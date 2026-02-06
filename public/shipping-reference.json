@@ -1,0 +1,252 @@
+{
+  "generated": "2026-01-29",
+  "source": "Extracted from 64 BOLs (Jan 2024 - Jan 2026)",
+  "notes": "Weights include product + packaging + pallet",
+  
+  "productWeights": {
+    "dv215": {
+      "description": "Varsity Bike Dock",
+      "weightPerUnit": 30,
+      "notes": "Ships in cardboard boxes, often in wooden crate",
+      "samples": [
+        {"qty": 6, "pallets": 1, "totalWeight": 198, "perUnit": 33},
+        {"qty": 39, "pallets": 1, "totalWeight": 1170, "perUnit": 30},
+        {"qty": 40, "pallets": 1, "totalWeight": 1104, "perUnit": 27.6},
+        {"qty": 45, "pallets": 1, "totalWeight": 1330, "perUnit": 29.5}
+      ],
+      "palletBreakpoints": [
+        {"minQty": 1, "maxQty": 10, "palletsPerRange": 1},
+        {"minQty": 11, "maxQty": 45, "palletsPerRange": 1},
+        {"minQty": 46, "maxQty": 90, "palletsPerRange": 2}
+      ]
+    },
+    "vr2": {
+      "description": "VR2 Offset Vertical Rack",
+      "weightPerUnit": 31,
+      "notes": "2 PCS per box (43x25x13), boxes on pallet or crate",
+      "samples": [
+        {"qty": 10, "pallets": 1, "totalWeight": 308, "perUnit": 30.8},
+        {"qty": 31, "pallets": 2, "totalWeight": 904, "perUnit": 29}
+      ],
+      "palletBreakpoints": [
+        {"minQty": 1, "maxQty": 16, "palletsPerRange": 1},
+        {"minQty": 17, "maxQty": 48, "palletsPerRange": 2}
+      ]
+    },
+    "vr1": {
+      "description": "VR1 XL Single Bike Dock",
+      "weightPerUnit": 28,
+      "notes": "Larger than VR2, ships similarly",
+      "samples": [
+        {"qty": 10, "pallets": 1, "totalWeight": 276, "perUnit": 27.6}
+      ],
+      "palletBreakpoints": [
+        {"minQty": 1, "maxQty": 20, "palletsPerRange": 1}
+      ]
+    },
+    "dd4": {
+      "description": "Double Docker 4-Bike",
+      "weightPerUnit": 235,
+      "notes": "Ships UNPACKAGED - components on pallets. VERIFIED (Chad 2026-02-03): 2 slides, 2 tracks, 1 manifold, 1 leg per unit. ≤2 units = combined pallet, 3+ units = split by component type.",
+      "componentsPerUnit": {
+        "slides": 2,
+        "tracks": 2,
+        "manifolds": 1,
+        "legs": 1,
+        "verified": "2026-02-03"
+      },
+      "crateSpecs": {
+        "slideTrackCrate": {"dims": "80×43×56", "capacity": 21, "weight": 1510, "note": "21 nested sets (7/layer × 3 layers)"},
+        "manifoldCrate": {"dims": "54×28×55", "capacity": 40, "note": "40 manifolds (10/layer × 4 layers)"},
+        "legsPallet": {"dims": "48×40 (48×45 w/overhang)", "capacity": "30-40", "heightAt30": "~53\""}
+      },
+      "packingRule": {
+        "smallOrder": {"maxUnits": 2, "method": "combined", "pallets": 1},
+        "largeOrder": {"minUnits": 3, "method": "by-component", "note": "Split into slide/track crate, manifold crate, legs pallet"}
+      },
+      "samples": [
+        {"qty": 3, "pallets": 2, "totalWeight": 856, "perUnit": 285},
+        {"qty": 6, "pallets": 2, "totalWeight": 1356, "perUnit": 226},
+        {"qty": 9, "pallets": 2, "totalWeight": 2296, "perUnit": 255},
+        {"qty": 12, "pallets": 2, "totalWeight": 2078, "perUnit": 173}
+      ],
+      "palletBreakpoints": [
+        {"minQty": 1, "maxQty": 2, "palletsPerRange": 1, "note": "Combined pallet"},
+        {"minQty": 3, "maxQty": 12, "palletsPerRange": 2, "note": "Split by component"},
+        {"minQty": 13, "maxQty": 20, "palletsPerRange": 3}
+      ]
+    },
+    "dd6": {
+      "description": "Double Docker 6-Bike",
+      "weightPerUnit": 280,
+      "notes": "Ships UNPACKAGED - raw components on pallets. ⚠️ Component counts per unit UNVERIFIED - needs Chad confirmation.",
+      "componentsPerUnit": {
+        "slides": null,
+        "tracks": null,
+        "manifolds": null,
+        "legs": null,
+        "verified": false,
+        "warning": "DD6 component counts need verification from Chad"
+      },
+      "palletBreakpoints": [
+        {"minQty": 1, "maxQty": 2, "palletsPerRange": 1, "note": "Combined pallet (assumed)"},
+        {"minQty": 3, "maxQty": 8, "palletsPerRange": 2}
+      ]
+    },
+    "mbv1": {
+      "description": "Metal Bike Vault 1-Bike Locker",
+      "weightPerUnit": 330,
+      "notes": "Ships in reusable metal cage frames",
+      "samples": [
+        {"qty": 2, "pallets": 1, "totalWeight": 664, "perUnit": 332},
+        {"qty": 8, "pallets": 2, "totalWeight": 2614, "perUnit": 327}
+      ],
+      "palletBreakpoints": [
+        {"minQty": 1, "maxQty": 3, "palletsPerRange": 1},
+        {"minQty": 4, "maxQty": 8, "palletsPerRange": 2}
+      ]
+    },
+    "mbv2": {
+      "description": "Metal Bike Vault 2-Bike Locker", 
+      "weightPerUnit": 450,
+      "notes": "Ships in reusable metal cage frames",
+      "palletBreakpoints": [
+        {"minQty": 1, "maxQty": 2, "palletsPerRange": 1},
+        {"minQty": 3, "maxQty": 6, "palletsPerRange": 2}
+      ]
+    },
+    "visi1": {
+      "description": "VisiLocker 1-Bike",
+      "weightPerUnit": 280,
+      "notes": "Ships in reusable metal cage frames",
+      "samples": [
+        {"qty": 5, "pallets": 2, "totalWeight": 1412, "perUnit": 282}
+      ],
+      "palletBreakpoints": [
+        {"minQty": 1, "maxQty": 3, "palletsPerRange": 1},
+        {"minQty": 4, "maxQty": 8, "palletsPerRange": 2}
+      ]
+    },
+    "visi2": {
+      "description": "VisiLocker 2-Bike",
+      "weightPerUnit": 370,
+      "notes": "Ships in reusable metal cage frames",
+      "samples": [
+        {"qty": 1, "pallets": 1, "totalWeight": 466, "perUnit": 466}
+      ],
+      "palletBreakpoints": [
+        {"minQty": 1, "maxQty": 2, "palletsPerRange": 1},
+        {"minQty": 3, "maxQty": 6, "palletsPerRange": 2}
+      ]
+    },
+    "hr101": {
+      "description": "Hoop Runner 101",
+      "weightPerUnit": 23,
+      "notes": "VERIFIED (Chad 2026-02-03): Individual 28×32×6\". Nested stacking: first=6\", each additional=+2\". Formula: 6 + ((qty-1) × 2)",
+      "dimensions": {
+        "individual": {"l": 32, "w": 28, "h": 6},
+        "verified": "2026-02-03"
+      },
+      "nesting": {
+        "firstHeight": 6,
+        "additionalIncrement": 2,
+        "formula": "6 + ((qty - 1) × 2)"
+      },
+      "samples": [
+        {"qty": 6, "pallets": 1, "totalWeight": 240, "perUnit": 40},
+        {"qty": 73, "pallets": 2, "totalWeight": 1038, "perUnit": 14}
+      ],
+      "palletBreakpoints": [
+        {"minQty": 1, "maxQty": 40, "palletsPerRange": 1},
+        {"minQty": 41, "maxQty": 100, "palletsPerRange": 2}
+      ]
+    },
+    "hr201": {
+      "description": "Hoop Runner 201",
+      "weightPerUnit": 55,
+      "notes": "Larger hoop runner",
+      "samples": [
+        {"qty": 4, "pallets": 1, "totalWeight": 220, "perUnit": 55}
+      ],
+      "palletBreakpoints": [
+        {"minQty": 1, "maxQty": 20, "palletsPerRange": 1}
+      ]
+    },
+    "undergrad": {
+      "description": "Undergrad Rack",
+      "weightPerUnit": 111,
+      "notes": "VERIFIED (Chad 2026-02-03): Double-sided max 3 per pallet, dims up to 160×48×40\"",
+      "variants": {
+        "singleSided": {
+          "models": ["3-bike", "4-bike", "5-bike"],
+          "maxPerPallet": "5-10",
+          "maxDims": {"l": 148, "w": 48, "h": 36},
+          "note": "Lay flat, stack 5-10 per pallet"
+        },
+        "doubleSided": {
+          "models": ["6-bike", "8-bike", "10-bike"],
+          "maxPerPallet": 3,
+          "maxDims": {"l": 160, "w": 48, "h": 40},
+          "verified": "2026-02-03"
+        }
+      },
+      "samples": [
+        {"qty": 2, "pallets": 1, "totalWeight": 170, "perUnit": 85},
+        {"qty": 2, "pallets": 1, "totalWeight": 275, "perUnit": 137}
+      ],
+      "palletBreakpoints": [
+        {"minQty": 1, "maxQty": 3, "palletsPerRange": 1, "note": "Double-sided max 3"},
+        {"minQty": 4, "maxQty": 6, "palletsPerRange": 2},
+        {"minQty": 7, "maxQty": 10, "palletsPerRange": 3}
+      ]
+    },
+    "sm10x": {
+      "description": "SkateDock SM10X",
+      "weightPerUnit": 96,
+      "notes": "Ships in cardboard boxes",
+      "samples": [
+        {"qty": 4, "pallets": 1, "totalWeight": 382, "perUnit": 95.5}
+      ],
+      "palletBreakpoints": [
+        {"minQty": 1, "maxQty": 6, "palletsPerRange": 1},
+        {"minQty": 7, "maxQty": 12, "palletsPerRange": 2}
+      ]
+    },
+    "radius": {
+      "description": "Radius Inverted U Rack",
+      "weightPerUnit": 25,
+      "notes": "Lightweight, efficient packing",
+      "samples": [
+        {"qty": 8, "pallets": 1, "totalWeight": 200, "perUnit": 25}
+      ],
+      "palletBreakpoints": [
+        {"minQty": 1, "maxQty": 30, "palletsPerRange": 1}
+      ]
+    },
+    "wave": {
+      "description": "Wave Rack",
+      "weightPerUnit": 60,
+      "notes": "Foam-wrapped tubes, nested on pallet",
+      "samples": [
+        {"qty": 2, "pallets": 1, "totalWeight": 116, "perUnit": 58}
+      ],
+      "palletBreakpoints": [
+        {"minQty": 1, "maxQty": 5, "palletsPerRange": 1}
+      ]
+    }
+  },
+  
+  "palletDefaults": {
+    "emptyPalletWeight": 50,
+    "standardPalletDims": [48, 40, 6],
+    "maxPalletWeight": 2500,
+    "maxPalletHeight": 96,
+    "preferredMaxHeight": 84
+  },
+  
+  "shippingMethods": {
+    "parcel": {"maxWeight": 150, "maxDim": 108},
+    "ltl": {"minWeight": 150, "maxWeight": 10000},
+    "dedicatedTruck": {"minWeight": 10000, "note": "Or bulk DD orders"}
+  }
+}

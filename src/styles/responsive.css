@@ -1,0 +1,388 @@
+/**
+ * Responsive Styles for Pallet Configurator
+ * 
+ * Breakpoints:
+ * - Desktop: >1024px (2-column layout)
+ * - Tablet: 768-1024px (stacked, larger touch targets)
+ * - Mobile: <768px (single column, collapsible sections)
+ */
+
+:root {
+  --touch-target-min: 44px;
+  --spacing-mobile: 12px;
+  --spacing-tablet: 16px;
+  --spacing-desktop: 20px;
+  --sidebar-width-desktop: 400px;
+  --pallet-viewer-min-height: 300px;
+}
+
+/* Base responsive container */
+.app-container {
+  display: flex;
+  flex-direction: row;
+  min-height: 100vh;
+  gap: var(--spacing-desktop);
+}
+
+.sidebar {
+  width: var(--sidebar-width-desktop);
+  flex-shrink: 0;
+  overflow-y: auto;
+  max-height: 100vh;
+}
+
+.main-content {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+}
+
+/* Product grid */
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--spacing-desktop);
+}
+
+/* 3D Viewer */
+.pallet-viewer-container {
+  min-height: 400px;
+  height: 60vh;
+  max-height: 70vh;
+}
+
+/* Touch targets - all interactive elements */
+.btn,
+.input,
+.touch-target {
+  min-height: var(--touch-target-min);
+  min-width: var(--touch-target-min);
+}
+
+/* Quantity buttons */
+.qty-btn {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.qty-btn:active {
+  transform: scale(0.95);
+}
+
+/* Product card */
+.product-card {
+  padding: var(--spacing-desktop);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.product-card:active {
+  transform: scale(0.98);
+}
+
+/* Quote input */
+.quote-input {
+  height: 48px;
+  font-size: 16px;
+  padding: 0 16px;
+  border-radius: 8px;
+  width: 100%;
+}
+
+/* Summary grid */
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+/* ===== TABLET (768-1024px) ===== */
+@media (max-width: 1024px) {
+  .app-container {
+    flex-direction: column;
+    gap: var(--spacing-tablet);
+  }
+
+  .sidebar {
+    width: 100%;
+    max-height: 45vh;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .main-content {
+    width: 100%;
+    padding: var(--spacing-tablet);
+  }
+
+  .product-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: var(--spacing-tablet);
+  }
+
+  .pallet-viewer-container {
+    min-height: var(--pallet-viewer-min-height);
+    height: 50vh;
+  }
+
+  /* Larger touch targets for tablet */
+  .qty-btn {
+    width: 48px;
+    height: 48px;
+  }
+
+  .btn,
+  .input,
+  .touch-target {
+    min-height: 48px;
+  }
+
+  .summary-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+  }
+}
+
+/* ===== MOBILE (<768px) ===== */
+@media (max-width: 768px) {
+  .app-container {
+    flex-direction: column;
+    gap: var(--spacing-mobile);
+    padding: var(--spacing-mobile);
+  }
+
+  .sidebar {
+    width: 100%;
+    max-height: 40vh;
+    padding: var(--spacing-mobile);
+  }
+
+  .main-content {
+    width: 100%;
+    padding: 0;
+  }
+
+  .product-grid {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-mobile);
+  }
+
+  .pallet-viewer-container {
+    min-height: var(--pallet-viewer-min-height);
+    height: 45vh;
+    max-height: 50vh;
+  }
+
+  /* Full width cards on mobile */
+  .product-card {
+    width: 100%;
+    padding: var(--spacing-mobile);
+  }
+
+  /* Full width inputs */
+  .quote-input {
+    width: 100%;
+  }
+
+  /* Stack summary on mobile */
+  .summary-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .summary-grid > * {
+    font-size: 14px;
+  }
+
+  /* Larger buttons on mobile */
+  .qty-btn {
+    width: 52px;
+    height: 52px;
+    font-size: 24px;
+  }
+
+  /* Stack pallet cards */
+  .pallet-cards {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-mobile);
+  }
+
+  /* Collapsible sections */
+  .collapsible-section {
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .collapsible-header {
+    padding: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .collapsible-content {
+    padding: 0 16px 16px;
+  }
+
+  .collapsible-content.collapsed {
+    display: none;
+  }
+
+  /* Horizontal scroll for order items */
+  .order-items-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .order-items-scroll::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* ===== VERY SMALL SCREENS (<375px) ===== */
+@media (max-width: 375px) {
+  .summary-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .pallet-viewer-container {
+    min-height: 250px;
+    height: 40vh;
+  }
+
+  .product-card {
+    padding: 10px;
+  }
+
+  .qty-btn {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+/* ===== LANDSCAPE PHONE ===== */
+@media (max-width: 896px) and (orientation: landscape) {
+  .sidebar {
+    max-height: 35vh;
+  }
+
+  .pallet-viewer-container {
+    min-height: 200px;
+    height: 50vh;
+  }
+}
+
+/* ===== UTILITY CLASSES ===== */
+
+/* Hide on mobile */
+.hide-mobile {
+  display: block;
+}
+
+@media (max-width: 768px) {
+  .hide-mobile {
+    display: none !important;
+  }
+}
+
+/* Show only on mobile */
+.show-mobile {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .show-mobile {
+    display: block;
+  }
+}
+
+/* No horizontal overflow */
+.no-overflow-x {
+  overflow-x: hidden;
+}
+
+/* Responsive text */
+.text-responsive {
+  font-size: 16px;
+}
+
+@media (max-width: 768px) {
+  .text-responsive {
+    font-size: 14px;
+  }
+}
+
+/* Safe area padding for notched phones */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+}
+
+/* Prevent text selection on interactive elements */
+.no-select {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Disable double-tap zoom on buttons */
+button,
+.btn,
+.touch-target {
+  touch-action: manipulation;
+}
+
+/* Smooth scrolling */
+.smooth-scroll {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Focus visible for accessibility */
+.focus-visible:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+/* Loading spinner for buttons */
+.btn-loading {
+  position: relative;
+  pointer-events: none;
+}
+
+.btn-loading::after {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  top: 50%;
+  left: 50%;
+  margin-left: -8px;
+  margin-top: -8px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

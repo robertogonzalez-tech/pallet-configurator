@@ -1,0 +1,2003 @@
+{
+  "created": "2026-01-29",
+  "source": "NetSuite + Dim Sheet merge",
+  "products": [
+    {
+      "sku": "80101-0370-BLK23",
+      "family": "Undergrad",
+      "displayName": "Undergrad, 10 Bike, Perpendicular, Black Duraplas",
+      "basePrice": 1650,
+      "bikesPerUnit": 2,
+      "packaged": {
+        "dimSheetMatch": "(1) Undergrad 5-bike",
+        "weight_lbs": 167,
+        "length_in": 126,
+        "width_in": 24,
+        "height_in": 36
+      }
+    },
+    {
+      "sku": "80101-0370-GAV",
+      "family": "Undergrad",
+      "displayName": "Undergrad, 10 Bike, Perpendicular, Galvanized",
+      "basePrice": 1705,
+      "bikesPerUnit": 2,
+      "packaged": {
+        "dimSheetMatch": "(1) Undergrad 5-bike",
+        "weight_lbs": 167,
+        "length_in": 126,
+        "width_in": 24,
+        "height_in": 36
+      }
+    },
+    {
+      "sku": "80101-0370-L-BLK23",
+      "family": "Undergrad",
+      "displayName": "Undergrad, 10 Bike, Angled-Left Entry, Black Duraplas",
+      "basePrice": null,
+      "bikesPerUnit": 2,
+      "packaged": {
+        "dimSheetMatch": "(1) Undergrad 5-bike",
+        "weight_lbs": 167,
+        "length_in": 126,
+        "width_in": 24,
+        "height_in": 36
+      }
+    },
+    {
+      "sku": "80101-0370-L-GAV",
+      "family": "Undergrad",
+      "displayName": "Undergrad, 10 Bike, Angled-Left Entry, Galvanized",
+      "basePrice": null,
+      "bikesPerUnit": 2,
+      "packaged": {
+        "dimSheetMatch": "(1) Undergrad 5-bike",
+        "weight_lbs": 167,
+        "length_in": 126,
+        "width_in": 24,
+        "height_in": 36
+      }
+    },
+    {
+      "sku": "80101-0370-R-BLK23",
+      "family": "Undergrad",
+      "displayName": "Undergrad, 10 Bike, Angled-Right Entry, Black Duraplas",
+      "basePrice": null,
+      "bikesPerUnit": 2,
+      "packaged": {
+        "dimSheetMatch": "(1) Undergrad 5-bike",
+        "weight_lbs": 167,
+        "length_in": 126,
+        "width_in": 24,
+        "height_in": 36
+      }
+    },
+    {
+      "sku": "80101-0370-R-GAV",
+      "family": "Undergrad",
+      "displayName": "Undergrad, 10 Bike, Angled-Right Entry, Galvanized",
+      "basePrice": null,
+      "bikesPerUnit": 2,
+      "packaged": {
+        "dimSheetMatch": "(1) Undergrad 5-bike",
+        "weight_lbs": 167,
+        "length_in": 126,
+        "width_in": 24,
+        "height_in": 36
+      }
+    },
+    {
+      "sku": "80101-0363-BLK23",
+      "family": "Undergrad",
+      "displayName": "Undergrad, 3 Bike, Perpendicular, Black Duraplas",
+      "basePrice": 569.25,
+      "bikesPerUnit": 3,
+      "packaged": {
+        "dimSheetMatch": "(1) Undergrad 3-bike",
+        "weight_lbs": 99,
+        "length_in": 71,
+        "width_in": 24,
+        "height_in": 36
+      }
+    },
+    {
+      "sku": "80101-0363-GAV",
+      "family": "Undergrad",
+      "displayName": "Undergrad, 3 Bike, Perpendicular, Galvanized",
+      "basePrice": 517,
+      "bikesPerUnit": 3,
+      "packaged": {
+        "dimSheetMatch": "(1) Undergrad 3-bike",
+        "weight_lbs": 99,
+        "length_in": 71,
+        "width_in": 24,
+        "height_in": 36
+      }
+    },
+    {
+      "sku": "80101-0363-L-BLK23",
+      "family": "Undergrad",
+      "displayName": "Undergrad, 3 Bike, Angled-Left Entry, Black Duraplas",
+      "basePrice": null,
+      "bikesPerUnit": 3,
+      "packaged": {
+        "dimSheetMatch": "(1) Undergrad 3-bike",
+        "weight_lbs": 99,
+        "length_in": 71,
+        "width_in": 24,
+        "height_in": 36
+      }
+    },
+    {
+      "sku": "80101-0363-L-GAV",
+      "family": "Undergrad",
+      "displayName": "Undergrad, 3 Bike, Angled-Left Entry, Galvanized",
+      "basePrice": null,
+      "bikesPerUnit": 3,
+      "packaged": {
+        "dimSheetMatch": "(1) Undergrad 3-bike",
+        "weight_lbs": 99,
+        "length_in": 71,
+        "width_in": 24,
+        "height_in": 36
+      }
+    },
+    {
+      "sku": "80101-0363-R-BLK23",
+      "family": "Undergrad",
+      "displayName": "Undergrad, 3 Bike, Angled-Right Entry, Black Duraplas",
+      "basePrice": null,
+      "bikesPerUnit": 3,
+      "packaged": {
+        "dimSheetMatch": "(1) Undergrad 3-bike",
+        "weight_lbs": 99,
+        "length_in": 71,
+        "width_in": 24,
+        "height_in": 36
+      }
+    },
+    {
+      "sku": "80101-0363-R-GAV",
+      "family": "Undergrad",
+      "displayName": "Undergrad, 3 Bike, Angled-Right Entry, Galvanized",
+      "basePrice": null,
+      "bikesPerUnit": 3,
+      "packaged": {
+        "dimSheetMatch": "(1) Undergrad 3-bike",
+        "weight_lbs": 99,
+        "length_in": 71,
+        "width_in": 24,
+        "height_in": 36
+      }
+    },
+    {
+      "sku": "80101-0364-BLK23",
+      "family": "Undergrad",
+      "displayName": "Undergrad, 4 Bike, Perpendicular, Black Duraplas",
+      "basePrice": 660,
+      "bikesPerUnit": 2,
+      "packaged": {
+        "dimSheetMatch": "(1) Undergrad 5-bike",
+        "weight_lbs": 167,
+        "length_in": 126,
+        "width_in": 24,
+        "height_in": 36
+      }
+    },
+    {
+      "sku": "80101-0364-GAV",
+      "family": "Undergrad",
+      "displayName": "Undergrad, 4 Bike, Perpendicular, Galvanized",
+      "basePrice": 682,
+      "bikesPerUnit": 4,
+      "packaged": {
+        "dimSheetMatch": "(1) Undergrad 5-bike",
+        "weight_lbs": 167,
+        "length_in": 126,
+        "width_in": 24,
+        "height_in": 36
+      }
+    },
+    {
+      "sku": "80101-0364-L-BLK23",
+      "family": "Undergrad",
+      "displayName": "Undergrad, 4 Bike, Angled-Left Entry, Black",
+      "basePrice": null,
+      "bikesPerUnit": 2,
+      "packaged": {
+        "dimSheetMatch": "(1) Undergrad 5-bike",
+        "weight_lbs": 167,
+        "length_in": 126,
+        "width_in": 24,
+        "height_in": 36
+      }
+    },
+    {
+      "sku": "80101-0364-L-GAV",
+      "family": "Undergrad",
+      "displayName": "Undergrad, 4 Bike, Angled-Left Entry, Galvanized",
+      "basePrice": null,
+      "bikesPerUnit": 4,
+      "packaged": {
+        "dimSheetMatch": "(1) Undergrad 5-bike",
+        "weight_lbs": 167,
+        "length_in": 126,
+        "width_in": 24,
+        "height_in": 36
+      }
+    },
+    {
+      "sku": "80101-0364-R-BLK23",
+      "family": "Undergrad",
+      "displayName": "Undergrad, 4 Bike, Angled-Right Entry, Black",
+      "basePrice": null,
+      "bikesPerUnit": 2,
+      "packaged": {
+        "dimSheetMatch": "(1) Undergrad 5-bike",
+        "weight_lbs": 167,
+        "length_in": 126,
+        "width_in": 24,
+        "height_in": 36
+      }
+    },
+    {
+      "sku": "80101-0364-R-GAV",
+      "family": "Undergrad",
+      "displayName": "Undergrad, 4 Bike, Angled-Right Entry, Galvanized",
+      "basePrice": null,
+      "bikesPerUnit": 4,
+      "packaged": {
+        "dimSheetMatch": "(1) Undergrad 5-bike",
+        "weight_lbs": 167,
+        "length_in": 126,
+        "width_in": 24,
+        "height_in": 36
+      }
+    },
+    {
+      "sku": "80101-0365-BLK23",
+      "family": "Undergrad",
+      "displayName": "Undergrad, 5 Bike, Perpendicular, Black Duraplas",
+      "basePrice": 825,
+      "bikesPerUnit": 2,
+      "packaged": {
+        "dimSheetMatch": "(1) Undergrad 5-bike",
+        "weight_lbs": 167,
+        "length_in": 126,
+        "width_in": 24,
+        "height_in": 36
+      }
+    },
+    {
+      "sku": "80101-0365-GAV",
+      "family": "Undergrad",
+      "displayName": "Undergrad, 5 Bike, Perpendicular, Galvanized",
+      "basePrice": 991.87,
+      "bikesPerUnit": 5,
+      "packaged": {
+        "dimSheetMatch": "(1) Undergrad 5-bike",
+        "weight_lbs": 167,
+        "length_in": 126,
+        "width_in": 24,
+        "height_in": 36
+      }
+    },
+    {
+      "sku": "80101-0365-L-BLK23",
+      "family": "Undergrad",
+      "displayName": "Undergrad, 5 Bike, Angled-Left Entry, Black Duraplas",
+      "basePrice": null,
+      "bikesPerUnit": 2,
+      "packaged": {
+        "dimSheetMatch": "(1) Undergrad 5-bike",
+        "weight_lbs": 167,
+        "length_in": 126,
+        "width_in": 24,
+        "height_in": 36
+      }
+    },
+    {
+      "sku": "80101-0365-L-GAV",
+      "family": "Undergrad",
+      "displayName": "Undergrad, 5 Bike, Angled-Left Entry, Galvanized",
+      "basePrice": null,
+      "bikesPerUnit": 5,
+      "packaged": {
+        "dimSheetMatch": "(1) Undergrad 5-bike",
+        "weight_lbs": 167,
+        "length_in": 126,
+        "width_in": 24,
+        "height_in": 36
+      }
+    },
+    {
+      "sku": "80101-0365-R-BLK23",
+      "family": "Undergrad",
+      "displayName": "Undergrad, 5 Bike, Angled-Right Entry, Black Duraplas",
+      "basePrice": null,
+      "bikesPerUnit": 2,
+      "packaged": {
+        "dimSheetMatch": "(1) Undergrad 5-bike",
+        "weight_lbs": 167,
+        "length_in": 126,
+        "width_in": 24,
+        "height_in": 36
+      }
+    },
+    {
+      "sku": "80101-0365-R-GAV",
+      "family": "Undergrad",
+      "displayName": "Undergrad, 5 Bike, Angled-Right Entry, Galvanized",
+      "basePrice": null,
+      "bikesPerUnit": 5,
+      "packaged": {
+        "dimSheetMatch": "(1) Undergrad 5-bike",
+        "weight_lbs": 167,
+        "length_in": 126,
+        "width_in": 24,
+        "height_in": 36
+      }
+    },
+    {
+      "sku": "80101-0366-BLK23",
+      "family": "Undergrad",
+      "displayName": "Undergrad, 6 Bike, Perpendicular, Black Duraplas",
+      "basePrice": 990,
+      "bikesPerUnit": 2,
+      "packaged": {
+        "dimSheetMatch": "(1) Undergrad 5-bike",
+        "weight_lbs": 167,
+        "length_in": 126,
+        "width_in": 24,
+        "height_in": 36
+      }
+    },
+    {
+      "sku": "80101-0366-GAV",
+      "family": "Undergrad",
+      "displayName": "Undergrad, 6 Bike, Perpendicular, Galvanized",
+      "basePrice": 1023,
+      "bikesPerUnit": 2,
+      "packaged": {
+        "dimSheetMatch": "(1) Undergrad 5-bike",
+        "weight_lbs": 167,
+        "length_in": 126,
+        "width_in": 24,
+        "height_in": 36
+      }
+    },
+    {
+      "sku": "80101-0366-L-BLK23",
+      "family": "Undergrad",
+      "displayName": "Undergrad, 6 Bike, Angled-Left Entry, Black Duraplas",
+      "basePrice": null,
+      "bikesPerUnit": 2,
+      "packaged": {
+        "dimSheetMatch": "(1) Undergrad 5-bike",
+        "weight_lbs": 167,
+        "length_in": 126,
+        "width_in": 24,
+        "height_in": 36
+      }
+    },
+    {
+      "sku": "80101-0366-L-GAV",
+      "family": "Undergrad",
+      "displayName": "Undergrad, 6 Bike, Angled-Left Entry, Galvanized",
+      "basePrice": null,
+      "bikesPerUnit": 2,
+      "packaged": {
+        "dimSheetMatch": "(1) Undergrad 5-bike",
+        "weight_lbs": 167,
+        "length_in": 126,
+        "width_in": 24,
+        "height_in": 36
+      }
+    },
+    {
+      "sku": "80101-0366-R-BLK23",
+      "family": "Undergrad",
+      "displayName": "Undergrad, 6 Bike, Angled-Right Entry, Black Duraplas",
+      "basePrice": null,
+      "bikesPerUnit": 2,
+      "packaged": {
+        "dimSheetMatch": "(1) Undergrad 5-bike",
+        "weight_lbs": 167,
+        "length_in": 126,
+        "width_in": 24,
+        "height_in": 36
+      }
+    },
+    {
+      "sku": "80101-0366-R-GAV",
+      "family": "Undergrad",
+      "displayName": "Undergrad, 6 Bike, Angled-Right Entry, Galvanized",
+      "basePrice": null,
+      "bikesPerUnit": 2,
+      "packaged": {
+        "dimSheetMatch": "(1) Undergrad 5-bike",
+        "weight_lbs": 167,
+        "length_in": 126,
+        "width_in": 24,
+        "height_in": 36
+      }
+    },
+    {
+      "sku": "80101-0368-BLK23",
+      "family": "Undergrad",
+      "displayName": "Undergrad, 8 Bike, Perpendicular, Black Duraplas",
+      "basePrice": 1320,
+      "bikesPerUnit": 2,
+      "packaged": {
+        "dimSheetMatch": "(1) Undergrad 5-bike",
+        "weight_lbs": 167,
+        "length_in": 126,
+        "width_in": 24,
+        "height_in": 36
+      }
+    },
+    {
+      "sku": "80101-0368-GAV",
+      "family": "Undergrad",
+      "displayName": "Undergrad, 8 Bike, Perpendicular, Galvanized",
+      "basePrice": 1375,
+      "bikesPerUnit": 2,
+      "packaged": {
+        "dimSheetMatch": "(1) Undergrad 5-bike",
+        "weight_lbs": 167,
+        "length_in": 126,
+        "width_in": 24,
+        "height_in": 36
+      }
+    },
+    {
+      "sku": "80101-0368-L-BLK23",
+      "family": "Undergrad",
+      "displayName": "Undergrad, 8 Bike, Angled-Left Entry, Black Duraplas",
+      "basePrice": null,
+      "bikesPerUnit": 2,
+      "packaged": {
+        "dimSheetMatch": "(1) Undergrad 5-bike",
+        "weight_lbs": 167,
+        "length_in": 126,
+        "width_in": 24,
+        "height_in": 36
+      }
+    },
+    {
+      "sku": "80101-0368-L-GAV",
+      "family": "Undergrad",
+      "displayName": "Undergrad, 8 Bike, Angled-Left Entry, Galvanized",
+      "basePrice": null,
+      "bikesPerUnit": 2,
+      "packaged": {
+        "dimSheetMatch": "(1) Undergrad 5-bike",
+        "weight_lbs": 167,
+        "length_in": 126,
+        "width_in": 24,
+        "height_in": 36
+      }
+    },
+    {
+      "sku": "80101-0368-R-BLK23",
+      "family": "Undergrad",
+      "displayName": "Undergrad, 8 Bike, Angled-Right Entry, Black Duraplas",
+      "basePrice": null,
+      "bikesPerUnit": 2,
+      "packaged": {
+        "dimSheetMatch": "(1) Undergrad 5-bike",
+        "weight_lbs": 167,
+        "length_in": 126,
+        "width_in": 24,
+        "height_in": 36
+      }
+    },
+    {
+      "sku": "80101-0368-R-GAV",
+      "family": "Undergrad",
+      "displayName": "Undergrad, 8 Bike, Angled-Right Entry, Galvanized",
+      "basePrice": null,
+      "bikesPerUnit": 2,
+      "packaged": {
+        "dimSheetMatch": "(1) Undergrad 5-bike",
+        "weight_lbs": 167,
+        "length_in": 126,
+        "width_in": 24,
+        "height_in": 36
+      }
+    },
+    {
+      "sku": "80101-0281-BLK06",
+      "family": "2UP",
+      "displayName": "VERTICAL, 2 UP BIKE RACK, ASSEMBLED, WELDED, BLACK EPOXY COATED",
+      "basePrice": 235,
+      "bikesPerUnit": 0,
+      "packaged": {
+        "dimSheetMatch": "2 Ups (1)",
+        "weight_lbs": 8,
+        "length_in": 35,
+        "width_in": 20,
+        "height_in": 16
+      }
+    },
+    {
+      "sku": "80101-0281-BLK06",
+      "family": "2UP",
+      "displayName": "VERTICAL, 2 UP BIKE RACK, ASSEMBLED, WELDED, BLACK EPOXY COATED",
+      "basePrice": 235,
+      "bikesPerUnit": 2,
+      "packaged": {
+        "dimSheetMatch": "2 Ups (1)",
+        "weight_lbs": 8,
+        "length_in": 35,
+        "width_in": 20,
+        "height_in": 16
+      }
+    },
+    {
+      "sku": "80101-0281-BLK06",
+      "family": "2UP",
+      "displayName": "VERTICAL, 2 UP BIKE RACK, ASSEMBLED, WELDED, BLACK EPOXY COATED",
+      "basePrice": 235,
+      "bikesPerUnit": 2,
+      "packaged": {
+        "dimSheetMatch": "2 Ups (1)",
+        "weight_lbs": 8,
+        "length_in": 35,
+        "width_in": 20,
+        "height_in": 16
+      }
+    },
+    {
+      "sku": "80101-0281-BLK06",
+      "family": "2UP",
+      "displayName": "VERTICAL, 2 UP BIKE RACK, ASSEMBLED, WELDED, BLACK EPOXY COATED",
+      "basePrice": 235,
+      "bikesPerUnit": 2,
+      "packaged": {
+        "dimSheetMatch": "2 Ups (1)",
+        "weight_lbs": 8,
+        "length_in": 35,
+        "width_in": 20,
+        "height_in": 16
+      }
+    },
+    {
+      "sku": "SM-WAVE5-GAV-CONCRETE",
+      "family": "Wave Runner",
+      "displayName": "SURFACE MOUNT, WAVE5, 5 BIKE WAVE RACK, GALVANIZED, CONCRETE MOUNTING",
+      "basePrice": null,
+      "bikesPerUnit": 5,
+      "packaged": {
+        "dimSheetMatch": "2106 - Waverunner (7 Bike)",
+        "weight_lbs": 105,
+        "length_in": 96,
+        "width_in": 36,
+        "height_in": 12
+      }
+    },
+    {
+      "sku": "SM-WAVE7-GAV-CONCRETE",
+      "family": "Wave Runner",
+      "displayName": "SURFACE MOUNT, WAVE7, 7 BIKE WAVE RACK, GALVANIZED, CONCRETE MOUNTING",
+      "basePrice": null,
+      "bikesPerUnit": 7,
+      "packaged": {
+        "dimSheetMatch": "2106 - Waverunner (7 Bike)",
+        "weight_lbs": 105,
+        "length_in": 96,
+        "width_in": 36,
+        "height_in": 12
+      }
+    },
+    {
+      "sku": "CS120-BLK13",
+      "family": "Base Station",
+      "displayName": "BASE STATION, DOUBLE SIDED, 120\", BLACK POWDER COAT",
+      "basePrice": 2115,
+      "bikesPerUnit": 0,
+      "packaged": {
+        "dimSheetMatch": "Stanchions(2)",
+        "weight_lbs": 66,
+        "length_in": 88,
+        "width_in": 26,
+        "height_in": 11
+      }
+    },
+    {
+      "sku": "CS38-BLK13",
+      "family": "Base Station",
+      "displayName": "BASE STATION, DOUBLE SIDED, 38\", BLACK POWDER COAT",
+      "basePrice": 2115,
+      "bikesPerUnit": 0,
+      "packaged": {
+        "dimSheetMatch": "Stanchions(2)",
+        "weight_lbs": 66,
+        "length_in": 88,
+        "width_in": 26,
+        "height_in": 11
+      }
+    },
+    {
+      "sku": "CS66-BLK13",
+      "family": "Base Station",
+      "displayName": "BASE STATION, DOUBLE SIDED, 66\", BLACK POWDER COAT",
+      "basePrice": 2115,
+      "bikesPerUnit": 0,
+      "packaged": {
+        "dimSheetMatch": "Stanchions(2)",
+        "weight_lbs": 66,
+        "length_in": 88,
+        "width_in": 26,
+        "height_in": 11
+      }
+    },
+    {
+      "sku": "CS95-BLK13",
+      "family": "Base Station",
+      "displayName": "BASE STATION, DOUBLE SIDED, 95\" STRUT, BLACK POWDER COAT",
+      "basePrice": 2115,
+      "bikesPerUnit": 0,
+      "packaged": {
+        "dimSheetMatch": "Stanchions(2)",
+        "weight_lbs": 66,
+        "length_in": 88,
+        "width_in": 26,
+        "height_in": 11
+      }
+    },
+    {
+      "sku": "CSA114-BLK13",
+      "family": "Base Station",
+      "displayName": "BASE STATION, ADD-ON, DOUBLE SIDED, 114\", BLACK POWDER COAT",
+      "basePrice": 1240,
+      "bikesPerUnit": 0,
+      "packaged": {
+        "dimSheetMatch": "Stanchions(2)",
+        "weight_lbs": 66,
+        "length_in": 88,
+        "width_in": 26,
+        "height_in": 11
+      }
+    },
+    {
+      "sku": "CSA57-BLK13",
+      "family": "Base Station",
+      "displayName": "BASE STATION, ADD-ON, DOUBLE SIDED, 57\", BLACK POWDER COAT",
+      "basePrice": 1240,
+      "bikesPerUnit": 0,
+      "packaged": {
+        "dimSheetMatch": "Stanchions(2)",
+        "weight_lbs": 66,
+        "length_in": 88,
+        "width_in": 26,
+        "height_in": 11
+      }
+    },
+    {
+      "sku": "CSA86-BLK13",
+      "family": "Base Station",
+      "displayName": "BASE STATION, ADD-ON, DOUBLE SIDED, 86\", BLACK POWDER COAT",
+      "basePrice": 1240,
+      "bikesPerUnit": 0,
+      "packaged": {
+        "dimSheetMatch": "Stanchions(2)",
+        "weight_lbs": 66,
+        "length_in": 88,
+        "width_in": 26,
+        "height_in": 11
+      }
+    },
+    {
+      "sku": "SS120-BLK13",
+      "family": "Base Station",
+      "displayName": "BASE STATION, SINGLE SIDED, 120\", BLACK POWDER COAT",
+      "basePrice": 1025,
+      "bikesPerUnit": 0,
+      "packaged": {
+        "dimSheetMatch": "Stanchions(2)",
+        "weight_lbs": 66,
+        "length_in": 88,
+        "width_in": 26,
+        "height_in": 11
+      }
+    },
+    {
+      "sku": "SS38-BLK13",
+      "family": "Base Station",
+      "displayName": "BASE STATION, SINGLE SIDED, 38\", BLACK POWDER COAT",
+      "basePrice": 1025,
+      "bikesPerUnit": 0,
+      "packaged": {
+        "dimSheetMatch": "Stanchions(2)",
+        "weight_lbs": 66,
+        "length_in": 88,
+        "width_in": 26,
+        "height_in": 11
+      }
+    },
+    {
+      "sku": "SS66-BLK13",
+      "family": "Base Station",
+      "displayName": "BASE STATION, SINGLE SIDED, 66\", BLACK POWDER COAT FINISH",
+      "basePrice": 1025,
+      "bikesPerUnit": 0,
+      "packaged": {
+        "dimSheetMatch": "Stanchions(2)",
+        "weight_lbs": 66,
+        "length_in": 88,
+        "width_in": 26,
+        "height_in": 11
+      }
+    },
+    {
+      "sku": "SS95-BLK13",
+      "family": "Base Station",
+      "displayName": "BASE STATION, SINGLE SIDED, 95\", BLACK POWDER COAT FINISH",
+      "basePrice": 1025,
+      "bikesPerUnit": 0,
+      "packaged": {
+        "dimSheetMatch": "Stanchions(2)",
+        "weight_lbs": 66,
+        "length_in": 88,
+        "width_in": 26,
+        "height_in": 11
+      }
+    },
+    {
+      "sku": "SSA114-BLK13",
+      "family": "Base Station",
+      "displayName": "BASE STATION, SINGLE SIDED, ADD-ON, 114\", BLACK POWDER COAT",
+      "basePrice": 670,
+      "bikesPerUnit": 0,
+      "packaged": {
+        "dimSheetMatch": "Stanchions(2)",
+        "weight_lbs": 66,
+        "length_in": 88,
+        "width_in": 26,
+        "height_in": 11
+      }
+    },
+    {
+      "sku": "SSA57-BLK13",
+      "family": "Base Station",
+      "displayName": "BASE STATION, SINGLE SIDED, ADD-ON, 57\", BLACK POWDER COAT",
+      "basePrice": 670,
+      "bikesPerUnit": 0,
+      "packaged": {
+        "dimSheetMatch": "Stanchions(2)",
+        "weight_lbs": 66,
+        "length_in": 88,
+        "width_in": 26,
+        "height_in": 11
+      }
+    },
+    {
+      "sku": "SSA86-BLK13",
+      "family": "Base Station",
+      "displayName": "BASE STATION, SINGLE SIDED, ADD-ON, 86\", BLACK POWDER COAT",
+      "basePrice": 670,
+      "bikesPerUnit": 0,
+      "packaged": {
+        "dimSheetMatch": "Stanchions(2)",
+        "weight_lbs": 66,
+        "length_in": 88,
+        "width_in": 26,
+        "height_in": 11
+      }
+    },
+    {
+      "sku": "80301-0151-BLK13",
+      "family": "Circle Series (Omega)",
+      "displayName": "CIRCLE SERIES, CS200, SQUARE TUBE, BLACK POLYESTER POWDER",
+      "basePrice": 432,
+      "bikesPerUnit": 2,
+      "packaged": {
+        "dimSheetMatch": "Circle Series (RT)",
+        "weight_lbs": 35,
+        "length_in": 36,
+        "width_in": 34,
+        "height_in": 8
+      }
+    },
+    {
+      "sku": "80301-0151-GAV",
+      "family": "Circle Series (Omega)",
+      "displayName": "CIRCLE SERIES, CS200, SQUARE TUBE, HD GALVANIZED",
+      "basePrice": 432,
+      "bikesPerUnit": 2,
+      "packaged": {
+        "dimSheetMatch": "Circle Series (RT)",
+        "weight_lbs": 35,
+        "length_in": 36,
+        "width_in": 34,
+        "height_in": 8
+      }
+    },
+    {
+      "sku": "DD-SS-04-BLK13",
+      "family": "Double Docker",
+      "displayName": "DOUBLE DOCKER, TWO TIER, LIFT ASSIST, SINGLE SIDED, 4 BIKES SECURED, BLACK POLYESTER POWDER COAT",
+      "basePrice": null,
+      "bikesPerUnit": 4,
+      "packaged": {
+        "dimSheetMatch": "DD4",
+        "weight_lbs": 475,
+        "length_in": 84,
+        "width_in": 40,
+        "height_in": 23
+      }
+    },
+    {
+      "sku": "DD-SS-04-GAV",
+      "family": "Double Docker",
+      "displayName": "DOUBLE DOCKER, TWO TIER, LIFT ASSIST, SINGLE SIDED, 4 BIKES SECURED, HD GALVANIZED",
+      "basePrice": null,
+      "bikesPerUnit": 4,
+      "packaged": {
+        "dimSheetMatch": "DD4",
+        "weight_lbs": 475,
+        "length_in": 84,
+        "width_in": 40,
+        "height_in": 23
+      }
+    },
+    {
+      "sku": "DD-SS-06-BLK13",
+      "family": "Double Docker",
+      "displayName": "DOUBLE DOCKER, TWO TIER, LIFT ASSIST, SINGLE SIDED, 6 BIKES SECURED, BLACK POLYESTER POWDER COAT",
+      "basePrice": null,
+      "bikesPerUnit": 6,
+      "packaged": {
+        "dimSheetMatch": "DD4",
+        "weight_lbs": 475,
+        "length_in": 84,
+        "width_in": 40,
+        "height_in": 23
+      }
+    },
+    {
+      "sku": "DD-SS-06-GAV",
+      "family": "Double Docker",
+      "displayName": "DOUBLE DOCKER, TWO TIER, LIFT ASSIST, SINGLE SIDED, 6 BIKES, HD GALVANIZED",
+      "basePrice": null,
+      "bikesPerUnit": 6,
+      "packaged": {
+        "dimSheetMatch": "DD4",
+        "weight_lbs": 475,
+        "length_in": 84,
+        "width_in": 40,
+        "height_in": 23
+      }
+    },
+    {
+      "sku": "DD-DS-08-BLK13",
+      "family": "Double Docker",
+      "displayName": "DOUBLE DOCKER, TWO TIER, LIFT ASSIST, DOUBLE SIDED, 8 BIKES, BLACK POLYESTER",
+      "basePrice": null,
+      "bikesPerUnit": 8,
+      "packaged": {
+        "dimSheetMatch": "DD4",
+        "weight_lbs": 475,
+        "length_in": 84,
+        "width_in": 40,
+        "height_in": 23
+      }
+    },
+    {
+      "sku": "DD-DS-08-GAV",
+      "family": "Double Docker",
+      "displayName": "DOUBLE DOCKER, TWO TIER, LIFT ASSIST, DOUBLE SIDED, 8 BIKES, HD GALVANIZED",
+      "basePrice": null,
+      "bikesPerUnit": 8,
+      "packaged": {
+        "dimSheetMatch": "DD4",
+        "weight_lbs": 475,
+        "length_in": 84,
+        "width_in": 40,
+        "height_in": 23
+      }
+    },
+    {
+      "sku": "DD-DS-12-BLK13",
+      "family": "Double Docker",
+      "displayName": "DOUBLE DOCKER, TWO TIER, LIFT ASSIST, DOUBLE SIDED, 12 BIKES, BLACK POLYESTER POWDER COAT",
+      "basePrice": null,
+      "bikesPerUnit": 12,
+      "packaged": {
+        "dimSheetMatch": "DD4",
+        "weight_lbs": 475,
+        "length_in": 84,
+        "width_in": 40,
+        "height_in": 23
+      }
+    },
+    {
+      "sku": "DD-DS-12-GAV",
+      "family": "Double Docker",
+      "displayName": "DOUBLE DOCKER, TWO TIER, LIFT ASSIST, DOUBLE SIDED, 12 BIKES, HD GALVANIZED",
+      "basePrice": null,
+      "bikesPerUnit": 12,
+      "packaged": {
+        "dimSheetMatch": "DD4",
+        "weight_lbs": 475,
+        "length_in": 84,
+        "width_in": 40,
+        "height_in": 23
+      }
+    },
+    {
+      "sku": "26347C (Deluxe Public Workstand)",
+      "family": "Pump & Repair",
+      "displayName": "FIXATION, DELUXE PUBLIC WORK STAND, W/ TOOLS",
+      "basePrice": 1150,
+      "bikesPerUnit": 0,
+      "packaged": {
+        "dimSheetMatch": "Deluxe stand",
+        "weight_lbs": 41,
+        "length_in": 56,
+        "width_in": 10,
+        "height_in": 10
+      }
+    },
+    {
+      "sku": "26302C-BLK",
+      "family": "Pump & Repair",
+      "displayName": "FIXATION, PUBLIC WORK STAND, BLACK POWDER COAT, W/ TOOLS",
+      "basePrice": 800,
+      "bikesPerUnit": 0,
+      "packaged": {
+        "dimSheetMatch": "Deluxe stand",
+        "weight_lbs": 41,
+        "length_in": 56,
+        "width_in": 10,
+        "height_in": 10
+      }
+    },
+    {
+      "sku": "26302C-RED",
+      "family": "Pump & Repair",
+      "displayName": "FIXATION, PUBLIC WORK STAND, RED POWDER COAT, W/ TOOLS",
+      "basePrice": 800,
+      "bikesPerUnit": 0,
+      "packaged": {
+        "dimSheetMatch": "Deluxe stand",
+        "weight_lbs": 41,
+        "length_in": 56,
+        "width_in": 10,
+        "height_in": 10
+      }
+    },
+    {
+      "sku": "89901-2050-GRY14",
+      "family": "Dismount",
+      "displayName": "THE DISMOUNT, 5 SCOOTER, PACKAGED, GREY POWDER",
+      "basePrice": 1100,
+      "bikesPerUnit": 0,
+      "packaged": {
+        "dimSheetMatch": "THE Dismount - Boxed from TW",
+        "weight_lbs": 55,
+        "length_in": 50.5,
+        "width_in": 12.5,
+        "height_in": 10
+      }
+    },
+    {
+      "sku": "89914-1111",
+      "family": "Fiberglass Bike Vault",
+      "displayName": "Fiberglass Bike Vault -1 Bike -Grey -Latch",
+      "basePrice": 2700,
+      "bikesPerUnit": 2,
+      "packaged": {
+        "dimSheetMatch": "ABSCO 301/FBV-1\n$105/locker packing material\n$435 for dedicated load packing material",
+        "weight_lbs": 240,
+        "length_in": 77,
+        "width_in": 40,
+        "height_in": 55
+      }
+    },
+    {
+      "sku": "89914-1211",
+      "family": "Fiberglass Bike Vault",
+      "displayName": "FBV1-LC-PAD, LEATHER TAN, CLOSED DOOR, PAD LOCK LATCH",
+      "basePrice": 2700,
+      "bikesPerUnit": 2,
+      "packaged": {
+        "dimSheetMatch": "ABSCO 301/FBV-1\n$105/locker packing material\n$435 for dedicated load packing material",
+        "weight_lbs": 240,
+        "length_in": 77,
+        "width_in": 40,
+        "height_in": 55
+      }
+    },
+    {
+      "sku": "89914-2111",
+      "family": "Fiberglass Bike Vault",
+      "displayName": "FBV2-IC-PAD, FIBERGLASS BIKE VAULT, IRIDIUM GREY, CLOSED DOOR, PAD LOCK LATCH",
+      "basePrice": 3250,
+      "bikesPerUnit": 2,
+      "packaged": {
+        "dimSheetMatch": "ABSCO 301/FBV-1\n$105/locker packing material\n$435 for dedicated load packing material",
+        "weight_lbs": 240,
+        "length_in": 77,
+        "width_in": 40,
+        "height_in": 55
+      }
+    },
+    {
+      "sku": "89914-2211",
+      "family": "Fiberglass Bike Vault",
+      "displayName": "FBV2-LC-PAD, LEATHER TAN, CLOSED DOOR, PAD LOCK LATCH",
+      "basePrice": 3250,
+      "bikesPerUnit": 2,
+      "packaged": {
+        "dimSheetMatch": "ABSCO 301/FBV-1\n$105/locker packing material\n$435 for dedicated load packing material",
+        "weight_lbs": 240,
+        "length_in": 77,
+        "width_in": 40,
+        "height_in": 55
+      }
+    },
+    {
+      "sku": "80301-0165-BLK13",
+      "family": "Hoop Runner",
+      "displayName": "HOOP RUNNER, HR100, IN-GROUND, 1.90\" OD, BLACK POLYESTER POWDER",
+      "basePrice": 260,
+      "bikesPerUnit": 2,
+      "packaged": {
+        "dimSheetMatch": "HR 201 (City of LA)",
+        "weight_lbs": 45,
+        "length_in": 35,
+        "width_in": 30,
+        "height_in": 8
+      }
+    },
+    {
+      "sku": "80301-0165-GAV",
+      "family": "Hoop Runner",
+      "displayName": "HOOP RUNNER, HR100, IN-GROUND, 1.90\" OD, HD GALVANIZED",
+      "basePrice": 260,
+      "bikesPerUnit": 2,
+      "packaged": {
+        "dimSheetMatch": "HR 201 (City of LA)",
+        "weight_lbs": 45,
+        "length_in": 35,
+        "width_in": 30,
+        "height_in": 8
+      }
+    },
+    {
+      "sku": "SM-HR101-BLK13-CONCRETE",
+      "family": "Hoop Runner",
+      "displayName": "SURFACE MOUNT, HR101, HOOP RUNNER, BLACK POLYESTER, CONCRETE MOUNTING",
+      "basePrice": null,
+      "bikesPerUnit": 2,
+      "packaged": {
+        "dimSheetMatch": "HR 101 (1 pack box)",
+        "weight_lbs": 14,
+        "length_in": 32.4,
+        "width_in": 27.5,
+        "height_in": 6.0,
+        "source": "STEP file 2026-01-30"
+      }
+    },
+    {
+      "sku": "SM-HR101-GAV-CONCRETE",
+      "family": "Hoop Runner",
+      "displayName": "SURFACE MOUNT, HR101, HOOP RUNNER, GALVANIZED, CONCRETE MOUNTING",
+      "basePrice": null,
+      "bikesPerUnit": 2,
+      "packaged": {
+        "dimSheetMatch": "HR 101 (1 pack box)",
+        "weight_lbs": 14,
+        "length_in": 32.4,
+        "width_in": 27.5,
+        "height_in": 6.0,
+        "source": "STEP file 2026-01-30"
+      }
+    },
+    {
+      "sku": "80301-0166-LEAN-BLK13",
+      "family": "Hoop Runner",
+      "displayName": "HOOP RUNNER, HR101, SURFACE/RAIL, 1.90\" OD, LEAN BAR, BLACK POLYESTER POWDER",
+      "basePrice": 245,
+      "bikesPerUnit": 2,
+      "packaged": {
+        "dimSheetMatch": "HR 201 (City of LA)",
+        "weight_lbs": 45,
+        "length_in": 35,
+        "width_in": 30,
+        "height_in": 8
+      }
+    },
+    {
+      "sku": "80301-0166-LEAN-GAV",
+      "family": "Hoop Runner",
+      "displayName": "HOOP RUNNER, HR101, SURFACE/RAIL, 1.90\" OD, LEAN BAR, HD GALVANIZED",
+      "basePrice": 265,
+      "bikesPerUnit": 2,
+      "packaged": {
+        "dimSheetMatch": "HR 201 (City of LA)",
+        "weight_lbs": 45,
+        "length_in": 35,
+        "width_in": 30,
+        "height_in": 8
+      }
+    },
+    {
+      "sku": "HR124-BLK23",
+      "family": "Hoop Runner",
+      "displayName": "HOOP RUNNER RAIL SYSTEM, 04 BIKES, HR 101 BLACK DURAPLAS",
+      "basePrice": null,
+      "bikesPerUnit": 4,
+      "packaged": {
+        "dimSheetMatch": "HR 201 (City of LA)",
+        "weight_lbs": 45,
+        "length_in": 35,
+        "width_in": 30,
+        "height_in": 8
+      }
+    },
+    {
+      "sku": "HR124-GAV",
+      "family": "Hoop Runner",
+      "displayName": "HOOP RUNNER RAIL SYSTEM, 04 BIKES, HR 101 HD GALVANIZED",
+      "basePrice": null,
+      "bikesPerUnit": 4,
+      "packaged": {
+        "dimSheetMatch": "HR 201 (City of LA)",
+        "weight_lbs": 45,
+        "length_in": 35,
+        "width_in": 30,
+        "height_in": 8
+      }
+    },
+    {
+      "sku": "HR126-BLK23",
+      "family": "Hoop Runner",
+      "displayName": "HOOP RUNNER RAIL SYSTEM, 06 BIKES, HR 101 BLACK DURAPLAS",
+      "basePrice": null,
+      "bikesPerUnit": 6,
+      "packaged": {
+        "dimSheetMatch": "HR 201 (City of LA)",
+        "weight_lbs": 45,
+        "length_in": 35,
+        "width_in": 30,
+        "height_in": 8
+      }
+    },
+    {
+      "sku": "HR126-GAV",
+      "family": "Hoop Runner",
+      "displayName": "HOOP RUNNER RAIL SYSTEM, 06 BIKES, HR 101 HD GALVANIZED",
+      "basePrice": null,
+      "bikesPerUnit": 6,
+      "packaged": {
+        "dimSheetMatch": "HR 201 (City of LA)",
+        "weight_lbs": 45,
+        "length_in": 35,
+        "width_in": 30,
+        "height_in": 8
+      }
+    },
+    {
+      "sku": "HR128-BLK23",
+      "family": "Hoop Runner",
+      "displayName": "HOOP RUNNER RAIL SYSTEM, 08 BIKES, HR 101 BLACK DURAPLAS",
+      "basePrice": null,
+      "bikesPerUnit": 8,
+      "packaged": {
+        "dimSheetMatch": "HR 201 (City of LA)",
+        "weight_lbs": 45,
+        "length_in": 35,
+        "width_in": 30,
+        "height_in": 8
+      }
+    },
+    {
+      "sku": "HR128-GAV",
+      "family": "Hoop Runner",
+      "displayName": "HOOP RUNNER RAIL SYSTEM, 08 BIKES, HR 101 HD GALVANIZED",
+      "basePrice": null,
+      "bikesPerUnit": 8,
+      "packaged": {
+        "dimSheetMatch": "HR 201 (City of LA)",
+        "weight_lbs": 45,
+        "length_in": 35,
+        "width_in": 30,
+        "height_in": 8
+      }
+    },
+    {
+      "sku": "89901-0163-BLK13 (HR201)(W/Chain and Crossbar)",
+      "family": "Hoop Runner",
+      "displayName": "HOOP RUNNER, HR201, SURFACE/RAIL, 2.38\" OD, CHAIN INTERIOR, CROSSBAR, BLACK POWDER",
+      "basePrice": 580,
+      "bikesPerUnit": 2,
+      "packaged": {
+        "dimSheetMatch": "HR 201 (City of LA)",
+        "weight_lbs": 45,
+        "length_in": 35,
+        "width_in": 30,
+        "height_in": 8
+      }
+    },
+    {
+      "sku": "FS-MBA-BLK23",
+      "family": "MBA",
+      "displayName": "FREE STANDING, MBA, MBA VARSITY BIKE DOCK, BLACK DURAPLAS",
+      "basePrice": null,
+      "bikesPerUnit": 2,
+      "packaged": {
+        "dimSheetMatch": "MBA",
+        "weight_lbs": 85,
+        "length_in": 34,
+        "width_in": 7,
+        "height_in": 27
+      }
+    },
+    {
+      "sku": "FS-MBA-GAV",
+      "family": "MBA",
+      "displayName": "FREE STANDING, MBA, MBA VARSITY BIKE DOCK, GALVANIZED",
+      "basePrice": null,
+      "bikesPerUnit": 2,
+      "packaged": {
+        "dimSheetMatch": "MBA",
+        "weight_lbs": 85,
+        "length_in": 34,
+        "width_in": 7,
+        "height_in": 27
+      }
+    },
+    {
+      "sku": "MBV1-GRY14-REVB",
+      "family": "Metal Bike Vault / VisiLocker",
+      "displayName": "MBV1, GREY POWDER COAT, REV B, PACKAGED",
+      "basePrice": null,
+      "bikesPerUnit": 1,
+      "packaged": {
+        "dimSheetMatch": "VISI 1",
+        "weight_lbs": 325,
+        "length_in": 80,
+        "width_in": 32,
+        "height_in": 55
+      }
+    },
+    {
+      "sku": "MBV2-GRY14-REVB",
+      "family": "Metal Bike Vault / VisiLocker",
+      "displayName": "MBV2, GREY POWDER COAT, REV B, PACKAGED",
+      "basePrice": null,
+      "bikesPerUnit": 2,
+      "packaged": {
+        "dimSheetMatch": "VISI 1",
+        "weight_lbs": 325,
+        "length_in": 80,
+        "width_in": 32,
+        "height_in": 55
+      }
+    },
+    {
+      "sku": "VISI1-GRY14-REVB",
+      "family": "Metal Bike Vault / VisiLocker",
+      "displayName": "VISI1, GREY POWDER COAT, REV B, PACKAGED",
+      "basePrice": null,
+      "bikesPerUnit": 1,
+      "packaged": {
+        "dimSheetMatch": "VISI 1",
+        "weight_lbs": 325,
+        "length_in": 80,
+        "width_in": 32,
+        "height_in": 55
+      }
+    },
+    {
+      "sku": "VISI2-GRY14-REVB",
+      "family": "Metal Bike Vault / VisiLocker",
+      "displayName": "VISI2, GREY POWDER COAT, REV B, PACKAGED",
+      "basePrice": null,
+      "bikesPerUnit": 2,
+      "packaged": {
+        "dimSheetMatch": "VISI 1",
+        "weight_lbs": 325,
+        "length_in": 80,
+        "width_in": 32,
+        "height_in": 55
+      }
+    },
+    {
+      "sku": "80101-0202-BLK13",
+      "family": "Radius",
+      "displayName": "RADIUS, INVERTED U RACK, SURFACE MOUNTED, BLACK POLYESTER POWDER",
+      "basePrice": 210,
+      "bikesPerUnit": 2,
+      "packaged": {
+        "dimSheetMatch": "Radius(1)",
+        "weight_lbs": 21,
+        "length_in": 34,
+        "width_in": 24,
+        "height_in": 8
+      }
+    },
+    {
+      "sku": "80101-0202-GAV",
+      "family": "Radius",
+      "displayName": "RADIUS, INVERTED U RACK, SURFACE MOUNTED, GALVANIZED",
+      "basePrice": 210,
+      "bikesPerUnit": 2,
+      "packaged": {
+        "dimSheetMatch": "Radius(1)",
+        "weight_lbs": 21,
+        "length_in": 34,
+        "width_in": 24,
+        "height_in": 8
+      }
+    },
+    {
+      "sku": "SD6X-GAV",
+      "family": "Skatedock",
+      "displayName": "E-SkateDock, SD6X, HD GALVANIZED, TOP INCLUDED",
+      "basePrice": null,
+      "bikesPerUnit": 2,
+      "packaged": {
+        "dimSheetMatch": "SM6x",
+        "weight_lbs": 58,
+        "length_in": 49,
+        "width_in": 14,
+        "height_in": 13
+      }
+    },
+    {
+      "sku": "SD6X-GRY23",
+      "family": "Skatedock",
+      "displayName": "E-SkateDock, SD6X, SILVER DURAPLAS, TOP INCLUDED",
+      "basePrice": null,
+      "bikesPerUnit": 2,
+      "packaged": {
+        "dimSheetMatch": "SM6x",
+        "weight_lbs": 58,
+        "length_in": 49,
+        "width_in": 14,
+        "height_in": 13
+      }
+    },
+    {
+      "sku": "SM10X-GRY23",
+      "family": "Skatedock",
+      "displayName": "SKATEDOCK, SM10X, SILVER DURAPLAS, TOP INCLUDED",
+      "basePrice": null,
+      "bikesPerUnit": 0,
+      "packaged": {
+        "dimSheetMatch": "Skatedock SM10x",
+        "weight_lbs": 28,
+        "length_in": 73.0,
+        "width_in": 14.0,
+        "height_in": 13.0,
+        "source": "STEP file 2026-01-30"
+      }
+    },
+    {
+      "sku": "SIK114-2R-METAL",
+      "family": "Strut Install Kit",
+      "displayName": "Strut Install Kit, 8 Bike Add-On, 2 Rails, Metal Stud Walls",
+      "basePrice": null,
+      "bikesPerUnit": 0,
+      "packaged": {
+        "dimSheetMatch": "Derived from component analysis",
+        "weight_lbs": 39,
+        "length_in": 114,
+        "width_in": 2,
+        "height_in": 2
+      }
+    },
+    {
+      "sku": "SIK114-3R-METAL",
+      "family": "Strut Install Kit",
+      "displayName": "Strut Install Kit, 8 Bike Add-On, 3 Rails, Metal Stud Walls",
+      "basePrice": null,
+      "bikesPerUnit": 0,
+      "packaged": {
+        "dimSheetMatch": "Derived from component analysis",
+        "weight_lbs": 59,
+        "length_in": 114,
+        "width_in": 2,
+        "height_in": 4
+      }
+    },
+    {
+      "sku": "SIK114-2R-WOOD",
+      "family": "Strut Install Kit",
+      "displayName": "Strut Install Kit, 8 Bike Add-On, 2 Rails, Wood Stud Walls",
+      "basePrice": null,
+      "bikesPerUnit": 0,
+      "packaged": {
+        "dimSheetMatch": "Derived from component analysis",
+        "weight_lbs": 39,
+        "length_in": 114,
+        "width_in": 2,
+        "height_in": 2
+      }
+    },
+    {
+      "sku": "SIK114-3R-WOOD",
+      "family": "Strut Install Kit",
+      "displayName": "Strut Install Kit, 8 Bike Add-On, 3 Rails, Wood Stud Walls",
+      "basePrice": null,
+      "bikesPerUnit": 0,
+      "packaged": {
+        "dimSheetMatch": "Derived from component analysis",
+        "weight_lbs": 59,
+        "length_in": 114,
+        "width_in": 2,
+        "height_in": 4
+      }
+    },
+    {
+      "sku": "SIK120-3R-METAL",
+      "family": "Strut Install Kit",
+      "displayName": "Strut Install Kit, 10 Bike, 3 Rails, Metal Stud Walls",
+      "basePrice": null,
+      "bikesPerUnit": 0,
+      "packaged": {
+        "dimSheetMatch": "Derived from component analysis",
+        "weight_lbs": 62,
+        "length_in": 120,
+        "width_in": 2,
+        "height_in": 4
+      }
+    },
+    {
+      "sku": "SIK120-2R-METAL",
+      "family": "Strut Install Kit",
+      "displayName": "Strut Install Kit, 10 Bike, 2 Rails, Metal Stud Walls",
+      "basePrice": null,
+      "bikesPerUnit": 0,
+      "packaged": {
+        "dimSheetMatch": "Derived from component analysis",
+        "weight_lbs": 41,
+        "length_in": 120,
+        "width_in": 2,
+        "height_in": 2
+      }
+    },
+    {
+      "sku": "SIK120-2R-WOOD",
+      "family": "Strut Install Kit",
+      "displayName": "Strut Install Kit, 10 Bike, 2 Rails, Wood Stud Walls",
+      "basePrice": null,
+      "bikesPerUnit": 0,
+      "packaged": {
+        "dimSheetMatch": "Derived from component analysis",
+        "weight_lbs": 41,
+        "length_in": 120,
+        "width_in": 2,
+        "height_in": 2
+      }
+    },
+    {
+      "sku": "SIK120-3R-WOOD",
+      "family": "Strut Install Kit",
+      "displayName": "Strut Install Kit, 10 Bike, 3 Rails, Wood Stud Walls",
+      "basePrice": null,
+      "bikesPerUnit": 0,
+      "packaged": {
+        "dimSheetMatch": "Derived from component analysis",
+        "weight_lbs": 62,
+        "length_in": 120,
+        "width_in": 2,
+        "height_in": 4
+      }
+    },
+    {
+      "sku": "SIK24-2R-METAL",
+      "family": "Strut Install Kit",
+      "displayName": "Strut Install Kit, 2 Bikes, 2 Rails, Metal Stud Walls",
+      "basePrice": null,
+      "bikesPerUnit": 0,
+      "packaged": {
+        "dimSheetMatch": "Derived from component analysis",
+        "weight_lbs": 9,
+        "length_in": 24,
+        "width_in": 2,
+        "height_in": 2
+      }
+    },
+    {
+      "sku": "SIK24-3R-METAL",
+      "family": "Strut Install Kit",
+      "displayName": "Strut Install Kit, 2 Bikes, 3 Rails, Metal Stud Walls",
+      "basePrice": null,
+      "bikesPerUnit": 0,
+      "packaged": {
+        "dimSheetMatch": "Derived from component analysis",
+        "weight_lbs": 14,
+        "length_in": 24,
+        "width_in": 2,
+        "height_in": 4
+      }
+    },
+    {
+      "sku": "SIK24-2R-WOOD",
+      "family": "Strut Install Kit",
+      "displayName": "Strut Install Kit, 2 Bikes, 2 Rails, Wood Stud Walls",
+      "basePrice": null,
+      "bikesPerUnit": 0,
+      "packaged": {
+        "dimSheetMatch": "Derived from component analysis",
+        "weight_lbs": 9,
+        "length_in": 24,
+        "width_in": 2,
+        "height_in": 2
+      }
+    },
+    {
+      "sku": "SIK24-3R-WOOD",
+      "family": "Strut Install Kit",
+      "displayName": "Strut Install Kit, 2 Bikes, 3 Rails, Wood Stud Walls",
+      "basePrice": null,
+      "bikesPerUnit": 0,
+      "packaged": {
+        "dimSheetMatch": "Derived from component analysis",
+        "weight_lbs": 14,
+        "length_in": 24,
+        "width_in": 2,
+        "height_in": 4
+      }
+    },
+    {
+      "sku": "SIK57-2R-METAL",
+      "family": "Strut Install Kit",
+      "displayName": "Strut Install Kit, 4 Bike Add-On, 2 Rails, Metal Stud Walls",
+      "basePrice": null,
+      "bikesPerUnit": 0,
+      "packaged": {
+        "dimSheetMatch": "Derived from component analysis",
+        "weight_lbs": 20,
+        "length_in": 57,
+        "width_in": 2,
+        "height_in": 2
+      }
+    },
+    {
+      "sku": "SIK57-3R-METAL",
+      "family": "Strut Install Kit",
+      "displayName": "Strut Install Kit, 4 Bike Add-On, 3 Rails, Metal Stud Walls",
+      "basePrice": null,
+      "bikesPerUnit": 0,
+      "packaged": {
+        "dimSheetMatch": "Derived from component analysis",
+        "weight_lbs": 30,
+        "length_in": 57,
+        "width_in": 2,
+        "height_in": 4
+      }
+    },
+    {
+      "sku": "SIK57-2R-WOOD",
+      "family": "Strut Install Kit",
+      "displayName": "Strut Install Kit, 4 Bike Add-On, 2 Rails, Wood Stud Walls",
+      "basePrice": null,
+      "bikesPerUnit": 0,
+      "packaged": {
+        "dimSheetMatch": "Derived from component analysis",
+        "weight_lbs": 20,
+        "length_in": 57,
+        "width_in": 2,
+        "height_in": 2
+      }
+    },
+    {
+      "sku": "SIK57-3R-WOOD",
+      "family": "Strut Install Kit",
+      "displayName": "Strut Install Kit, 4 Bike Add-On, 3 Rails, Wood Stud Walls",
+      "basePrice": null,
+      "bikesPerUnit": 0,
+      "packaged": {
+        "dimSheetMatch": "Derived from component analysis",
+        "weight_lbs": 30,
+        "length_in": 57,
+        "width_in": 2,
+        "height_in": 4
+      }
+    },
+    {
+      "sku": "SIK86-2R-METAL",
+      "family": "Strut Install Kit",
+      "displayName": "Strut Install Kit, 6 Bike Add-On, 2 Rails, Metal Stud Walls",
+      "basePrice": null,
+      "bikesPerUnit": 0,
+      "packaged": {
+        "dimSheetMatch": "Derived from component analysis",
+        "weight_lbs": 30,
+        "length_in": 86,
+        "width_in": 2,
+        "height_in": 2
+      }
+    },
+    {
+      "sku": "SIK86-3R-METAL",
+      "family": "Strut Install Kit",
+      "displayName": "Strut Install Kit, 6 Bike Add-On, 3 Rails, Metal Stud Walls",
+      "basePrice": null,
+      "bikesPerUnit": 0,
+      "packaged": {
+        "dimSheetMatch": "Derived from component analysis",
+        "weight_lbs": 45,
+        "length_in": 86,
+        "width_in": 2,
+        "height_in": 4
+      }
+    },
+    {
+      "sku": "SIK86-2R-WOOD",
+      "family": "Strut Install Kit",
+      "displayName": "Strut Install Kit, 6 Bike Add-On, 2 Rails, Wood Stud Walls",
+      "basePrice": null,
+      "bikesPerUnit": 0,
+      "packaged": {
+        "dimSheetMatch": "Derived from component analysis",
+        "weight_lbs": 30,
+        "length_in": 86,
+        "width_in": 2,
+        "height_in": 2
+      }
+    },
+    {
+      "sku": "SIK86-3R-WOOD",
+      "family": "Strut Install Kit",
+      "displayName": "Strut Install Kit, 6 Bike Add-On, 3 Rails, Wood Stud Walls",
+      "basePrice": null,
+      "bikesPerUnit": 0,
+      "packaged": {
+        "dimSheetMatch": "Derived from component analysis",
+        "weight_lbs": 45,
+        "length_in": 86,
+        "width_in": 2,
+        "height_in": 4
+      }
+    },
+    {
+      "sku": "50801-0012-GAV-100",
+      "family": "Cane Detection",
+      "displayName": "UNISTRUT, 100\"",
+      "basePrice": 43.55,
+      "bikesPerUnit": 0,
+      "packaged": {
+        "dimSheetMatch": "Derived: single unistrut channel",
+        "weight_lbs": 17,
+        "length_in": 100,
+        "width_in": 2,
+        "height_in": 2
+      }
+    },
+    {
+      "sku": "50801-0012-GAV-18",
+      "family": "Cane Detection",
+      "displayName": "UNISTRUT, 18\"",
+      "basePrice": 43.55,
+      "bikesPerUnit": 0,
+      "packaged": {
+        "dimSheetMatch": "Derived: single unistrut channel",
+        "weight_lbs": 3,
+        "length_in": 18,
+        "width_in": 2,
+        "height_in": 2
+      }
+    },
+    {
+      "sku": "50801-0012-GAV-46",
+      "family": "Cane Detection",
+      "displayName": "UNISTRUT, 46\"",
+      "basePrice": 43.55,
+      "bikesPerUnit": 0,
+      "packaged": {
+        "dimSheetMatch": "Derived: single unistrut channel",
+        "weight_lbs": 8,
+        "length_in": 46,
+        "width_in": 2,
+        "height_in": 2
+      }
+    },
+    {
+      "sku": "50801-0012-GAV-75",
+      "family": "Cane Detection",
+      "displayName": "UNISTRUT, 75\"",
+      "basePrice": 43.55,
+      "bikesPerUnit": 0,
+      "packaged": {
+        "dimSheetMatch": "Derived: single unistrut channel",
+        "weight_lbs": 13,
+        "length_in": 75,
+        "width_in": 2,
+        "height_in": 2
+      }
+    },
+    {
+      "sku": "50801-0012-GAV-102",
+      "family": "Cane Detection",
+      "displayName": "UNISTRUT, 102\"",
+      "basePrice": 43.55,
+      "bikesPerUnit": 0,
+      "packaged": {
+        "dimSheetMatch": "Derived: single unistrut channel",
+        "weight_lbs": 17,
+        "length_in": 102,
+        "width_in": 2,
+        "height_in": 2
+      }
+    },
+    {
+      "sku": "50801-0012-GAV-45",
+      "family": "Cane Detection",
+      "displayName": "UNISTRUT, 45\"",
+      "basePrice": 43.55,
+      "bikesPerUnit": 0,
+      "packaged": {
+        "dimSheetMatch": "Derived: single unistrut channel",
+        "weight_lbs": 8,
+        "length_in": 45,
+        "width_in": 2,
+        "height_in": 2
+      }
+    },
+    {
+      "sku": "50801-0012-GAV-74",
+      "family": "Cane Detection",
+      "displayName": "UNISTRUT, 74\"",
+      "basePrice": 43.55,
+      "bikesPerUnit": 0,
+      "packaged": {
+        "dimSheetMatch": "Derived: single unistrut channel",
+        "weight_lbs": 12,
+        "length_in": 74,
+        "width_in": 2,
+        "height_in": 2
+      }
+    },
+    {
+      "sku": "8110 - Stretch Rack",
+      "family": "Saris",
+      "displayName": "SARIS, STRETCH RACK, 8110, 10 BIKE, 6\u2019 W/LOCK BAR",
+      "basePrice": 1440,
+      "bikesPerUnit": 10,
+      "packaged": {
+        "dimSheetMatch": "6 bike stretch rack",
+        "weight_lbs": 104,
+        "length_in": 90,
+        "width_in": 48,
+        "height_in": 7
+      }
+    },
+    {
+      "sku": "8116 - Stretch Rack",
+      "family": "Saris",
+      "displayName": "SARIS, STRETCH RACK, 8116, 6 BIKE, 4.5\u2019 W/LOCK BAR",
+      "basePrice": 966,
+      "bikesPerUnit": 6,
+      "packaged": {
+        "dimSheetMatch": "6 bike stretch rack",
+        "weight_lbs": 104,
+        "length_in": 90,
+        "width_in": 48,
+        "height_in": 7
+      }
+    },
+    {
+      "sku": "8118 - Stretch Rack",
+      "family": "Saris",
+      "displayName": "SARIS, STRETCH RACK, 8118, 8 BIKE, 4.5\u2019 W/LOCK BAR",
+      "basePrice": 1224,
+      "bikesPerUnit": 8,
+      "packaged": {
+        "dimSheetMatch": "8 bike streth rack",
+        "weight_lbs": 119,
+        "length_in": 90,
+        "width_in": 48,
+        "height_in": 10
+      }
+    },
+    {
+      "sku": "8180 - Stretch Rack",
+      "family": "Saris",
+      "displayName": "SARIS, STRETCH RACK, 8180, 8 BIKE, 6\u2019 W/LOCK BAR",
+      "basePrice": 1224,
+      "bikesPerUnit": 8,
+      "packaged": {
+        "dimSheetMatch": "6 bike stretch rack",
+        "weight_lbs": 104,
+        "length_in": 90,
+        "width_in": 48,
+        "height_in": 7
+      }
+    },
+    {
+      "sku": "8116 - Stretch Rack",
+      "family": "Saris",
+      "displayName": "SARIS, STRETCH RACK, 8116, 6 BIKE, 4.5\u2019 W/LOCK BAR",
+      "basePrice": 966,
+      "bikesPerUnit": 6,
+      "packaged": {
+        "dimSheetMatch": "6 bike stretch rack",
+        "weight_lbs": 104,
+        "length_in": 90,
+        "width_in": 48,
+        "height_in": 7
+      }
+    },
+    {
+      "sku": "8118 - Stretch Rack",
+      "family": "Saris",
+      "displayName": "SARIS, STRETCH RACK, 8118, 8 BIKE, 4.5\u2019 W/LOCK BAR",
+      "basePrice": 1224,
+      "bikesPerUnit": 8,
+      "packaged": {
+        "dimSheetMatch": "8 bike streth rack",
+        "weight_lbs": 119,
+        "length_in": 90,
+        "width_in": 48,
+        "height_in": 10
+      }
+    },
+    {
+      "sku": "8180 - Stretch Rack",
+      "family": "Saris",
+      "displayName": "SARIS, STRETCH RACK, 8180, 8 BIKE, 6\u2019 W/LOCK BAR",
+      "basePrice": 1224,
+      "bikesPerUnit": 8,
+      "packaged": {
+        "dimSheetMatch": "6 bike stretch rack",
+        "weight_lbs": 104,
+        "length_in": 90,
+        "width_in": 48,
+        "height_in": 7
+      }
+    },
+    {
+      "sku": "90101-2287-BLK13",
+      "family": "Varsity",
+      "displayName": "VARSITY, DV215, SURFACE MOUNTED, BLACK, 2-PK, 4 BIKES SECURED",
+      "basePrice": 815,
+      "bikesPerUnit": 2,
+      "packaged": {
+        "dimSheetMatch": "Varsity(2)",
+        "weight_lbs": 30,
+        "length_in": 34.5,
+        "width_in": 11.0,
+        "height_in": 13.5,
+        "source": "STEP file 2026-01-30"
+      }
+    },
+    {
+      "sku": "90101-2287-GAV",
+      "family": "Varsity",
+      "displayName": "VARSITY, DV215, SURFACE MOUNTED, HD GAV, 2-PK, 4 BIKES SECURED",
+      "basePrice": 815,
+      "bikesPerUnit": 2,
+      "packaged": {
+        "dimSheetMatch": "Varsity(2)",
+        "weight_lbs": 30,
+        "length_in": 34.5,
+        "width_in": 11.0,
+        "height_in": 13.5,
+        "source": "STEP file 2026-01-30"
+      }
+    },
+    {
+      "sku": "90101-0172-BLK13",
+      "family": "VR2 Offset",
+      "displayName": "VERTICAL, OFFSET, VR2, BLACK POLYESTER POWDER, 2-PK, 4 BIKES SECURED",
+      "basePrice": 670,
+      "bikesPerUnit": 0,
+      "packaged": {
+        "dimSheetMatch": "VR-2(2)",
+        "weight_lbs": 62,
+        "length_in": 42.8,
+        "width_in": 24.9,
+        "height_in": 13.4,
+        "source": "STEP file 2026-01-30"
+      }
+    },
+    {
+      "sku": "90101-0172-BLK13",
+      "family": "VR2 Offset",
+      "displayName": "VERTICAL, OFFSET, VR2, BLACK POLYESTER POWDER, 2-PK, 4 BIKES SECURED",
+      "basePrice": 670,
+      "bikesPerUnit": 2,
+      "packaged": {
+        "dimSheetMatch": "VR-2(2)",
+        "weight_lbs": 62,
+        "length_in": 42.8,
+        "width_in": 24.9,
+        "height_in": 13.4,
+        "source": "STEP file 2026-01-30"
+      }
+    },
+    {
+      "sku": "90101-0172-BLK13",
+      "family": "VR2 Offset",
+      "displayName": "VERTICAL, OFFSET, VR2, BLACK POLYESTER POWDER, 2-PK, 4 BIKES SECURED",
+      "basePrice": 670,
+      "bikesPerUnit": 2,
+      "packaged": {
+        "dimSheetMatch": "VR-2(2)",
+        "weight_lbs": 62,
+        "length_in": 42.8,
+        "width_in": 24.9,
+        "height_in": 13.4,
+        "source": "STEP file 2026-01-30"
+      }
+    },
+    {
+      "sku": "90101-0172-BLK13",
+      "family": "VR2 Offset",
+      "displayName": "VERTICAL, OFFSET, VR2, BLACK POLYESTER POWDER, 2-PK, 4 BIKES SECURED",
+      "basePrice": 670,
+      "bikesPerUnit": 2,
+      "packaged": {
+        "dimSheetMatch": "VR-2(2)",
+        "weight_lbs": 62,
+        "length_in": 42.8,
+        "width_in": 24.9,
+        "height_in": 13.4,
+        "source": "STEP file 2026-01-30"
+      }
+    },
+    {
+      "sku": "90101-1172-BLK13",
+      "family": "VR1 XL",
+      "displayName": "VERTICAL, VR1, BIKE DOCK, BLACK POLYESTER, BOXED, 2-PK, 2 BIKES SECURED",
+      "basePrice": 350,
+      "bikesPerUnit": 0,
+      "packaged": {
+        "dimSheetMatch": "VR-1(2)",
+        "weight_lbs": 35,
+        "length_in": 31,
+        "width_in": 25,
+        "height_in": 8
+      }
+    },
+    {
+      "sku": "90101-1172-BLK13",
+      "family": "VR1 XL",
+      "displayName": "VERTICAL, VR1, BIKE DOCK, BLACK POLYESTER, BOXED, 2-PK, 2 BIKES SECURED",
+      "basePrice": 350,
+      "bikesPerUnit": 1,
+      "packaged": {
+        "dimSheetMatch": "VR-1(2)",
+        "weight_lbs": 35,
+        "length_in": 31,
+        "width_in": 25,
+        "height_in": 8
+      }
+    },
+    {
+      "sku": "90101-1172-BLK13",
+      "family": "VR1 XL",
+      "displayName": "VERTICAL, VR1, BIKE DOCK, BLACK POLYESTER, BOXED, 2-PK, 2 BIKES SECURED",
+      "basePrice": 350,
+      "bikesPerUnit": 1,
+      "packaged": {
+        "dimSheetMatch": "VR-1(2)",
+        "weight_lbs": 35,
+        "length_in": 31,
+        "width_in": 25,
+        "height_in": 8
+      }
+    },
+    {
+      "sku": "90101-1172-BLK13",
+      "family": "VR1 XL",
+      "displayName": "VERTICAL, VR1, BIKE DOCK, BLACK POLYESTER, BOXED, 2-PK, 2 BIKES SECURED",
+      "basePrice": 350,
+      "bikesPerUnit": 1,
+      "packaged": {
+        "dimSheetMatch": "VR-1(2)",
+        "weight_lbs": 35,
+        "length_in": 31,
+        "width_in": 25,
+        "height_in": 8
+      }
+    }
+  ]
+}

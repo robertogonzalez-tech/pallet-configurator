@@ -1,0 +1,270 @@
+{
+  "families": {
+    "varsity": {
+      "name": "Varsity Bike Dock",
+      "patterns": ["varsity", "dv215", "80101-0088", "80101-0287", "80301-0088", "80301-0287", "90101-2287"],
+      "unitsPerPallet": 80,
+      "weightPerUnit": 29
+    },
+    "vr2": {
+      "name": "Vertical Offset Rack (VR2)",
+      "patterns": ["vr2", "vr-vr2", "vertical offset rack", "90101-0172", "80101-0172"],
+      "unitsPerPallet": 25,
+      "weightPerUnit": 31
+    },
+    "vr1": {
+      "name": "Vertical Offset XL Rack (VR1)",
+      "patterns": ["vr1", "vr-vr1", "vertical offset xl"],
+      "unitsPerPallet": 25,
+      "weightPerUnit": 31
+    },
+    "undergrad": {
+      "name": "Undergrad Bike Rack",
+      "patterns": ["undergrad"],
+      "unitsPerPallet": 4,
+      "weightPerUnit": 85
+    },
+    "dd4": {
+      "name": "Double Docker 4-Bike",
+      "patterns": ["dd04", "dd-04", "dd-ss-04", "dd4"],
+      "unitsPerPallet": 4,
+      "weightPerUnit": 206
+    },
+    "dd6": {
+      "name": "Double Docker 6-Bike",
+      "patterns": ["dd06", "dd-06", "dd-ss-06", "dd6"],
+      "unitsPerPallet": 3,
+      "weightPerUnit": 260
+    },
+    "dsdd": {
+      "name": "Double Sided Double Docker",
+      "patterns": ["dsdd08", "dsdd12"],
+      "unitsPerPallet": 2,
+      "weightPerUnit": 400
+    },
+    "mbv1": {
+      "name": "Metal Bike Vault 1",
+      "patterns": ["mbv1", "mbv-1"],
+      "unitsPerPallet": 4,
+      "weightPerUnit": 312
+    },
+    "mbv2": {
+      "name": "Metal Bike Vault 2",
+      "patterns": ["mbv2", "mbv-2"],
+      "unitsPerPallet": 2,
+      "weightPerUnit": 420
+    },
+    "visi1": {
+      "name": "VisiLocker 1",
+      "patterns": ["visi1", "visi-1"],
+      "unitsPerPallet": 5,
+      "weightPerUnit": 280
+    },
+    "visi2": {
+      "name": "VisiLocker 2",
+      "patterns": ["visi2", "visi-2"],
+      "unitsPerPallet": 2,
+      "weightPerUnit": 375
+    },
+    "fbv1": {
+      "name": "FBV1 Locker",
+      "patterns": ["fbv1", "fbv-1"],
+      "unitsPerPallet": 4,
+      "weightPerUnit": 300
+    },
+    "fbv2": {
+      "name": "FBV2 Locker",
+      "patterns": ["fbv2", "fbv-2"],
+      "unitsPerPallet": 2,
+      "weightPerUnit": 400
+    },
+    "hr101": {
+      "name": "Hoop Runner 101",
+      "patterns": ["hr101", "hr-101", "hr100", "hr-100"],
+      "unitsPerPallet": 50,
+      "weightPerUnit": 14
+    },
+    "hr201": {
+      "name": "Hoop Runner 201 LA",
+      "patterns": ["hr201", "hr-201"],
+      "unitsPerPallet": 15,
+      "weightPerUnit": 48
+    },
+    "hr124": {
+      "name": "Hoops On Rails 124",
+      "patterns": ["hr124", "hr-124", "hr126", "hr128"],
+      "unitsPerPallet": 8,
+      "weightPerUnit": 60
+    },
+    "wave": {
+      "name": "Wave Rack",
+      "patterns": ["wave rack", "wave"],
+      "unitsPerPallet": 4,
+      "weightPerUnit": 58
+    },
+    "skatedock": {
+      "name": "SkateDock",
+      "patterns": ["skatedock", "sd6x", "sm10x", "89901-121"],
+      "unitsPerPallet": 15,
+      "weightPerUnit": 28
+    },
+    "dismount": {
+      "name": "Dismount Scooter Dock",
+      "patterns": ["dismount", "89901-205", "80101-205", "80301-204", "80301-205"],
+      "unitsPerPallet": 50,
+      "weightPerUnit": 15
+    },
+    "ss120": {
+      "name": "Side Stage 120\"",
+      "patterns": ["ss120", "ss-120"],
+      "unitsPerPallet": 4,
+      "weightPerUnit": 85
+    },
+    "ss95": {
+      "name": "Side Stage 95\"",
+      "patterns": ["ss95", "ss-95"],
+      "unitsPerPallet": 5,
+      "weightPerUnit": 70
+    },
+    "ss66": {
+      "name": "Side Stage 66\"",
+      "patterns": ["ss66", "ss-66"],
+      "unitsPerPallet": 8,
+      "weightPerUnit": 50
+    },
+    "ss38": {
+      "name": "Side Stage 38\"",
+      "patterns": ["ss38", "ss-38"],
+      "unitsPerPallet": 10,
+      "weightPerUnit": 35
+    },
+    "ssa114": {
+      "name": "Side Stage Add-On 114\"",
+      "patterns": ["ssa114", "ssa-114"],
+      "unitsPerPallet": 5,
+      "weightPerUnit": 60
+    },
+    "ssa86": {
+      "name": "Side Stage Add-On 86\"",
+      "patterns": ["ssa86", "ssa-86"],
+      "unitsPerPallet": 6,
+      "weightPerUnit": 45
+    },
+    "ssa57": {
+      "name": "Side Stage Add-On 57\"",
+      "patterns": ["ssa57", "ssa-57"],
+      "unitsPerPallet": 8,
+      "weightPerUnit": 35
+    },
+    "cs120": {
+      "name": "Center Stage 120\"",
+      "patterns": ["cs120", "cs-120"],
+      "unitsPerPallet": 4,
+      "weightPerUnit": 90
+    },
+    "cs95": {
+      "name": "Center Stage 95\"",
+      "patterns": ["cs95", "cs-95"],
+      "unitsPerPallet": 4,
+      "weightPerUnit": 75
+    },
+    "cs66": {
+      "name": "Center Stage 66\"",
+      "patterns": ["cs66", "cs-66"],
+      "unitsPerPallet": 6,
+      "weightPerUnit": 55
+    },
+    "cs38": {
+      "name": "Center Stage 38\"",
+      "patterns": ["cs38", "cs-38"],
+      "unitsPerPallet": 8,
+      "weightPerUnit": 40
+    },
+    "csa114": {
+      "name": "Center Stage Add-On 114\"",
+      "patterns": ["csa114", "csa-114"],
+      "unitsPerPallet": 5,
+      "weightPerUnit": 65
+    },
+    "csa86": {
+      "name": "Center Stage Add-On 86\"",
+      "patterns": ["csa86", "csa-86"],
+      "unitsPerPallet": 6,
+      "weightPerUnit": 50
+    },
+    "csa57": {
+      "name": "Center Stage Add-On 57\"",
+      "patterns": ["csa57", "csa-57"],
+      "unitsPerPallet": 8,
+      "weightPerUnit": 38
+    },
+    "sik120": {
+      "name": "SIK120 Strut Kit (10-bike)",
+      "patterns": ["sik120", "sik-120"],
+      "unitsPerPallet": 4,
+      "weightPerUnit": 85
+    },
+    "sik114": {
+      "name": "SIK114 Strut Kit",
+      "patterns": ["sik114", "sik-114"],
+      "unitsPerPallet": 5,
+      "weightPerUnit": 75
+    },
+    "sik86": {
+      "name": "SIK86 Strut Kit (6-bike)",
+      "patterns": ["sik86", "sik-86"],
+      "unitsPerPallet": 6,
+      "weightPerUnit": 55
+    },
+    "sik57": {
+      "name": "SIK57 Strut Kit (4-bike)",
+      "patterns": ["sik57", "sik-57"],
+      "unitsPerPallet": 10,
+      "weightPerUnit": 40
+    },
+    "sik24": {
+      "name": "SIK24 Strut Kit (2-bike)",
+      "patterns": ["sik24", "sik-24"],
+      "unitsPerPallet": 15,
+      "weightPerUnit": 25
+    },
+    "cs200": {
+      "name": "Circle Series CS200",
+      "patterns": ["cs200", "circle series", "sm-om"],
+      "unitsPerPallet": 14,
+      "weightPerUnit": 40
+    },
+    "2up": {
+      "name": "2UP Bike Rack",
+      "patterns": ["2up"],
+      "unitsPerPallet": 30,
+      "weightPerUnit": 20
+    },
+    "mba": {
+      "name": "MBA Bike Dock",
+      "patterns": ["mba"],
+      "unitsPerPallet": 10,
+      "weightPerUnit": 45
+    },
+    "radius": {
+      "name": "Radius Rack",
+      "patterns": ["radius"],
+      "unitsPerPallet": 18,
+      "weightPerUnit": 34
+    },
+    "stretch": {
+      "name": "Saris Stretch Rack",
+      "patterns": ["stretch", "saris", "8110", "8116", "8118", "8180"],
+      "unitsPerPallet": 3,
+      "weightPerUnit": 150
+    },
+    "repair": {
+      "name": "Pump & Repair Stand",
+      "patterns": ["pump", "repair"],
+      "unitsPerPallet": 20,
+      "weightPerUnit": 25
+    }
+  },
+  "updated": "2026-01-30T06:45:00Z",
+  "source": "NetSuite Layout Product Map (142 records)"
+}

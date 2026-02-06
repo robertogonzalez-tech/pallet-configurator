@@ -1,0 +1,37 @@
+{
+  "timestamp": "2026-02-03T22:23:19.260Z",
+  "hawb": "25493380",
+  "soNumber": "7706",
+  "consignee": "GROUND CONTROL SYSTEMS                                                                    AMERICAN LANDSCAPE",
+  "actual": {
+    "pallets": 1,
+    "weight": 1104
+  },
+  "predicted": {
+    "pallets": 1,
+    "weight": 300,
+    "breakdown": [
+      {
+        "sku": "90101-2287-BLK13",
+        "name": "VARSITY, DV215, SURFACE MOUNTED, BLACK, 2-PK, 4 BIKES SECURED",
+        "qty": 20,
+        "pallets": 1,
+        "weight": 300,
+        "rule": "70/pallet, 15lbs/unit"
+      }
+    ]
+  },
+  "variance": {
+    "pallets": 0,
+    "weight": 804,
+    "palletAccurate": true,
+    "withinOnePallet": true
+  },
+  "items": [
+    {
+      "sku": "90101-2287-BLK13",
+      "name": "VARSITY, DV215, SURFACE MOUNTED, BLACK, 2-PK, 4 BIKES SECURED",
+      "qty": 20
+    }
+  ]
+}
