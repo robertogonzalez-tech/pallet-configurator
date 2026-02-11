@@ -335,16 +335,14 @@ async function processBolFile(drive, fileId, fileName) {
         const { error } = await supabase.from('validations').insert({
           pick_ticket_id: `SO${bol.soNumber}`,
           sales_order_id: `SO${bol.soNumber}`,
-          quote_number: null,
           predicted_pallets: prediction.totalPallets,
-          predicted_weight_lbs: prediction.totalWeight,
-          predicted_items: items,
-          prediction_timestamp: new Date().toISOString(),
+          predicted_weight: prediction.totalWeight,
+          predicted_breakdown: prediction.breakdown,
           actual_pallets: bol.pallets,
-          actual_weight_lbs: bol.weight,
+          actual_weight: bol.weight,
           actual_notes: `HAWB: ${bol.hawb}, Consignee: ${bol.consignee}`,
           validated_by: 'System',
-          validation_timestamp: bol.shipDate ? new Date(bol.shipDate).toISOString() : new Date().toISOString(),
+          validated_at: bol.shipDate ? new Date(bol.shipDate).toISOString() : new Date().toISOString(),
           status: 'validated'
         })
         
