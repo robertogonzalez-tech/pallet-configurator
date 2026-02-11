@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const OAuth = require('oauth-1.0a');
 const { createClient } = require('@supabase/supabase-js');
+const { sendValidationEmail, saveToGoogleSheets } = require('./lib/notifications');
 
 // NetSuite credentials from environment variables (trim to handle whitespace from Vercel UI)
 const config = {
@@ -200,7 +201,34 @@ module.exports = async (req, res) => {
       validationId = data?.[0]?.id;
     }
     
-    // 6. Return comparison data
+    // 6. Send notifications (email + Google Sheets backup)
+    const notificationData = {
+      soNumber: `SO${soNumber}`,
+      validatedBy,
+      notes,
+      predicted: {
+        pallets: prediction.totalPallets,
+        weight: prediction.totalWeight
+      },
+      actual: {
+        pallets: actualPallets,
+        weight: actualWeight
+      },
+      variance: {
+        pallets: palletVariance,
+        weight: weightVariance,
+        palletAccurate,
+        withinOnePallet
+      }
+    };
+    
+    // Send email and save to Sheets (non-blocking, don't wait)
+    Promise.all([
+      sendValidationEmail(notificationData).catch(err => console.error('Email error:', err)),
+      saveToGoogleSheets(notificationData).catch(err => console.error('Sheets error:', err))
+    ]);
+    
+    // 7. Return comparison data
     return res.status(200).json({
       success: true,
       validationId,
