@@ -103,25 +103,42 @@ async function downloadFile(drive, fileId, fileName) {
   return tmpPath
 }
 
-// Parse BOL PDF (reused from process-bol.js)
-function parseBolPdf(pdfPath) {
+// Get page count from PDF
+function getPdfPageCount(pdfPath) {
   try {
-    const text = execSync(`pdftotext -layout "${pdfPath}" -`, { encoding: 'utf8' })
-    const fields = {}
+    const info = execSync(`pdfinfo "${pdfPath}"`, { encoding: 'utf8' })
+    const pageMatch = info.match(/Pages:\s+(\d+)/)
+    return pageMatch ? parseInt(pageMatch[1]) : 1
+  } catch (err) {
+    console.warn('Could not get page count, assuming 1 page:', err.message)
+    return 1
+  }
+}
+
+// Parse a single page from BOL PDF
+function parseBolPdfPage(pdfPath, pageNum) {
+  try {
+    const text = execSync(`pdftotext -layout -f ${pageNum} -l ${pageNum} "${pdfPath}" -`, { encoding: 'utf8' })
+    const fields = { pageNum }
     
     // HAWB/Air Bill Number
     const hawbMatch = text.match(/(\d{8})\s*$/m) || text.match(/AIR BILL NO\..*?(\d{8})/is)
     if (hawbMatch) fields.hawb = hawbMatch[1]
     
-    // Shipper Reference Number (Sales Order)
-    const shipperLine = text.split('\n').find(l => /^\d{10}\s+\d{4,}/.test(l.trim()))
+    // Shipper Reference Number (Sales Order) - must be 4 digits
+    const shipperLine = text.split('\n').find(l => /^\d{10}\s+\d{4}/.test(l.trim()))
     if (shipperLine) {
-      const soMatch = shipperLine.match(/^\d{10}\s+(\d{4,})/)
+      const soMatch = shipperLine.match(/^\d{10}\s+(\d{4})/)
       if (soMatch) fields.soNumber = soMatch[1]
     }
     if (!fields.soNumber) {
-      const soMatch2 = text.match(/SHIPPER REFERENCE NUMBER.*?(\d{4,6})/is)
+      const soMatch2 = text.match(/SHIPPER REFERENCE NUMBER.*?(\d{4})/is)
       if (soMatch2) fields.soNumber = soMatch2[1]
+    }
+    
+    // Skip if no valid 4-digit SO number
+    if (!fields.soNumber || fields.soNumber.length !== 4) {
+      return null
     }
     
     // Packages and weight from "1 BIKE RACKS ... 1104" line
@@ -143,9 +160,26 @@ function parseBolPdf(pdfPath) {
     
     return fields
   } catch (err) {
-    console.error('Error parsing PDF:', err.message)
+    console.error(`Error parsing page ${pageNum}:`, err.message)
     return null
   }
+}
+
+// Parse all BOLs from a multi-page PDF
+function parseBolPdf(pdfPath) {
+  const pageCount = getPdfPageCount(pdfPath)
+  console.log(`   PDF has ${pageCount} page(s)`)
+  
+  const bols = []
+  for (let page = 1; page <= pageCount; page++) {
+    const bol = parseBolPdfPage(pdfPath, page)
+    if (bol && bol.soNumber) {
+      bols.push(bol)
+    }
+  }
+  
+  console.log(`   Found ${bols.length} valid BOL(s) with SO numbers`)
+  return bols
 }
 
 // Get sales order items from NetSuite
@@ -242,28 +276,49 @@ function predictPallets(items) {
   return { totalPallets, totalWeight: Math.round(totalWeight), breakdown }
 }
 
-// Process a single BOL file
+// Process a single BOL from a PDF (may contain multiple BOLs)
 async function processBolFile(drive, fileId, fileName) {
   console.log(`\n📋 Processing: ${fileName}`)
   
   let pdfPath = null
+  const results = []
   
   try {
     // Download the file
     pdfPath = await downloadFile(drive, fileId, fileName)
     
-    // Parse the PDF
-    const bol = parseBolPdf(pdfPath)
-    if (!bol || !bol.soNumber) {
-      console.error('   ❌ Could not parse BOL or find SO number')
-      return null
+    // Parse the PDF (returns array of BOLs if multi-page)
+    const bols = parseBolPdf(pdfPath)
+    if (!bols || bols.length === 0) {
+      console.error('   ❌ No valid BOLs found in PDF')
+      return results
     }
     
-    console.log(`   HAWB: ${bol.hawb || 'N/A'}`)
-    console.log(`   SO: ${bol.soNumber}`)
-    console.log(`   Pallets: ${bol.pallets || 'N/A'}`)
-    console.log(`   Weight: ${bol.weight || 'N/A'} lbs`)
-    
+    // Process each BOL
+    for (const bol of bols) {
+      const pageInfo = bol.pageNum ? ` (page ${bol.pageNum})` : ''
+      console.log(`\n   📄 BOL${pageInfo}:`)
+      console.log(`      HAWB: ${bol.hawb || 'N/A'}`)
+      console.log(`      SO: ${bol.soNumber}`)
+      console.log(`      Pallets: ${bol.pallets || 'N/A'}`)
+      console.log(`      Weight: ${bol.weight || 'N/A'} lbs`)
+      
+      const result = await processOneBol(bol, fileId, fileName)
+      if (result) results.push(result)
+    }
+  } finally {
+    // Cleanup temp file
+    if (pdfPath) {
+      try { unlinkSync(pdfPath) } catch {}
+    }
+  }
+  
+  return results
+}
+
+// Process a single BOL entry
+async function processOneBol(bol, fileId, fileName) {
+  try {
     // Get SO items from NetSuite
     const items = await getSalesOrderItems(bol.soNumber)
     if (!items || items.length === 0) {
@@ -358,13 +413,8 @@ async function processBolFile(drive, fileId, fileName) {
     
     return result
   } catch (err) {
-    console.error(`   ❌ Error processing file: ${err.message}`)
+    console.error(`   ❌ Error processing BOL SO${bol.soNumber}: ${err.message}`)
     return null
-  } finally {
-    // Cleanup temp file
-    if (pdfPath) {
-      try { unlinkSync(pdfPath) } catch {}
-    }
   }
 }
 
