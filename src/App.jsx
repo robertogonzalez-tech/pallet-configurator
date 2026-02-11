@@ -169,10 +169,7 @@ class ErrorBoundary extends Component {
   }
 }
 
-// Lazy load 3D components to avoid blocking initial render
-const ModelViewer = lazy(() => import('./ModelViewer'))
-const ModelGallery = lazy(() => import('./ModelGallery'))
-const PalletViewer3D = lazy(() => import('./PalletViewer3D'))
+// 3D viewer components removed per Berto (2026-02-11)
 
 // Packing rules configuration - CALIBRATED against 115 real BOL records
 // Accuracy: 57.4% exact match, 91.3% within ±1 pallet (Jan 2026 calibration run)
@@ -476,7 +473,6 @@ function App() {
   const [quoteLoading, setQuoteLoading] = useState(false)
   const [quoteError, setQuoteError] = useState(null)
   const [selectedPallet, setSelectedPallet] = useState(null)
-  const [show3DViewer, setShow3DViewer] = useState(false)
   const [isOptimizing, setIsOptimizing] = useState(false)
   const [aiPlan, setAiPlan] = useState(null)
   const [showPackingSlip, setShowPackingSlip] = useState(false)
@@ -1625,20 +1621,6 @@ function App() {
         
         {appMode === 'sales' && (
         <div style={{ display: 'flex', gap: '12px', marginTop: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
-          <button
-            onClick={() => setShow3DViewer(!show3DViewer)}
-            style={{
-              padding: '8px 16px',
-              background: show3DViewer ? '#1e40af' : '#f3f4f6',
-              color: show3DViewer ? 'white' : '#374151',
-              border: show3DViewer ? 'none' : '1px solid #d1d5db',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontWeight: '500'
-            }}
-          >
-            {show3DViewer ? '✕ Hide 3D Viewer' : '🎮 Show 3D Product Viewer'}
-          </button>
           <a
             href="/guide.html"
             target="_blank"
@@ -1726,15 +1708,6 @@ function App() {
       {/* Sales Mode - Main configurator */}
       {appMode === 'sales' && (
       <>
-      {/* 3D Model Gallery */}
-      {show3DViewer && (
-        <div className="container" style={{ marginBottom: '20px' }}>
-          <Suspense fallback={<div style={{ height: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#1e293b', borderRadius: '8px', color: '#94a3b8' }}>Loading 3D viewer...</div>}>
-            <ModelGallery />
-          </Suspense>
-        </div>
-      )}
-
       <div className="container">
         <div className="grid">
           {/* Left Panel - Order Builder */}
