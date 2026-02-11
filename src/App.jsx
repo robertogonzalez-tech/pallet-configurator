@@ -6,6 +6,7 @@ import BOLValidator from './BOLValidator'
 import PackingComparison from './PackingComparison'
 import TextPackingOutput from './TextPackingOutput'
 import ValidationMode from './ValidationMode'
+import ValidationForm from './components/ValidationForm'
 import ModeSwitcher from './components/ModeSwitcher'
 import { getProductDims, getProductModelKey, calculateDDPallets, DD_COMPONENTS } from './productModels'
 import { packItemsWithConstraints, PALLET, validateAgainstBOL } from './binPacking3D'
@@ -1679,6 +1680,13 @@ function App() {
         </div>
         )}
       </header>
+
+      {/* Validate Mode - Manual pallet data entry */}
+      {appMode === 'validate' && (
+        <div className="container">
+          <ValidationForm />
+        </div>
+      )}
 
       {/* Validation Mode */}
       {appMode === 'validation' && (

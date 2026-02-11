@@ -189,7 +189,7 @@ async function getSalesOrderItems(soNumber) {
     const tranResult = JSON.parse(execSync(`${NETSUITE_CLI} sql "${tranQuery}"`, { encoding: 'utf8' }))
     
     if (!tranResult.success || tranResult.count === 0) {
-      console.error(`   Sales order SO${soNumber} not found`)
+      // Don't log as error - old SOs are expected, just skip silently
       return null
     }
     
@@ -207,7 +207,9 @@ async function getSalesOrderItems(soNumber) {
     `
     const itemsResult = JSON.parse(execSync(`${NETSUITE_CLI} sql "${itemsQuery}"`, { encoding: 'utf8' }))
     
-    if (!itemsResult.success) return null
+    if (!itemsResult.success || !itemsResult.results || itemsResult.results.length === 0) {
+      return null
+    }
     
     return itemsResult.results.map(r => ({
       sku: r.itemid,
@@ -215,7 +217,7 @@ async function getSalesOrderItems(soNumber) {
       qty: Math.abs(r.quantity)
     }))
   } catch (err) {
-    console.error('Error getting SO items:', err.message)
+    // NetSuite CLI errors are expected for old/missing orders - don't spam logs
     return null
   }
 }
@@ -296,15 +298,21 @@ async function processBolFile(drive, fileId, fileName) {
     
     // Process each BOL
     for (const bol of bols) {
-      const pageInfo = bol.pageNum ? ` (page ${bol.pageNum})` : ''
-      console.log(`\n   📄 BOL${pageInfo}:`)
-      console.log(`      HAWB: ${bol.hawb || 'N/A'}`)
-      console.log(`      SO: ${bol.soNumber}`)
-      console.log(`      Pallets: ${bol.pallets || 'N/A'}`)
-      console.log(`      Weight: ${bol.weight || 'N/A'} lbs`)
-      
-      const result = await processOneBol(bol, fileId, fileName)
-      if (result) results.push(result)
+      try {
+        const pageInfo = bol.pageNum ? ` (page ${bol.pageNum})` : ''
+        console.log(`\n   📄 BOL${pageInfo}:`)
+        console.log(`      HAWB: ${bol.hawb || 'N/A'}`)
+        console.log(`      SO: ${bol.soNumber}`)
+        console.log(`      Pallets: ${bol.pallets || 'N/A'}`)
+        console.log(`      Weight: ${bol.weight || 'N/A'} lbs`)
+        
+        const result = await processOneBol(bol, fileId, fileName)
+        if (result) results.push(result)
+      } catch (err) {
+        console.error(`   ❌ Error processing BOL SO${bol.soNumber}: ${err.message}`)
+        // Continue to next BOL instead of crashing
+        continue
+      }
     }
   } finally {
     // Cleanup temp file
@@ -322,7 +330,7 @@ async function processOneBol(bol, fileId, fileName) {
     // Get SO items from NetSuite
     const items = await getSalesOrderItems(bol.soNumber)
     if (!items || items.length === 0) {
-      console.error('   ❌ Could not get items for SO', bol.soNumber)
+      console.log(`   ⏭️  Skipping SO${bol.soNumber} (not found in NetSuite or no items)`)
       return null
     }
     
