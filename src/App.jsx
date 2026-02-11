@@ -5,7 +5,6 @@ import WarehouseView from './WarehouseView'
 import BOLValidator from './BOLValidator'
 import PackingComparison from './PackingComparison'
 import TextPackingOutput from './TextPackingOutput'
-import ValidationMode from './ValidationMode'
 import ValidationForm from './components/ValidationForm'
 import ModeSwitcher from './components/ModeSwitcher'
 import { getProductDims, getProductModelKey, calculateDDPallets, DD_COMPONENTS } from './productModels'
@@ -1667,13 +1666,6 @@ function App() {
       {appMode === 'validate' && (
         <div className="container">
           <ValidationForm />
-        </div>
-      )}
-
-      {/* Validation Mode */}
-      {appMode === 'validation' && (
-        <div className="container">
-          <ValidationMode />
         </div>
       )}
 

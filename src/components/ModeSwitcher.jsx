@@ -3,7 +3,6 @@ import { useState } from 'react'
 const MODES = [
   { id: 'sales', label: 'Sales', icon: '💰', description: 'Quote → Pallet estimate' },
   { id: 'validate', label: 'Validate', icon: '📋', description: 'Enter actual pallet data' },
-  { id: 'validation', label: 'Validation', icon: '✅', description: 'Verify predictions' },
   { id: 'warehouse', label: 'Warehouse', icon: '📦', description: 'Packing instructions' },
 ]
 
