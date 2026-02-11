@@ -16,16 +16,30 @@
  */
 
 import { google } from 'googleapis'
+import { createClient } from '@supabase/supabase-js'
 import { execSync } from 'child_process'
 import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
+import dotenv from 'dotenv'
 
+// Load environment variables from .env.local
 const __dirname = dirname(fileURLToPath(import.meta.url))
+dotenv.config({ path: join(__dirname, '../.env.local') })
+
 const RESULTS_DIR = join(__dirname, '../validation-results')
 const STATE_FILE = join(__dirname, '../.drive-watcher-state.json')
 const CREDENTIALS_PATH = process.env.HOME + '/.config/clawdbot/google-sheets-service-account.json'
 const NETSUITE_CLI = process.env.HOME + '/clawd/bin/brooke-netsuite'
+
+// Initialize Supabase client
+const supabase = process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY
+  ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY)
+  : null
+
+if (!supabase) {
+  console.warn('⚠️  Supabase not configured - results will only be saved locally')
+}
 
 // Ensure results directory exists
 if (!existsSync(RESULTS_DIR)) {
@@ -232,10 +246,12 @@ function predictPallets(items) {
 async function processBolFile(drive, fileId, fileName) {
   console.log(`\n📋 Processing: ${fileName}`)
   
-  // Download the file
-  const pdfPath = await downloadFile(drive, fileId, fileName)
+  let pdfPath = null
   
   try {
+    // Download the file
+    pdfPath = await downloadFile(drive, fileId, fileName)
+    
     // Parse the PDF
     const bol = parseBolPdf(pdfPath)
     if (!bol || !bol.soNumber) {
@@ -255,10 +271,30 @@ async function processBolFile(drive, fileId, fileName) {
       return null
     }
     
-    console.log(`   Items: ${items.length} line items`)
+    console.log(`   Items: ${items.length} line items (before filtering)`)
+    
+    // Filter out hardware/kit items that pack with main products
+    const kitSkuPatterns = [
+      /^80101-0257-.+-KIT$/i, // DD4 hardware kit
+      /^80101-0258-.+-KIT$/i, // DD6 hardware kit
+      /^91000-/i,             // Hardware tools
+      /^WAK\d+$/i,            // Wall anchor kits
+      /^26268$/i,             // Work Stand Install Kit
+      /^3000[PQ]-/i,          // Screws
+      /^31000-/i,             // Washers
+      /^39000-/i,             // Nuts
+      /^50801-/i,             // Unistrut
+      /^81000-/i,             // Anchor/hardware kits
+    ]
+    
+    const filteredItems = items.filter(item => {
+      return !kitSkuPatterns.some(pattern => pattern.test(item.sku))
+    })
+    
+    console.log(`   Items: ${filteredItems.length} line items (after filtering, ${items.length - filteredItems.length} hardware items skipped)`)
     
     // Run prediction
-    const prediction = predictPallets(items)
+    const prediction = predictPallets(filteredItems)
     
     console.log(`\n   🎯 Prediction: ${prediction.totalPallets} pallets, ${prediction.totalWeight} lbs`)
     
@@ -288,15 +324,49 @@ async function processBolFile(drive, fileId, fileName) {
       items
     }
     
-    // Save result
+    // Save result to local JSON
     const resultFile = join(RESULTS_DIR, `SO${bol.soNumber}-${Date.now()}.json`)
     writeFileSync(resultFile, JSON.stringify(result, null, 2))
-    console.log(`   💾 Saved: ${resultFile}`)
+    console.log(`   💾 Saved locally: ${resultFile}`)
+    
+    // Save to Supabase
+    if (supabase) {
+      try {
+        const { error } = await supabase.from('validations').insert({
+          pick_ticket_id: `SO${bol.soNumber}`,
+          sales_order_id: `SO${bol.soNumber}`,
+          quote_number: null,
+          predicted_pallets: prediction.totalPallets,
+          predicted_weight_lbs: prediction.totalWeight,
+          predicted_items: items,
+          prediction_timestamp: new Date().toISOString(),
+          actual_pallets: bol.pallets,
+          actual_weight_lbs: bol.weight,
+          actual_notes: `HAWB: ${bol.hawb}, Consignee: ${bol.consignee}`,
+          validated_by: 'System',
+          validation_timestamp: bol.shipDate ? new Date(bol.shipDate).toISOString() : new Date().toISOString(),
+          status: 'validated'
+        })
+        
+        if (error) {
+          console.error('   ❌ Supabase error:', error.message)
+        } else {
+          console.log('   ✅ Saved to Supabase')
+        }
+      } catch (err) {
+        console.error('   ❌ Failed to save to Supabase:', err.message)
+      }
+    }
     
     return result
+  } catch (err) {
+    console.error(`   ❌ Error processing file: ${err.message}`)
+    return null
   } finally {
     // Cleanup temp file
-    try { unlinkSync(pdfPath) } catch {}
+    if (pdfPath) {
+      try { unlinkSync(pdfPath) } catch {}
+    }
   }
 }
 
@@ -327,7 +397,17 @@ async function watchFolder(folderId, interval = 5 * 60 * 1000) {
       console.log(`   📥 ${newFiles.length} new file(s) to process`)
       
       for (const file of newFiles) {
-        const result = await processBolFile(drive, file.id, file.name)
+        try {
+          const result = await processBolFile(drive, file.id, file.name)
+          
+          // Alert on significant variance
+          if (result && Math.abs(result.variance.pallets) >= 2) {
+            console.log(`\n   ⚠️  ALERT: Large pallet variance (${result.variance.pallets}) for SO${result.soNumber}`)
+            // TODO: Send Discord notification here
+          }
+        } catch (err) {
+          console.error(`   ❌ Failed to process ${file.name}: ${err.message}`)
+        }
         
         // Mark as processed regardless of success (to avoid reprocessing bad files)
         state.processedFiles.push(file.id)
@@ -336,38 +416,43 @@ async function watchFolder(folderId, interval = 5 * 60 * 1000) {
         if (state.processedFiles.length > 500) {
           state.processedFiles = state.processedFiles.slice(-500)
         }
-        
-        // Alert on significant variance
-        if (result && Math.abs(result.variance.pallets) >= 2) {
-          console.log(`\n   ⚠️  ALERT: Large pallet variance (${result.variance.pallets}) for SO${result.soNumber}`)
-          // TODO: Send Discord notification here
-        }
       }
       
       state.lastCheck = new Date().toISOString()
       saveState(state)
       
     } catch (err) {
-      console.error('Error checking for files:', err.message)
+      console.error('❌ Error checking for files:', err.message)
+      console.error('   Will retry on next check...')
     }
   }
   
-  // Check immediately, then on interval
-  await checkForNewFiles()
+  // Check immediately, then on interval (wrap in try/catch to prevent initial failure from crashing)
+  try {
+    await checkForNewFiles()
+  } catch (err) {
+    console.error('❌ Initial check failed:', err.message)
+    console.error('   Will retry on next interval...')
+  }
   setInterval(checkForNewFiles, interval)
 }
 
 // Process a single file by ID
 async function processFileById(fileId) {
-  const drive = await getDriveClient()
-  
-  // Get file metadata
-  const response = await drive.files.get({
-    fileId,
-    fields: 'id, name'
-  })
-  
-  await processBolFile(drive, fileId, response.data.name)
+  try {
+    const drive = await getDriveClient()
+    
+    // Get file metadata
+    const response = await drive.files.get({
+      fileId,
+      fields: 'id, name'
+    })
+    
+    await processBolFile(drive, fileId, response.data.name)
+  } catch (err) {
+    console.error('❌ Error processing file:', err.message)
+    throw err // Re-throw for single file processing (not watch mode)
+  }
 }
 
 // Main

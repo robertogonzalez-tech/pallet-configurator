@@ -13,6 +13,7 @@
     "@react-three/fiber": "^8.18.0",
     "@supabase/supabase-js": "^2.94.0",
     "@vercel/blob": "^2.0.1",
+    "dotenv": "^17.2.4",
     "googleapis": "^171.2.0",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.0.0",

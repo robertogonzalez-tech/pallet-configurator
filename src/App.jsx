@@ -594,7 +594,13 @@ function App() {
             /^80101-0258-.+-KIT$/i, // DD6 hardware kit
             /^91000-/i,             // Hardware tools (trident sockets, etc.)
             /^WAK\d+$/i,            // Wall anchor kits
+            /^26268$/i,             // Public Work Stand Install Kit - small, packs with hardware
             /^\d{5}\s*\(/i,         // SKUs like "26246 (HSO Pump...)" - Saris accessories
+            /^3000[PQ]-/i,          // Screws (3000P-, 3000Q-)
+            /^31000-/i,             // Washers (31000-)
+            /^39000-/i,             // Nuts (39000-)
+            /^50801-/i,             // Unistrut (50801-)
+            /^81000-/i,             // Anchor/hardware kits (81000-)
           ]
           if (kitSkuPatterns.some(pattern => pattern.test(item))) {
             console.log(`[MATCH] ⏭️ Skipping kit/hardware SKU: "${item}"`)
