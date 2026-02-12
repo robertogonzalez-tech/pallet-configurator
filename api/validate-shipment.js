@@ -63,6 +63,87 @@ async function callNetSuite(action, params = {}) {
   return response.json();
 }
 
+async function getSalesOrderViaSuiteQL(soNumber) {
+  // Step 1: Look up sales order by tranid to get internal ID
+  const soQuery = `SELECT id, tranid FROM transaction WHERE tranid = 'SO${soNumber}' AND type = 'SalesOrd'`;
+  const soUrl = `https://${config.accountId}.suitetalk.api.netsuite.com/services/rest/query/v1/suiteql?limit=1&offset=0`;
+  
+  const oauth = createOAuthClient();
+  const token = { key: config.tokenId, secret: config.tokenSecret };
+  const authHeader = oauth.toHeader(oauth.authorize({ url: soUrl, method: 'POST' }, token));
+  authHeader.Authorization = authHeader.Authorization.replace(
+    'OAuth ',
+    `OAuth realm="${config.accountId.toUpperCase()}", `
+  );
+  
+  const soResponse = await fetch(soUrl, {
+    method: 'POST',
+    headers: {
+      'Authorization': authHeader.Authorization,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Prefer': 'transient'
+    },
+    body: JSON.stringify({ q: soQuery })
+  });
+  
+  const soData = await soResponse.json();
+  
+  if (!soData.items || soData.items.length === 0) {
+    return { success: false, error: `Sales order SO${soNumber} not found` };
+  }
+  
+  const soId = soData.items[0].id;
+  
+  // Step 2: Get line items for this sales order
+  const itemsQuery = `
+    SELECT 
+      tl.item AS item_id,
+      i.itemid AS sku,
+      i.displayname AS name,
+      tl.quantity
+    FROM transactionline tl
+    JOIN item i ON i.id = tl.item
+    WHERE tl.transaction = ${soId}
+      AND tl.mainline = 'F'
+      AND tl.taxline = 'F'
+      AND tl.item IS NOT NULL
+  `;
+  
+  const itemsUrl = `https://${config.accountId}.suitetalk.api.netsuite.com/services/rest/query/v1/suiteql?limit=1000&offset=0`;
+  const itemsAuthHeader = oauth.toHeader(oauth.authorize({ url: itemsUrl, method: 'POST' }, token));
+  itemsAuthHeader.Authorization = itemsAuthHeader.Authorization.replace(
+    'OAuth ',
+    `OAuth realm="${config.accountId.toUpperCase()}", `
+  );
+  
+  const itemsResponse = await fetch(itemsUrl, {
+    method: 'POST',
+    headers: {
+      'Authorization': itemsAuthHeader.Authorization,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Prefer': 'transient'
+    },
+    body: JSON.stringify({ q: itemsQuery })
+  });
+  
+  const itemsData = await itemsResponse.json();
+  
+  if (!itemsData.items || itemsData.items.length === 0) {
+    return { success: false, error: `No items found for SO${soNumber}` };
+  }
+  
+  // Format items to match expected structure
+  const items = itemsData.items.map(row => ({
+    sku: row.sku,
+    name: row.name,
+    quantity: parseInt(row.quantity, 10)
+  }));
+  
+  return { success: true, items };
+}
+
 // Simple pallet prediction logic (matches productModels.js)
 function predictPallets(items) {
   const unitsPerPallet = {
@@ -149,18 +230,13 @@ module.exports = async (req, res) => {
       });
     }
     
-    // 1. Look up sales order in NetSuite  
-    // Try 'so' action (similar to 'quote' action pattern)
-    const soData = await callNetSuite('so', { num: soNumber });
-    
-    // Debug logging
-    console.log('NetSuite response for SO' + soNumber + ':', JSON.stringify(soData, null, 2));
+    // 1. Look up sales order in NetSuite using SuiteQL
+    const soData = await getSalesOrderViaSuiteQL(soNumber);
     
     if (!soData.success || !soData.items || soData.items.length === 0) {
       return res.status(404).json({ 
         success: false, 
-        error: `Sales order SO${soNumber} not found or has no items`,
-        debug: soData // Include raw response in error
+        error: `Sales order SO${soNumber} not found or has no items`
       });
     }
     
