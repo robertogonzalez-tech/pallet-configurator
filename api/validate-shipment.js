@@ -67,7 +67,7 @@ async function getSalesOrderViaSuiteQL(soNumber) {
   // Step 1: Look up sales order by tranid to get internal ID
   // Try both with and without SO prefix, order by ID desc to get most recent
   const soQuery = `SELECT id, tranid, type FROM transaction WHERE tranid IN ('SO${soNumber}', '${soNumber}') ORDER BY id DESC`;
-  const soUrl = `https://${config.accountId}.suitetalk.api.netsuite.com/services/rest/query/v1/suiteql?limit=1&offset=0`;
+  const soUrl = `https://${config.accountId}.suitetalk.api.netsuite.com/services/rest/query/v1/suiteql?limit=10&offset=0`;
   
   const oauth = createOAuthClient();
   const token = { key: config.tokenId, secret: config.tokenSecret };
@@ -97,11 +97,27 @@ async function getSalesOrderViaSuiteQL(soNumber) {
     return { success: false, error: `Sales order SO${soNumber} not found`, debug: { query: soQuery, response: soData } };
   }
   
-  const soId = soData.items[0].id;
-  console.log('Found SO' + soNumber + ' with internal ID:', soId, 'type:', soData.items[0].type, 'tranid:', soData.items[0].tranid);
+  // Find the first transaction that's actually a sales order (not a return/credit)
+  // Returns typically have negative quantities
+  const salesOrder = soData.items.find(t => {
+    // Log all types we're seeing
+    console.log('Transaction', t.id, 'type:', t.type, 'tranid:', t.tranid);
+    // Common sales order types: SalesOrd, Sales Order
+    return t.type && (t.type.includes('Sales') || t.type === 'SalesOrd');
+  });
   
-  // Step 2: Get line items for this sales order
-  // Temporarily remove quantity filter to see what exists
+  if (!salesOrder) {
+    return { 
+      success: false, 
+      error: `Found transactions for SO${soNumber} but none are sales orders`,
+      debug: { allTransactions: soData.items }
+    };
+  }
+  
+  const soId = salesOrder.id;
+  console.log('Selected sales order with internal ID:', soId, 'type:', salesOrder.type);
+  
+  // Step 2: Get line items for this sales order (positive quantities only)
   const itemsQuery = `
     SELECT 
       i.itemid AS sku,
@@ -112,6 +128,7 @@ async function getSalesOrderViaSuiteQL(soNumber) {
     WHERE tl.transaction = ${soId}
       AND tl.mainline = 'F'
       AND tl.item IS NOT NULL
+      AND tl.quantity > 0
   `;
   
   const itemsUrl = `https://${config.accountId}.suitetalk.api.netsuite.com/services/rest/query/v1/suiteql?limit=1000&offset=0`;
