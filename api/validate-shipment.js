@@ -134,11 +134,11 @@ async function getSalesOrderViaSuiteQL(soNumber) {
     return { success: false, error: `No items found for SO${soNumber}` };
   }
   
-  // Format items to match expected structure
+  // Format items to match expected structure (qty not quantity for predictPallets)
   const items = itemsData.items.map(row => ({
     sku: row.sku,
     name: row.name,
-    quantity: parseInt(row.quantity, 10)
+    qty: parseInt(row.quantity, 10)
   }));
   
   return { success: true, items };
