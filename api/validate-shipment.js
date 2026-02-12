@@ -65,8 +65,8 @@ async function callNetSuite(action, params = {}) {
 
 async function getSalesOrderViaSuiteQL(soNumber) {
   // Step 1: Look up sales order by tranid to get internal ID
-  // Try both with and without SO prefix
-  const soQuery = `SELECT id, tranid, type FROM transaction WHERE tranid IN ('SO${soNumber}', '${soNumber}')`;
+  // Try both with and without SO prefix, order by ID desc to get most recent
+  const soQuery = `SELECT id, tranid, type FROM transaction WHERE tranid IN ('SO${soNumber}', '${soNumber}') ORDER BY id DESC`;
   const soUrl = `https://${config.accountId}.suitetalk.api.netsuite.com/services/rest/query/v1/suiteql?limit=1&offset=0`;
   
   const oauth = createOAuthClient();
