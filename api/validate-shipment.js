@@ -144,10 +144,11 @@ async function getSalesOrderViaSuiteQL(soNumber) {
   }
   
   // Format items to match expected structure (qty not quantity for predictPallets)
+  // Use Math.abs() to convert negative quantities (returns/credits) to positive
   const items = itemsData.items.map(row => ({
     sku: row.sku || row.itemid || 'UNKNOWN',
     name: row.name || row.displayname || 'Unknown Item',
-    qty: parseInt(row.quantity, 10)
+    qty: Math.abs(parseInt(row.quantity, 10) || 0)
   }));
   
   console.log('Formatted items:', JSON.stringify(items, null, 2));
@@ -370,4 +371,3 @@ module.exports = async (req, res) => {
     });
   }
 };
-// Force Vercel rebuild
