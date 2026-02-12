@@ -250,7 +250,8 @@ module.exports = async (req, res) => {
     if (!soData.success || !soData.items || soData.items.length === 0) {
       return res.status(404).json({ 
         success: false, 
-        error: `Sales order SO${soNumber} not found or has no items`
+        error: `Sales order SO${soNumber} not found or has no items`,
+        debug: soData
       });
     }
     
