@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { supabase, isSupabaseConfigured, getSupabaseStatus } from '../lib/supabase'
 
-// Default pallet dimensions (common sizes)
+// Default pallet dimensions (all blank)
 const DEFAULT_PALLET = {
   weight: '',
-  length: '48',
-  width: '40',
+  length: '',
+  width: '',
   height: '',
 }
 
@@ -255,10 +255,10 @@ export default function ValidationForm() {
             {/* Desktop Table Header */}
             <div className="pallet-table-header">
               <span className="col-num">#</span>
-              <span className="col-weight">Weight (lbs)</span>
               <span className="col-dim">L (in)</span>
               <span className="col-dim">W (in)</span>
               <span className="col-dim">H (in)</span>
+              <span className="col-weight">Weight (lbs)</span>
               <span className="col-action"></span>
             </div>
 
@@ -269,18 +269,6 @@ export default function ValidationForm() {
                   <div className="pallet-num">{index + 1}</div>
 
                   <div className="pallet-fields">
-                    <div className="field-group weight-field">
-                      <label className="mobile-label">Weight (lbs)</label>
-                      <input
-                        type="number"
-                        inputMode="numeric"
-                        value={pallet.weight}
-                        onChange={(e) => updatePallet(index, 'weight', e.target.value)}
-                        placeholder="1104"
-                        className="input-weight"
-                      />
-                    </div>
-
                     <div className="dims-group">
                       <div className="field-group">
                         <label className="mobile-label">Length</label>
@@ -289,7 +277,7 @@ export default function ValidationForm() {
                           inputMode="numeric"
                           value={pallet.length}
                           onChange={(e) => updatePallet(index, 'length', e.target.value)}
-                          placeholder="48"
+                          placeholder=""
                           className="input-dim"
                         />
                       </div>
@@ -303,7 +291,7 @@ export default function ValidationForm() {
                           inputMode="numeric"
                           value={pallet.width}
                           onChange={(e) => updatePallet(index, 'width', e.target.value)}
-                          placeholder="40"
+                          placeholder=""
                           className="input-dim"
                         />
                       </div>
@@ -317,10 +305,22 @@ export default function ValidationForm() {
                           inputMode="numeric"
                           value={pallet.height}
                           onChange={(e) => updatePallet(index, 'height', e.target.value)}
-                          placeholder="48"
+                          placeholder=""
                           className="input-dim"
                         />
                       </div>
+                    </div>
+
+                    <div className="field-group weight-field">
+                      <label className="mobile-label">Weight (lbs)</label>
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        value={pallet.weight}
+                        onChange={(e) => updatePallet(index, 'weight', e.target.value)}
+                        placeholder=""
+                        className="input-weight"
+                      />
                     </div>
                   </div>
 
@@ -561,8 +561,8 @@ export default function ValidationForm() {
         }
 
         .col-num { width: 32px; text-align: center; }
-        .col-weight { flex: 1; min-width: 100px; }
         .col-dim { width: 70px; text-align: center; }
+        .col-weight { flex: 2; min-width: 150px; }
         .col-action { width: 44px; }
 
         /* Pallet Rows */
@@ -623,7 +623,8 @@ export default function ValidationForm() {
         }
 
         .weight-field {
-          flex: 1;
+          flex: 2;
+          min-width: 150px;
         }
 
         .input-weight {
