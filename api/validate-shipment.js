@@ -64,8 +64,8 @@ async function callNetSuite(action, params = {}) {
 }
 
 async function getSalesOrderViaSuiteQL(soNumber) {
-  // Step 1: Look up sales order by tranid to get internal ID
-  const soQuery = `SELECT id, tranid FROM transaction WHERE tranid = 'SO${soNumber}' AND type = 'SalesOrd'`;
+  // Step 1: Look up sales order by tranid to get internal ID (type = 'SalesOrd' excludes returns/credits)
+  const soQuery = `SELECT id, tranid, type FROM transaction WHERE tranid = 'SO${soNumber}' AND type = 'SalesOrd'`;
   const soUrl = `https://${config.accountId}.suitetalk.api.netsuite.com/services/rest/query/v1/suiteql?limit=1&offset=0`;
   
   const oauth = createOAuthClient();
@@ -95,7 +95,7 @@ async function getSalesOrderViaSuiteQL(soNumber) {
   
   const soId = soData.items[0].id;
   
-  // Step 2: Get line items for this sales order
+  // Step 2: Get line items for this sales order (only positive quantities, exclude returns)
   const itemsQuery = `
     SELECT 
       tl.item AS item_id,
@@ -108,6 +108,7 @@ async function getSalesOrderViaSuiteQL(soNumber) {
       AND tl.mainline = 'F'
       AND tl.taxline = 'F'
       AND tl.item IS NOT NULL
+      AND tl.quantity > 0
   `;
   
   const itemsUrl = `https://${config.accountId}.suitetalk.api.netsuite.com/services/rest/query/v1/suiteql?limit=1000&offset=0`;
@@ -256,7 +257,8 @@ module.exports = async (req, res) => {
     // 5. Save to Supabase
     let validationId = null;
     if (supabase) {
-      const { data, error } = await supabase.from('validations').insert({
+      console.log('Attempting Supabase save for SO' + soNumber);
+      const insertData = {
         pick_ticket_id: `SO${soNumber}`,
         sales_order_id: `SO${soNumber}`,
         predicted_pallets: prediction.totalPallets,
@@ -269,17 +271,26 @@ module.exports = async (req, res) => {
         validated_by: validatedBy,
         validated_at: new Date().toISOString(),
         status: 'validated'
-      }).select('id');
+      };
+      console.log('Insert data:', JSON.stringify(insertData, null, 2));
+      
+      const { data, error } = await supabase.from('validations').insert(insertData).select('id');
+      
+      console.log('Supabase response - data:', data, 'error:', error);
       
       if (error) {
         console.error('Supabase save error:', error);
         return res.status(500).json({ 
           success: false, 
-          error: `Failed to save validation: ${error.message}` 
+          error: `Failed to save validation: ${error.message}`,
+          details: error
         });
       }
       
       validationId = data?.[0]?.id;
+      console.log('Validation saved with ID:', validationId);
+    } else {
+      console.warn('Supabase client not configured - skipping save');
     }
     
     // 6. Send notifications (email + Google Sheets backup)
