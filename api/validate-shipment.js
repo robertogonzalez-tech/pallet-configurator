@@ -159,7 +159,7 @@ async function getSalesOrderViaSuiteQL(soNumber) {
 // Simple pallet prediction logic (matches productModels.js)
 function predictPallets(items) {
   // Hardware SKU patterns to skip (small items that pack with main products)
-  const hardwarePatterns = ['3000P-', '3000Q-', '31000-', '39000-', '50801-', '81000-', '26268'];
+  const hardwarePatterns = ['3000P-', '3000Q-', '31000-', '32000-', '34010-', '39000-', '50801-', '81000-', '26268'];
   
   // Filter out hardware items
   items = items.filter(item => {
