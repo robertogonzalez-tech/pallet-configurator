@@ -89,8 +89,11 @@ async function getSalesOrderViaSuiteQL(soNumber) {
   
   const soData = await soResponse.json();
   
+  console.log('SuiteQL SO lookup response:', JSON.stringify(soData, null, 2));
+  
   if (!soData.items || soData.items.length === 0) {
-    return { success: false, error: `Sales order SO${soNumber} not found` };
+    console.log('No items found for SO' + soNumber + ', query was: ' + soQuery);
+    return { success: false, error: `Sales order SO${soNumber} not found`, debug: { query: soQuery, response: soData } };
   }
   
   const soId = soData.items[0].id;
@@ -131,8 +134,11 @@ async function getSalesOrderViaSuiteQL(soNumber) {
   
   const itemsData = await itemsResponse.json();
   
+  console.log('SuiteQL items query response:', JSON.stringify(itemsData, null, 2));
+  
   if (!itemsData.items || itemsData.items.length === 0) {
-    return { success: false, error: `No items found for SO${soNumber}` };
+    console.log('No line items found for SO' + soNumber + ' (soId: ' + soId + ')');
+    return { success: false, error: `No items found for SO${soNumber}`, debug: { soId, itemsQuery, response: itemsData } };
   }
   
   // Format items to match expected structure (qty not quantity for predictPallets)
