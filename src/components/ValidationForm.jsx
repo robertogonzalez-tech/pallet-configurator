@@ -9,7 +9,7 @@ const DEFAULT_PALLET = {
   height: '',
 }
 
-const VALIDATORS = ['Chad', 'Anisa', 'Brady', 'Connor']
+const VALIDATORS = ['Chad', 'Anisa', 'Avianna', 'Brady', 'Connor']
 
 export default function ValidationForm() {
   // Form state
