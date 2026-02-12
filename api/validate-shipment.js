@@ -65,8 +65,8 @@ async function callNetSuite(action, params = {}) {
 
 async function getSalesOrderViaSuiteQL(soNumber) {
   // Step 1: Look up sales order by tranid to get internal ID
-  // Try both with and without SO prefix, order by ID desc to get most recent
-  const soQuery = `SELECT id, tranid, type FROM transaction WHERE tranid IN ('SO${soNumber}', '${soNumber}') ORDER BY id DESC`;
+  // Try both with and without SO prefix, filter for sales orders only, order by ID desc to get most recent
+  const soQuery = `SELECT id, tranid, type FROM transaction WHERE tranid IN ('SO${soNumber}', '${soNumber}') AND type = 'SalesOrd' ORDER BY id DESC`;
   const soUrl = `https://${config.accountId}.suitetalk.api.netsuite.com/services/rest/query/v1/suiteql?limit=10&offset=0`;
   
   const oauth = createOAuthClient();
@@ -93,29 +93,14 @@ async function getSalesOrderViaSuiteQL(soNumber) {
   console.log('SuiteQL SO lookup response:', JSON.stringify(soData, null, 2));
   
   if (!soData.items || soData.items.length === 0) {
-    console.log('No items found for SO' + soNumber + ', query was: ' + soQuery);
-    return { success: false, error: `Sales order SO${soNumber} not found`, debug: { query: soQuery, response: soData } };
+    console.log('No items found for SO' + soNumber + ' with type=SalesOrd filter, query was: ' + soQuery);
+    return { success: false, error: `Sales order SO${soNumber} not found (no SalesOrd type match)`, debug: { query: soQuery, response: soData } };
   }
   
-  // Find the first transaction that's actually a sales order (not a return/credit)
-  // Returns typically have negative quantities
-  const salesOrder = soData.items.find(t => {
-    // Log all types we're seeing
-    console.log('Transaction', t.id, 'type:', t.type, 'tranid:', t.tranid);
-    // Common sales order types: SalesOrd, Sales Order
-    return t.type && (t.type.includes('Sales') || t.type === 'SalesOrd');
-  });
-  
-  if (!salesOrder) {
-    return { 
-      success: false, 
-      error: `Found transactions for SO${soNumber} but none are sales orders`,
-      debug: { allTransactions: soData.items }
-    };
-  }
-  
+  // Type filter in SQL query should handle this, but double-check
+  const salesOrder = soData.items[0]; // Take first match (already filtered by type=SalesOrd)
   const soId = salesOrder.id;
-  console.log('Selected sales order with internal ID:', soId, 'type:', salesOrder.type);
+  console.log('Found sales order with internal ID:', soId, 'type:', salesOrder.type);
   
   // Step 2: Get line items for this sales order (positive quantities only)
   const itemsQuery = `
