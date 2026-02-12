@@ -98,18 +98,19 @@ async function getSalesOrderViaSuiteQL(soNumber) {
   }
   
   const soId = soData.items[0].id;
+  console.log('Found SO' + soNumber + ' with internal ID:', soId, 'type:', soData.items[0].type, 'tranid:', soData.items[0].tranid);
   
   // Step 2: Get line items for this sales order
-  // Simplify to bare minimum to see what's in transactionline
   const itemsQuery = `
     SELECT 
-      tl.id,
-      tl.item,
-      tl.quantity,
-      tl.mainline,
-      tl.taxline
+      i.itemid AS sku,
+      i.displayname AS name,
+      tl.quantity
     FROM transactionline tl
+    LEFT JOIN item i ON i.id = tl.item
     WHERE tl.transaction = ${soId}
+      AND tl.mainline = 'F'
+      AND tl.item IS NOT NULL
   `;
   
   const itemsUrl = `https://${config.accountId}.suitetalk.api.netsuite.com/services/rest/query/v1/suiteql?limit=1000&offset=0`;
@@ -141,10 +142,12 @@ async function getSalesOrderViaSuiteQL(soNumber) {
   
   // Format items to match expected structure (qty not quantity for predictPallets)
   const items = itemsData.items.map(row => ({
-    sku: row.sku,
-    name: row.name,
+    sku: row.sku || row.itemid || 'UNKNOWN',
+    name: row.name || row.displayname || 'Unknown Item',
     qty: parseInt(row.quantity, 10)
   }));
+  
+  console.log('Formatted items:', JSON.stringify(items, null, 2));
   
   return { success: true, items };
 }
