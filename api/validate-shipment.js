@@ -158,6 +158,15 @@ async function getSalesOrderViaSuiteQL(soNumber) {
 
 // Simple pallet prediction logic (matches productModels.js)
 function predictPallets(items) {
+  // Hardware SKU patterns to skip (small items that pack with main products)
+  const hardwarePatterns = ['3000P-', '3000Q-', '31000-', '39000-', '50801-', '81000-', '26268'];
+  
+  // Filter out hardware items
+  items = items.filter(item => {
+    const sku = item.sku || '';
+    return !hardwarePatterns.some(pattern => sku.includes(pattern));
+  });
+  
   const unitsPerPallet = {
     'dv215': 70, '90101-2287': 70,
     'dismount': 15,
