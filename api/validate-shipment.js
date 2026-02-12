@@ -14,8 +14,8 @@ const config = {
 };
 
 // Supabase client
-const supabase = process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY
-  ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY)
+const supabase = process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
+  ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
   : null;
 
 function createOAuthClient() {
@@ -261,7 +261,9 @@ module.exports = async (req, res) => {
     }
     
     // 2. Run pallet prediction
+    console.log('Items being sent to predictPallets:', JSON.stringify(soData.items, null, 2));
     const prediction = predictPallets(soData.items);
+    console.log('Prediction result:', JSON.stringify(prediction, null, 2));
     
     // 3. Calculate actuals from pallet data
     const actualPallets = pallets.length;
@@ -293,9 +295,16 @@ module.exports = async (req, res) => {
       };
       console.log('Insert data:', JSON.stringify(insertData, null, 2));
       
-      const { data, error } = await supabase.from('validations').insert(insertData).select('id');
-      
-      console.log('Supabase response - data:', data, 'error:', error);
+      let data, error;
+      try {
+        const result = await supabase.from('validations').insert(insertData).select('id');
+        data = result.data;
+        error = result.error;
+        console.log('Supabase response - data:', data, 'error:', error);
+      } catch (err) {
+        console.error('Supabase insert exception:', err);
+        error = err;
+      }
       
       if (error) {
         console.error('Supabase save error:', error);
