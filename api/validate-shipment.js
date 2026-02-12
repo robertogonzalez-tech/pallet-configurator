@@ -150,7 +150,7 @@ module.exports = async (req, res) => {
     }
     
     // 1. Look up sales order in NetSuite
-    const soData = await callNetSuite('salesorder', { num: soNumber });
+    const soData = await callNetSuite('salesOrderByNumber', { num: soNumber });
     
     // Debug logging
     console.log('NetSuite response for SO' + soNumber + ':', JSON.stringify(soData, null, 2));
