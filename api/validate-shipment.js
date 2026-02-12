@@ -230,6 +230,11 @@ module.exports = async (req, res) => {
   try {
     const { soNumber, pallets, validatedBy, notes } = req.body;
     
+    console.log('=== VALIDATE REQUEST ===');
+    console.log('SO#:', soNumber);
+    console.log('Has AccountID:', !!config.accountId);
+    console.log('Has Supabase:', !!supabase);
+    
     if (!soNumber || !pallets || !validatedBy) {
       return res.status(400).json({ 
         success: false, 
@@ -238,7 +243,9 @@ module.exports = async (req, res) => {
     }
     
     // 1. Look up sales order in NetSuite using SuiteQL
+    console.log('Calling getSalesOrderViaSuiteQL for SO' + soNumber);
     const soData = await getSalesOrderViaSuiteQL(soNumber);
+    console.log('SuiteQL result:', JSON.stringify(soData));
     
     if (!soData.success || !soData.items || soData.items.length === 0) {
       return res.status(404).json({ 
