@@ -149,8 +149,9 @@ module.exports = async (req, res) => {
       });
     }
     
-    // 1. Look up sales order in NetSuite
-    const soData = await callNetSuite('salesOrderByNumber', { num: soNumber });
+    // 1. Look up sales order in NetSuite  
+    // Try 'so' action (similar to 'quote' action pattern)
+    const soData = await callNetSuite('so', { num: soNumber });
     
     // Debug logging
     console.log('NetSuite response for SO' + soNumber + ':', JSON.stringify(soData, null, 2));
