@@ -25,49 +25,54 @@ export default function ModeSwitcher({ currentMode, onModeChange }) {
       
       <style>{`
         .mode-switcher {
-          margin-bottom: 24px;
+          margin-bottom: 28px;
         }
         
         .mode-tabs {
           display: flex;
-          gap: 8px;
-          background: #1e293b;
-          padding: 6px;
-          border-radius: 12px;
+          gap: 10px;
+          background: linear-gradient(135deg, #f8d5b0 0%, #fde8cc 100%);
+          padding: 8px;
+          border-radius: 14px;
           width: fit-content;
+          border: 2px solid #fde8cc;
+          box-shadow: 0 4px 12px rgba(120, 113, 108, 0.1);
         }
         
         .mode-tab {
           display: flex;
           align-items: center;
-          gap: 8px;
-          padding: 10px 20px;
+          gap: 10px;
+          padding: 12px 24px;
           border: none;
           background: transparent;
-          color: #94a3b8;
-          border-radius: 8px;
+          color: #78716c;
+          border-radius: 10px;
           cursor: pointer;
           transition: all 0.2s ease;
-          font-size: 14px;
-          font-weight: 500;
+          font-size: 14.5px;
+          font-weight: 600;
         }
         
         .mode-tab:hover {
-          background: #334155;
-          color: #e2e8f0;
+          background: rgba(255, 255, 255, 0.7);
+          color: #0d9488;
+          transform: translateY(-2px);
         }
         
         .mode-tab.active {
-          background: #3b82f6;
+          background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%);
           color: white;
+          box-shadow: 0 4px 12px rgba(13, 148, 136, 0.3);
         }
         
         .mode-icon {
-          font-size: 18px;
+          font-size: 20px;
         }
         
         .mode-label {
-          font-weight: 600;
+          font-weight: 700;
+          letter-spacing: 0.015em;
         }
         
         @media (max-width: 640px) {
@@ -77,7 +82,7 @@ export default function ModeSwitcher({ currentMode, onModeChange }) {
           }
           
           .mode-tab {
-            padding: 8px 12px;
+            padding: 10px 14px;
             flex: 1;
             justify-content: center;
           }
