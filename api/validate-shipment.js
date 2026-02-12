@@ -152,10 +152,14 @@ module.exports = async (req, res) => {
     // 1. Look up sales order in NetSuite
     const soData = await callNetSuite('salesorder', { num: soNumber });
     
+    // Debug logging
+    console.log('NetSuite response for SO' + soNumber + ':', JSON.stringify(soData, null, 2));
+    
     if (!soData.success || !soData.items || soData.items.length === 0) {
       return res.status(404).json({ 
         success: false, 
-        error: `Sales order SO${soNumber} not found or has no items` 
+        error: `Sales order SO${soNumber} not found or has no items`,
+        debug: soData // Include raw response in error
       });
     }
     
