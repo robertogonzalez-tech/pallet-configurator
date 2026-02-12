@@ -102,7 +102,8 @@ async function getSalesOrderViaSuiteQL(soNumber) {
   const soId = salesOrder.id;
   console.log('Found sales order with internal ID:', soId, 'type:', salesOrder.type);
   
-  // Step 2: Get line items for this sales order (positive quantities only)
+  // Step 2: Get line items for this sales order
+  // DEBUG: Temporarily remove quantity filter to see all items
   const itemsQuery = `
     SELECT 
       i.itemid AS sku,
@@ -113,7 +114,6 @@ async function getSalesOrderViaSuiteQL(soNumber) {
     WHERE tl.transaction = ${soId}
       AND tl.mainline = 'F'
       AND tl.item IS NOT NULL
-      AND tl.quantity > 0
   `;
   
   const itemsUrl = `https://${config.accountId}.suitetalk.api.netsuite.com/services/rest/query/v1/suiteql?limit=1000&offset=0`;
