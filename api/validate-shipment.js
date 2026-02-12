@@ -100,19 +100,16 @@ async function getSalesOrderViaSuiteQL(soNumber) {
   const soId = soData.items[0].id;
   
   // Step 2: Get line items for this sales order
-  // Remove quantity filter temporarily to see what data exists
+  // Simplify to bare minimum to see what's in transactionline
   const itemsQuery = `
     SELECT 
-      tl.item AS item_id,
-      i.itemid AS sku,
-      i.displayname AS name,
-      tl.quantity
+      tl.id,
+      tl.item,
+      tl.quantity,
+      tl.mainline,
+      tl.taxline
     FROM transactionline tl
-    JOIN item i ON i.id = tl.item
     WHERE tl.transaction = ${soId}
-      AND tl.mainline = 'F'
-      AND tl.taxline = 'F'
-      AND tl.item IS NOT NULL
   `;
   
   const itemsUrl = `https://${config.accountId}.suitetalk.api.netsuite.com/services/rest/query/v1/suiteql?limit=1000&offset=0`;
