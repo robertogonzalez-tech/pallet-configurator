@@ -112,20 +112,22 @@ export default function ValidationForm() {
         throw new Error(data.error || 'Failed to submit validation')
       }
 
-      // Store prediction for display
-      setPrediction(data.prediction)
+      // Store prediction and diagnostics for display
+      setPrediction(data)
 
-      // Show success
+      // Show success — use correct API response fields
       setSuccess({
         soNumber: `SO${soNumber}`,
         actualPallets: totalPallets,
         actualWeight: totalWeight,
-        predictedPallets: data.prediction?.palletCount || 0,
-        predictedWeight: data.prediction?.totalWeight || 0,
-        variance: {
-          pallets: totalPallets - (data.prediction?.palletCount || 0),
-          weight: totalWeight - (data.prediction?.totalWeight || 0),
+        predictedPallets: data.predicted?.pallets || 0,
+        predictedWeight: data.predicted?.weight || 0,
+        variance: data.variance || {
+          pallets: totalPallets - (data.predicted?.pallets || 0),
+          weight: totalWeight - (data.predicted?.weight || 0),
         },
+        severity: data.variance?.severity || 'unknown',
+        diagnostics: data.diagnostics || null,
       })
 
       // Clear form for next entry
@@ -180,12 +182,44 @@ export default function ValidationForm() {
             </div>
           </div>
 
-          <div className={`variance-badge ${success.variance.pallets === 0 ? 'exact' : success.variance.pallets > 0 ? 'over' : 'under'}`}>
+          <div className={`variance-badge ${success.variance.pallets === 0 ? 'exact' : Math.abs(success.variance.pallets) <= 1 ? 'close' : Math.abs(success.variance.pallets) <= 2 ? 'over' : 'high'}`}>
             {success.variance.pallets === 0
               ? 'Exact Match!'
               : `${success.variance.pallets > 0 ? '+' : ''}${success.variance.pallets} pallet${Math.abs(success.variance.pallets) !== 1 ? 's' : ''}`
             }
           </div>
+
+          {/* Diagnostics Panel */}
+          {success.diagnostics && (
+            <div className="diagnostics-panel">
+              <div className={`confidence-badge confidence-${success.diagnostics.confidenceLevel}`}>
+                Prediction confidence: {success.diagnostics.confidenceScore}% ({success.diagnostics.confidenceLevel})
+              </div>
+              <div className="diagnostics-grid">
+                <div className="diag-item">
+                  <span className="diag-value">{success.diagnostics.totalLines}</span>
+                  <span className="diag-label">Total lines</span>
+                </div>
+                <div className="diag-item">
+                  <span className="diag-value">{success.diagnostics.filteredNonShippable + success.diagnostics.filteredHardware + success.diagnostics.filteredPackaging + success.diagnostics.filteredComponents}</span>
+                  <span className="diag-label">Filtered out</span>
+                </div>
+                <div className="diag-item">
+                  <span className="diag-value">{success.diagnostics.knownProducts}</span>
+                  <span className="diag-label">Known products</span>
+                </div>
+                <div className="diag-item">
+                  <span className="diag-value">{success.diagnostics.unknownProducts}</span>
+                  <span className="diag-label">Unknown</span>
+                </div>
+              </div>
+              {success.diagnostics.unknownSkus?.length > 0 && (
+                <div className="unknown-skus">
+                  Unknown SKUs: {success.diagnostics.unknownSkus.join(', ')}
+                </div>
+              )}
+            </div>
+          )}
 
           <button className="new-btn" onClick={handleNewValidation}>
             Validate Another Shipment
@@ -853,6 +887,85 @@ export default function ValidationForm() {
         .variance-badge.under {
           background: #3b82f6;
           color: white;
+        }
+
+        .variance-badge.close {
+          background: #22c55e;
+          color: white;
+        }
+
+        .variance-badge.high {
+          background: #ef4444;
+          color: white;
+        }
+
+        /* Diagnostics Panel */
+        .diagnostics-panel {
+          background: #1e293b;
+          border: 1px solid #334155;
+          border-radius: 12px;
+          padding: 16px;
+          margin: 16px 0;
+          text-align: left;
+        }
+
+        .confidence-badge {
+          display: inline-block;
+          padding: 4px 12px;
+          border-radius: 12px;
+          font-size: 13px;
+          font-weight: 600;
+          margin-bottom: 12px;
+        }
+
+        .confidence-high {
+          background: #14532d;
+          color: #86efac;
+        }
+
+        .confidence-medium {
+          background: #422006;
+          color: #fbbf24;
+        }
+
+        .confidence-low {
+          background: #450a0a;
+          color: #fca5a5;
+        }
+
+        .diagnostics-grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 8px;
+        }
+
+        .diag-item {
+          text-align: center;
+        }
+
+        .diag-value {
+          display: block;
+          font-size: 20px;
+          font-weight: 700;
+          color: white;
+        }
+
+        .diag-label {
+          display: block;
+          font-size: 11px;
+          color: #94a3b8;
+          margin-top: 2px;
+        }
+
+        .unknown-skus {
+          margin-top: 10px;
+          padding: 8px 12px;
+          background: #450a0a;
+          border-radius: 8px;
+          color: #fca5a5;
+          font-size: 12px;
+          font-family: monospace;
+          word-break: break-all;
         }
 
         .new-btn {

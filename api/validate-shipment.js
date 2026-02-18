@@ -2,8 +2,12 @@ const crypto = require('crypto');
 const OAuth = require('oauth-1.0a');
 const { createClient } = require('@supabase/supabase-js');
 const { sendValidationEmail, saveToGoogleSheets } = require('./lib/notifications');
+const fs = require('fs');
+const path = require('path');
 
-// NetSuite credentials from environment variables (trim to handle whitespace from Vercel UI)
+// ============================================================
+// CONFIG
+// ============================================================
 const config = {
   accountId: process.env.NETSUITE_ACCOUNT_ID?.trim(),
   consumerKey: process.env.NETSUITE_CONSUMER_KEY?.trim(),
@@ -13,70 +17,339 @@ const config = {
   restletUrl: process.env.NETSUITE_RESTLET_URL?.trim()
 };
 
-// Supabase client
 const supabase = process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
   ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
   : null;
 
-function createOAuthClient() {
-  return OAuth({
-    consumer: {
-      key: config.consumerKey,
-      secret: config.consumerSecret
-    },
-    signature_method: 'HMAC-SHA256',
-    hash_function(base_string, key) {
-      return crypto
-        .createHmac('sha256', key)
-        .update(base_string)
-        .digest('base64');
+// ============================================================
+// PRODUCT CATALOG — loaded from products.json
+// ============================================================
+let PRODUCT_CATALOG = null;
+
+function loadProductCatalog() {
+  if (PRODUCT_CATALOG) return PRODUCT_CATALOG;
+  try {
+    // Try multiple paths — Vercel serverless functions have different CWDs
+    let data;
+    const paths = [
+      path.join(process.cwd(), 'public', 'products.json'),
+      path.join(__dirname, '..', 'public', 'products.json'),
+      path.join(__dirname, 'public', 'products.json'),
+    ];
+    for (const p of paths) {
+      try {
+        const raw = fs.readFileSync(p, 'utf8');
+        data = JSON.parse(raw);
+        console.log(`[CATALOG] Loaded from ${p}`);
+        break;
+      } catch (e) { /* try next path */ }
     }
-  });
+    if (!data) {
+      console.error('[CATALOG] products.json not found at any path');
+      return {};
+    }
+    PRODUCT_CATALOG = {};
+    for (const p of (data.products || [])) {
+      PRODUCT_CATALOG[p.sku.toUpperCase()] = {
+        sku: p.sku,
+        family: p.family,
+        name: p.displayName,
+        weight: p.packaged?.weight_lbs || 50,
+        length: p.packaged?.length_in || 24,
+        width: p.packaged?.width_in || 18,
+        height: p.packaged?.height_in || 12,
+      };
+    }
+    console.log(`[CATALOG] Loaded ${Object.keys(PRODUCT_CATALOG).length} products`);
+    return PRODUCT_CATALOG;
+  } catch (err) {
+    console.error('[CATALOG] Failed to load products.json:', err.message);
+    return {};
+  }
 }
 
-async function callNetSuite(action, params = {}) {
-  const urlObj = new URL(config.restletUrl);
-  urlObj.searchParams.set('action', action);
-  for (const [key, value] of Object.entries(params)) {
-    urlObj.searchParams.set(key, value);
+// ============================================================
+// SKU CLASSIFICATION
+// ============================================================
+
+// Non-physical line items (fees, services, notes)
+const NON_SHIPPABLE_EXACT = new Set([
+  'credit card fee', 'installation service', 'installation labor',
+  'installation mobilization - add/alt', 'installation overhead',
+  'installation note', 'discount', 'royalty fee - skatedock',
+  'misc-non-inv-sale', 'misc-non-inv-sale terms', 'change order amount',
+  'shipping', 'shipping note', 'price escalation - add/alt',
+  'contract notes', 'change order request', 'change order summary',
+  'add/alternate', 'sales order discounts - line level', 'desc',
+  'product summary', 'lead time', 'installation mobilization',
+  'freight', 'change order note',
+]);
+
+const NON_SHIPPABLE_STARTSWITH = [
+  'installation ', 'royalty fee', 'misc-non-inv',
+  'change order', 'shipping note', 'price escalation',
+  'contract note', 'sales order discount',
+];
+
+// Hardware / fastener / packaging prefixes (ship with main products)
+const HARDWARE_PREFIXES = [
+  '30006-', '30008-', '31000-', '32000-', '32004-',
+  '34002-', '34010-', '34051-',
+  '39000-', '39010-', '39100-',
+  '40103-', '40304-', '40802-', '41002-',
+  '50801-',
+  '81004-',
+  '91000-',
+];
+
+const HARDWARE_STARTSWITH = ['sik', 'wak'];
+const HARDWARE_CONTAINS = ['anchor kit', 'polybag', 'trident nut driver'];
+
+// Component suppression: parent prefix → child prefixes to skip
+const COMPONENT_SUPPRESSION = {
+  'dd-': [
+    '80101-0050', '80301-0250', '80301-0252', '80301-0253',
+    '80301-0257', '50101-0256', '80101-0257',
+  ],
+  '90101-2287': [
+    '80101-0088', '80101-0287', '61211-0002', '61211-0004',
+    '61211-0005', '71003-0088',
+  ],
+  '90101-0172': [
+    '80101-0172',
+  ],
+};
+
+// Packaging prefixes
+const PACKAGING_PREFIXES = ['61211-', '60905-', '60913-', '60923-'];
+
+function classifyItem(sku, name, orderHasParents) {
+  const skuLower = (sku || '').toLowerCase().trim();
+  const nameLower = (name || '').toLowerCase().trim();
+
+  if (NON_SHIPPABLE_EXACT.has(skuLower) || NON_SHIPPABLE_EXACT.has(nameLower)) return 'non_shippable';
+  for (const prefix of NON_SHIPPABLE_STARTSWITH) {
+    if (skuLower.startsWith(prefix) || nameLower.startsWith(prefix)) return 'non_shippable';
   }
-  
-  const url = urlObj.toString();
-  const oauth = createOAuthClient();
-  const token = { key: config.tokenId, secret: config.tokenSecret };
-  
-  const authHeader = oauth.toHeader(oauth.authorize({ url, method: 'GET' }, token));
-  authHeader.Authorization = authHeader.Authorization.replace(
-    'OAuth ',
-    `OAuth realm="${config.accountId.toUpperCase()}", `
-  );
-  
-  const response = await fetch(url, {
-    method: 'GET',
-    headers: {
-      'Authorization': authHeader.Authorization,
-      'Content-Type': 'application/json',
-      'Accept': 'application/json'
+  if (skuLower === 'unknown' && nameLower === 'unknown item') return 'non_shippable';
+
+  for (const prefix of HARDWARE_PREFIXES) {
+    if (skuLower.startsWith(prefix)) return 'hardware';
+  }
+  for (const sw of HARDWARE_STARTSWITH) {
+    if (skuLower.startsWith(sw)) return 'hardware';
+  }
+  for (const kw of HARDWARE_CONTAINS) {
+    if (nameLower.includes(kw)) return 'hardware';
+  }
+
+  for (const prefix of PACKAGING_PREFIXES) {
+    if (skuLower.startsWith(prefix)) return 'packaging';
+  }
+
+  for (const [parentPrefix, componentPrefixes] of Object.entries(COMPONENT_SUPPRESSION)) {
+    if (orderHasParents.has(parentPrefix)) {
+      for (const compPrefix of componentPrefixes) {
+        if (skuLower.startsWith(compPrefix.toLowerCase())) return 'component_of_parent';
+      }
+    }
+  }
+
+  return 'product';
+}
+
+// ============================================================
+// PRODUCT LOOKUP
+// ============================================================
+function lookupProduct(sku) {
+  const catalog = loadProductCatalog();
+  const skuUpper = (sku || '').toUpperCase().trim();
+
+  // Exact match
+  if (catalog[skuUpper]) return catalog[skuUpper];
+
+  // Try without color suffix (-BLK13, -GAV, -GRY14, -RED, etc.)
+  const baseSku = skuUpper.replace(/-[A-Z]{2,}[0-9]*$/, '');
+  for (const [catSku, product] of Object.entries(catalog)) {
+    if (catSku.replace(/-[A-Z]{2,}[0-9]*$/, '') === baseSku && baseSku.length > 4) {
+      return product;
+    }
+  }
+
+  // Family-based prefix matching
+  const skuLower = (sku || '').toLowerCase();
+  const familyPrefixes = {
+    'dd-ss-04': 'Double Docker', 'dd-ss-06': 'Double Docker',
+    'dd-ds-04': 'Double Docker', 'dd-ds-06': 'Double Docker',
+    '90101-2287': 'Varsity', '90101-0172': 'VR2 Offset',
+    '89901-2050': 'Dismount', '89901-121': 'Skatedock',
+    'sm10x': 'Skatedock', 'sd6x': 'Skatedock',
+    'ss120': 'Base Station', 'ss95': 'Base Station', 'ss66': 'Base Station', 'ss38': 'Base Station',
+    'cs120': 'Base Station', 'cs95': 'Base Station', 'cs66': 'Base Station', 'cs38': 'Base Station',
+    'ssa': 'Base Station', 'csa': 'Base Station',
+    '80301-0166': 'Hoop Runner', '80301-0151': 'Circle Series (Omega)',
+    'visi2': 'Metal Bike Vault / VisiLocker', 'mbv2': 'Metal Bike Vault / VisiLocker',
+    'mbv1': 'MBA',
+    '80101-0370': 'Undergrad', '80101-0363': 'Undergrad', '80101-0364': 'Undergrad',
+    '80101-0365': 'Undergrad', '80101-0366': 'Undergrad', '80101-0368': 'Undergrad',
+    '80101-0281': '2UP',
+    'sm-wave': 'Wave Runner',
+    '26302c': 'Pump & Repair',
+    '26246': 'Pump & Repair',
+    '89904': 'Skatedock',
+    '89901-1210': 'Skatedock',
+    '89901-1172': 'VR1 XL',
+    '80101-0230': 'Base Station',
+    '80101-0232': 'Base Station',
+  };
+
+  for (const [prefix, family] of Object.entries(familyPrefixes)) {
+    if (skuLower.startsWith(prefix)) {
+      for (const product of Object.values(catalog)) {
+        if (product.family === family) return product;
+      }
+    }
+  }
+
+  return null;
+}
+
+// ============================================================
+// PALLET PREDICTION
+// ============================================================
+const UNITS_PER_PALLET = {
+  'Varsity': 70, 'VR2 Offset': 40, 'VR1 XL': 40,
+  'Double Docker': 1, 'Hoop Runner': 60, 'Undergrad': 2,
+  'Skatedock': 16, 'Dismount': 15, 'Base Station': 6,
+  'Wave Runner': 4, 'Circle Series (Omega)': 10,
+  'Metal Bike Vault / VisiLocker': 2, 'MBA': 2,
+  'Pump & Repair': 10, 'Cane Detection': 10, '2UP': 24,
+  'Strut Install Kit': 20, 'Saris': 10, 'Fiberglass Bike Vault': 2,
+  'Radius': 6,
+};
+
+function estimateDDPallets(qty, bikeCount) {
+  if (bikeCount === 4) {
+    return Math.ceil((qty * 2) / 21) + Math.ceil(qty / 32) + Math.ceil(qty / 40);
+  } else if (bikeCount === 6) {
+    return Math.ceil((qty * 2) / 14) + Math.ceil(qty / 20) + Math.ceil(qty / 30);
+  }
+  return Math.ceil(qty * 4 / 10);
+}
+
+function predictPallets(items) {
+  // Identify parent products on the order
+  const orderHasParents = new Set();
+  for (const item of items) {
+    const skuLower = (item.sku || '').toLowerCase();
+    for (const parentPrefix of Object.keys(COMPONENT_SUPPRESSION)) {
+      if (skuLower.startsWith(parentPrefix) || skuLower.includes(parentPrefix)) {
+        orderHasParents.add(parentPrefix);
+      }
+    }
+  }
+
+  let totalPallets = 0;
+  let totalWeight = 0;
+  const breakdown = [];
+  const diagnostics = {
+    totalLines: items.length,
+    filteredNonShippable: 0,
+    filteredHardware: 0,
+    filteredPackaging: 0,
+    filteredComponents: 0,
+    knownProducts: 0,
+    unknownProducts: 0,
+    unknownSkus: [],
+  };
+
+  for (const item of items) {
+    if (!item.qty || item.qty === 0) {
+      diagnostics.filteredNonShippable++;
+      continue;
+    }
+
+    const classification = classifyItem(item.sku, item.name, orderHasParents);
+
+    if (classification === 'non_shippable') { diagnostics.filteredNonShippable++; continue; }
+    if (classification === 'hardware') { diagnostics.filteredHardware++; continue; }
+    if (classification === 'packaging') { diagnostics.filteredPackaging++; continue; }
+    if (classification === 'component_of_parent') { diagnostics.filteredComponents++; continue; }
+
+    // Real product — look up in catalog
+    const product = lookupProduct(item.sku);
+    let pallets, weight, matched;
+
+    if (product) {
+      diagnostics.knownProducts++;
+      matched = product.family;
+      const upp = UNITS_PER_PALLET[product.family] || 10;
+      const wpu = product.weight || 50;
+
+      if (product.family === 'Double Docker') {
+        const bikeCount = (item.sku || '').includes('04') ? 4 : 6;
+        pallets = estimateDDPallets(item.qty, bikeCount);
+        weight = item.qty * wpu;
+      } else {
+        pallets = Math.ceil(item.qty / upp);
+        weight = item.qty * wpu;
+      }
+    } else {
+      diagnostics.unknownProducts++;
+      diagnostics.unknownSkus.push(item.sku);
+      matched = null;
+      pallets = Math.ceil(item.qty / 10);
+      weight = item.qty * 25;
+    }
+
+    totalPallets += pallets;
+    totalWeight += weight;
+    breakdown.push({
+      sku: item.sku,
+      name: item.name,
+      qty: item.qty,
+      pallets,
+      weight: Math.round(weight),
+      matched: matched || 'UNKNOWN',
+    });
+  }
+
+  const productLines = diagnostics.knownProducts + diagnostics.unknownProducts;
+  const confidenceScore = productLines > 0
+    ? Math.round((diagnostics.knownProducts / productLines) * 100)
+    : 100; // No products = nothing to be wrong about
+  const confidenceLevel = confidenceScore >= 90 ? 'high' : confidenceScore >= 60 ? 'medium' : 'low';
+
+  return {
+    totalPallets,
+    totalWeight: Math.round(totalWeight),
+    breakdown,
+    diagnostics: { ...diagnostics, productLines, confidenceScore, confidenceLevel },
+  };
+}
+
+// ============================================================
+// NETSUITE OAUTH
+// ============================================================
+function createOAuthClient() {
+  return OAuth({
+    consumer: { key: config.consumerKey, secret: config.consumerSecret },
+    signature_method: 'HMAC-SHA256',
+    hash_function(base_string, key) {
+      return crypto.createHmac('sha256', key).update(base_string).digest('base64');
     }
   });
-  
-  return response.json();
 }
 
 async function getSalesOrderViaSuiteQL(soNumber) {
-  // Step 1: Look up sales order by tranid to get internal ID
-  // Try both with and without SO prefix, filter for sales orders only, order by ID desc to get most recent
   const soQuery = `SELECT id, tranid, type FROM transaction WHERE tranid IN ('SO${soNumber}', '${soNumber}') AND type = 'SalesOrd' ORDER BY id DESC`;
   const soUrl = `https://${config.accountId}.suitetalk.api.netsuite.com/services/rest/query/v1/suiteql?limit=10&offset=0`;
-  
+
   const oauth = createOAuthClient();
   const token = { key: config.tokenId, secret: config.tokenSecret };
   const authHeader = oauth.toHeader(oauth.authorize({ url: soUrl, method: 'POST' }, token));
-  authHeader.Authorization = authHeader.Authorization.replace(
-    'OAuth ',
-    `OAuth realm="${config.accountId.toUpperCase()}", `
-  );
-  
+  authHeader.Authorization = authHeader.Authorization.replace('OAuth ', `OAuth realm="${config.accountId.toUpperCase()}", `);
+
   const soResponse = await fetch(soUrl, {
     method: 'POST',
     headers: {
@@ -87,42 +360,26 @@ async function getSalesOrderViaSuiteQL(soNumber) {
     },
     body: JSON.stringify({ q: soQuery })
   });
-  
+
   const soData = await soResponse.json();
-  
-  console.log('SuiteQL SO lookup response:', JSON.stringify(soData, null, 2));
-  
+
   if (!soData.items || soData.items.length === 0) {
-    console.log('No items found for SO' + soNumber + ' with type=SalesOrd filter, query was: ' + soQuery);
-    return { success: false, error: `Sales order SO${soNumber} not found (no SalesOrd type match)`, debug: { query: soQuery, response: soData } };
+    return { success: false, error: `Sales order SO${soNumber} not found` };
   }
-  
-  // Type filter in SQL query should handle this, but double-check
-  const salesOrder = soData.items[0]; // Take first match (already filtered by type=SalesOrd)
-  const soId = salesOrder.id;
-  console.log('Found sales order with internal ID:', soId, 'type:', salesOrder.type);
-  
-  // Step 2: Get line items for this sales order
-  // DEBUG: Temporarily remove quantity filter to see all items
+
+  const soId = soData.items[0].id;
+
   const itemsQuery = `
-    SELECT 
-      i.itemid AS sku,
-      i.displayname AS name,
-      tl.quantity
+    SELECT i.itemid AS sku, i.displayname AS name, tl.quantity
     FROM transactionline tl
     LEFT JOIN item i ON i.id = tl.item
-    WHERE tl.transaction = ${soId}
-      AND tl.mainline = 'F'
-      AND tl.item IS NOT NULL
+    WHERE tl.transaction = ${soId} AND tl.mainline = 'F' AND tl.item IS NOT NULL
   `;
-  
+
   const itemsUrl = `https://${config.accountId}.suitetalk.api.netsuite.com/services/rest/query/v1/suiteql?limit=1000&offset=0`;
   const itemsAuthHeader = oauth.toHeader(oauth.authorize({ url: itemsUrl, method: 'POST' }, token));
-  itemsAuthHeader.Authorization = itemsAuthHeader.Authorization.replace(
-    'OAuth ',
-    `OAuth realm="${config.accountId.toUpperCase()}", `
-  );
-  
+  itemsAuthHeader.Authorization = itemsAuthHeader.Authorization.replace('OAuth ', `OAuth realm="${config.accountId.toUpperCase()}", `);
+
   const itemsResponse = await fetch(itemsUrl, {
     method: 'POST',
     headers: {
@@ -133,162 +390,66 @@ async function getSalesOrderViaSuiteQL(soNumber) {
     },
     body: JSON.stringify({ q: itemsQuery })
   });
-  
+
   const itemsData = await itemsResponse.json();
-  
-  console.log('SuiteQL items query response:', JSON.stringify(itemsData, null, 2));
-  
+
   if (!itemsData.items || itemsData.items.length === 0) {
-    console.log('No line items found for SO' + soNumber + ' (soId: ' + soId + ')');
-    return { success: false, error: `No items found for SO${soNumber}`, debug: { soId, itemsQuery, response: itemsData } };
+    return { success: false, error: `No items found for SO${soNumber}` };
   }
-  
-  // Format items to match expected structure (qty not quantity for predictPallets)
-  // Use Math.abs() to convert negative quantities (returns/credits) to positive
+
   const items = itemsData.items.map(row => ({
     sku: row.sku || row.itemid || 'UNKNOWN',
     name: row.name || row.displayname || 'Unknown Item',
     qty: Math.abs(parseInt(row.quantity, 10) || 0)
   }));
-  
-  console.log('Formatted items:', JSON.stringify(items, null, 2));
-  
+
   return { success: true, items };
 }
 
-// Simple pallet prediction logic (matches productModels.js)
-function predictPallets(items) {
-  // Hardware SKU patterns to skip (small items that pack with main products)
-  const hardwarePatterns = ['3000P-', '3000Q-', '31000-', '32000-', '34010-', '39000-', '50801-', '81000-', '26268'];
-  
-  // Filter out hardware items
-  items = items.filter(item => {
-    const sku = item.sku || '';
-    return !hardwarePatterns.some(pattern => sku.includes(pattern));
-  });
-  
-  const unitsPerPallet = {
-    'dv215': 70, '90101-2287': 70,
-    'dismount': 15,
-    'vr2': 50, 'vr1': 50,
-    'dd4': 12, 'dd6': 8,
-    'mbv1': 4, 'mbv2': 2,
-    'visi1': 6, 'visi2': 3,
-    'hr101': 60, 'hr201': 20,
-    'undergrad': 4,
-    'sm10x': 16, 'sm10': 16, '89901-121': 16,
-    'default': 10
-  };
-  
-  const weightPerUnit = {
-    'dv215': 55, '90101-2287': 55,
-    'dismount': 10,
-    'vr2': 31, 'vr1': 31,
-    'dd4': 206, 'dd6': 260,
-    'mbv1': 312, 'mbv2': 420,
-    'visi1': 280, 'visi2': 375,
-    'hr101': 14, 'hr201': 48,
-    'undergrad': 85,
-    'sm10x': 28, 'sm10': 28, '89901-121': 28,
-    'default': 50
-  };
-  
-  let totalPallets = 0;
-  let totalWeight = 0;
-  const breakdown = [];
-  
-  for (const item of items) {
-    const skuLower = item.sku.toLowerCase();
-    let upp = unitsPerPallet.default;
-    let wpu = weightPerUnit.default;
-    
-    for (const [key, val] of Object.entries(unitsPerPallet)) {
-      if (key !== 'default' && skuLower.includes(key.toLowerCase())) {
-        upp = val;
-        wpu = weightPerUnit[key] || weightPerUnit.default;
-        break;
-      }
-    }
-    
-    const pallets = Math.ceil(item.qty / upp);
-    const weight = item.qty * wpu;
-    
-    totalPallets += pallets;
-    totalWeight += weight;
-    breakdown.push({ 
-      sku: item.sku, 
-      name: item.name, 
-      qty: item.qty, 
-      pallets, 
-      weight: Math.round(weight)
-    });
-  }
-  
-  return { totalPallets, totalWeight: Math.round(totalWeight), breakdown };
-}
-
+// ============================================================
+// API HANDLER
+// ============================================================
 module.exports = async (req, res) => {
-  // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-  
-  if (req.method !== 'POST') {
-    return res.status(405).json({ success: false, error: 'Method not allowed' });
-  }
-  
+
+  if (req.method === 'OPTIONS') return res.status(200).end();
+  if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'Method not allowed' });
+
   try {
     const { soNumber, pallets, validatedBy, notes } = req.body;
-    
-    console.log('=== VALIDATE REQUEST ===');
-    console.log('SO#:', soNumber);
-    console.log('Has AccountID:', !!config.accountId);
-    console.log('Has Supabase:', !!supabase);
-    
+    console.log('=== VALIDATE SO' + soNumber + ' ===');
+
     if (!soNumber || !pallets || !validatedBy) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Missing required fields: soNumber, pallets, validatedBy' 
-      });
+      return res.status(400).json({ success: false, error: 'Missing required fields: soNumber, pallets, validatedBy' });
     }
-    
-    // 1. Look up sales order in NetSuite using SuiteQL
-    console.log('Calling getSalesOrderViaSuiteQL for SO' + soNumber);
+
+    // 1. NetSuite lookup
     const soData = await getSalesOrderViaSuiteQL(soNumber);
-    console.log('SuiteQL result:', JSON.stringify(soData));
-    
-    if (!soData.success || !soData.items || soData.items.length === 0) {
-      return res.status(404).json({ 
-        success: false, 
-        error: `Sales order SO${soNumber} not found or has no items`,
-        debug: soData
-      });
+    if (!soData.success || !soData.items?.length) {
+      return res.status(404).json({ success: false, error: `Sales order SO${soNumber} not found or has no items` });
     }
-    
-    // 2. Run pallet prediction
-    console.log('Items being sent to predictPallets:', JSON.stringify(soData.items, null, 2));
+
+    // 2. Predict
     const prediction = predictPallets(soData.items);
-    console.log('Prediction result:', JSON.stringify(prediction, null, 2));
-    
-    // 3. Calculate actuals from pallet data
+    const d = prediction.diagnostics;
+    console.log(`[PREDICT] ${prediction.totalPallets} pallets | confidence=${d.confidenceLevel} (${d.confidenceScore}%) | filtered: ${d.filteredNonShippable}ns ${d.filteredHardware}hw ${d.filteredComponents}comp ${d.filteredPackaging}pkg | unknown: ${d.unknownProducts}`);
+
+    // 3. Actuals
     const actualPallets = pallets.length;
     const actualWeight = pallets.reduce((sum, p) => sum + (p.weight || 0), 0);
-    
-    // 4. Calculate variance
+
+    // 4. Variance
     const palletVariance = actualPallets - prediction.totalPallets;
     const weightVariance = actualWeight - prediction.totalWeight;
-    const palletAccurate = palletVariance === 0;
-    const withinOnePallet = Math.abs(palletVariance) <= 1;
-    
+    const absDelta = Math.abs(palletVariance);
+    const severity = absDelta === 0 ? 'exact' : absDelta <= 1 ? 'low' : absDelta <= 2 ? 'medium' : 'high';
+
     // 5. Save to Supabase
     let validationId = null;
     if (supabase) {
-      console.log('Attempting Supabase save for SO' + soNumber);
-      const insertData = {
+      const result = await supabase.from('validations').insert({
         pick_ticket_id: `SO${soNumber}`,
         sales_order_id: `SO${soNumber}`,
         predicted_pallets: prediction.totalPallets,
@@ -301,63 +462,22 @@ module.exports = async (req, res) => {
         validated_by: validatedBy,
         validated_at: new Date().toISOString(),
         status: 'validated'
-      };
-      console.log('Insert data:', JSON.stringify(insertData, null, 2));
-      
-      let data, error;
-      try {
-        const result = await supabase.from('validations').insert(insertData).select('id');
-        data = result.data;
-        error = result.error;
-        console.log('Supabase response - data:', data, 'error:', error);
-      } catch (err) {
-        console.error('Supabase insert exception:', err);
-        error = err;
+      }).select('id');
+
+      if (result.error) {
+        console.error('Supabase error:', result.error);
+      } else {
+        validationId = result.data?.[0]?.id;
       }
-      
-      if (error) {
-        console.error('Supabase save error:', error);
-        return res.status(500).json({ 
-          success: false, 
-          error: `Failed to save validation: ${error.message}`,
-          details: error
-        });
-      }
-      
-      validationId = data?.[0]?.id;
-      console.log('Validation saved with ID:', validationId);
-    } else {
-      console.warn('Supabase client not configured - skipping save');
     }
-    
-    // 6. Send notifications (email + Google Sheets backup)
-    const notificationData = {
-      soNumber: `SO${soNumber}`,
-      validatedBy,
-      notes,
-      predicted: {
-        pallets: prediction.totalPallets,
-        weight: prediction.totalWeight
-      },
-      actual: {
-        pallets: actualPallets,
-        weight: actualWeight
-      },
-      variance: {
-        pallets: palletVariance,
-        weight: weightVariance,
-        palletAccurate,
-        withinOnePallet
-      }
-    };
-    
-    // Send email and save to Sheets (non-blocking, don't wait)
+
+    // 6. Notifications (non-blocking)
     Promise.all([
-      sendValidationEmail(notificationData).catch(err => console.error('Email error:', err)),
-      saveToGoogleSheets(notificationData).catch(err => console.error('Sheets error:', err))
+      sendValidationEmail({ soNumber: `SO${soNumber}`, validatedBy, notes, predicted: { pallets: prediction.totalPallets, weight: prediction.totalWeight }, actual: { pallets: actualPallets, weight: actualWeight }, variance: { pallets: palletVariance, weight: weightVariance } }).catch(() => {}),
+      saveToGoogleSheets({ soNumber: `SO${soNumber}`, validatedBy, notes, predicted: { pallets: prediction.totalPallets, weight: prediction.totalWeight }, actual: { pallets: actualPallets, weight: actualWeight }, variance: { pallets: palletVariance, weight: weightVariance } }).catch(() => {})
     ]);
-    
-    // 7. Return comparison data
+
+    // 7. Response
     return res.status(200).json({
       success: true,
       validationId,
@@ -367,25 +487,20 @@ module.exports = async (req, res) => {
         weight: prediction.totalWeight,
         breakdown: prediction.breakdown
       },
-      actual: {
-        pallets: actualPallets,
-        weight: actualWeight,
-        dimensions: pallets
-      },
+      actual: { pallets: actualPallets, weight: actualWeight, dimensions: pallets },
       variance: {
         pallets: palletVariance,
         weight: weightVariance,
-        palletAccurate,
-        withinOnePallet
+        palletAccurate: palletVariance === 0,
+        withinOnePallet: absDelta <= 1,
+        severity,
       },
+      diagnostics: prediction.diagnostics,
       items: soData.items
     });
-    
+
   } catch (error) {
     console.error('Validation error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      error: error.message || 'Internal server error' 
-    });
+    return res.status(500).json({ success: false, error: error.message || 'Internal server error' });
   }
 };
