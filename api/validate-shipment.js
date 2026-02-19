@@ -93,18 +93,20 @@ const NON_SHIPPABLE_STARTSWITH = [
 
 // Hardware / fastener prefixes — these ship WITH main products, not as own pallets
 const HARDWARE_PREFIXES = [
-  // Fasteners / screws / bolts (3xxxx series)
-  '3000p-', '3000q-', '30006-', '30008-', '30012-',
-  '31000-',
-  '32000-', '32001-', '32004-',
-  '34002-', '34010-', '34051-',
+  // Fasteners / screws / bolts (3xxxx series — catch-all for 3000x)
+  '3000', '30006-', '30008-', '30012-', '30016-', '30017-',
+  '31000-', '31005-',
+  '32000-', '32001-', '32004-', '32019-',
+  '34000-', '34002-', '34010-', '34051-',
   // Misc hardware
   '39000-', '39010-', '39100-',
   // Plastic parts / caps / guards (4xxxx series — assembly sub-components)
   '40103-', '40108-', '40110-', '40111-', '40304-',
   '40501-', '40602-', '40802-', '41002-',
-  // Cross tubes / structural sub-components
-  '50301-', '50801-',
+  // Structural sub-components
+  '50101-', '50301-', '50801-',
+  // Assembly intermediates
+  '71003-',
   // All DD/general hardware kits (81000 series)
   '81000-', '81004-',
   // Packaging / label items
@@ -117,6 +119,8 @@ const HARDWARE_CONTAINS = [
   'hardware kit', 'install kit', 'hardware,',
   'toggle bolt', 'channel nut', 'carriage bolt kit',
   'u-bolt kit', 'anchoring kit', 'stacking hardware',
+  'flat washer', 'flange nut', 'wedge anchor',
+  'hex-head bolt', 'lag screw', 'cap screw', 'end cap,',
 ];
 
 // Service / coating lines — these are work orders, not physical products
@@ -129,20 +133,39 @@ const COMPONENT_SUPPRESSION = {
     '80301-0257', '80301-0258', '50101-0256', '80101-0257',
   ],
   '90101-2287': [
-    '80101-0088', '80101-0287', '80301-0088',
+    '80101-0088', '80101-0287', '80301-0088', '80301-0287',
     '61211-0002', '61211-0004', '61211-0005',
     '71003-0088',
   ],
-  '90101-0172': [
-    '80101-0172',
+  '90101-0172': ['80101-0172'],
+  '89901-0163': ['80301-0163'],
+  '80101-0202': ['80301-0202'],
+  '89901-2050': [
+    '80301-2048', '80301-2049', '80301-2050', '80301-2051', '80301-2052', '80101-2050',
   ],
-  '89901-0163': [
-    '80301-0163',
-  ],
-  '80101-0202': [
-    '80301-0202',
-  ],
+  '80101-0281': ['80301-0281'],
+  '89901-0418': ['90101-0418'],
+  '90101-1172': ['80301-1172'],
+  '89901-1172': ['80301-1172'],
+  '80101-1172': ['80301-1172'],
 };
+
+// Sub-component SKUs that should ALWAYS be filtered regardless of parent presence
+// (these are manufacturing intermediates / unassembled parts, never finished goods)
+const ALWAYS_SUPPRESS_PREFIXES = [
+  '80301-0088', '80301-0287',  // Varsity DV215 unassembled parts
+  '80101-0088', '80101-0287',  // Varsity assembled sub-parts
+  '80101-0050',                 // DD sub-part
+  '80301-0250', '80301-0252', '80301-0253', '80301-0257', '80301-0258', // DD manifold/rail parts
+  '80101-0257', '80101-0258',  // DD kit parts
+  '80301-2048', '80301-2049', '80301-2050', '80301-2051', '80301-2052', // Dismount welded assemblies
+  '80101-2050',                 // Dismount head
+  '80301-1172',                 // VR1 raw
+  '80301-0281',                 // 2UP raw
+  '80301-0202',                 // Radius raw
+  '80301-0163',                 // Hoop Runner raw
+  '90101-0418', '90101-0407',   // VISI2/MBA box sub-components
+];
 
 // Packaging prefixes
 const PACKAGING_PREFIXES = ['61211-', '60905-', '60913-', '60923-'];
@@ -181,6 +204,11 @@ function classifyItem(sku, name, orderHasParents) {
   // 5. Packaging
   for (const prefix of PACKAGING_PREFIXES) {
     if (skuLower.startsWith(prefix)) return 'packaging';
+  }
+
+  // 5.5. Always-suppress sub-components (manufacturing intermediates)
+  for (const prefix of ALWAYS_SUPPRESS_PREFIXES) {
+    if (skuLower.startsWith(prefix.toLowerCase())) return 'component_of_parent';
   }
 
   // 6. Component suppression (child parts when parent is on the order)
@@ -229,7 +257,8 @@ function lookupProduct(sku) {
     '80301-0166': 'Hoop Runner', '80301-0151': 'Circle Series (Omega)',
     '89901-0163': 'Hoop Runner', '80101-0163': 'Hoop Runner',
     'visi2': 'Metal Bike Vault / VisiLocker', 'mbv2': 'Metal Bike Vault / VisiLocker',
-    'mbv1': 'MBA', '89901-0407': 'MBA', '90101-0407': 'MBA',
+    '89901-0418': 'Metal Bike Vault / VisiLocker',
+    'mbv1': 'MBA', '89901-0407': 'MBA',
     '80101-0370': 'Undergrad', '80101-0363': 'Undergrad', '80101-0364': 'Undergrad',
     '80101-0365': 'Undergrad', '80101-0366': 'Undergrad', '80101-0368': 'Undergrad',
     '80101-0281': '2UP',
@@ -238,10 +267,11 @@ function lookupProduct(sku) {
     '26246': 'Pump & Repair',
     '89904': 'Skatedock',
     '89901-1210': 'Skatedock',
-    '89901-1172': 'VR1 XL', '80101-1172': 'VR1 XL',
+    '90101-1172': 'VR1 XL', '89901-1172': 'VR1 XL', '80101-1172': 'VR1 XL',
     '80101-0230': 'Base Station',
     '80101-0232': 'Base Station',
     '80101-0202': 'Radius',
+    '80101-0335': 'Guardian',
   };
 
   for (const [prefix, family] of Object.entries(familyPrefixes)) {
@@ -266,7 +296,7 @@ const UNITS_PER_PALLET = {
   'Metal Bike Vault / VisiLocker': 2, 'MBA': 2,
   'Pump & Repair': 10, 'Cane Detection': 10, '2UP': 24,
   'Strut Install Kit': 20, 'Saris': 10, 'Fiberglass Bike Vault': 2,
-  'Radius': 6,
+  'Radius': 6, 'Guardian': 6,
 };
 
 function estimateDDPallets(qty, bikeCount) {
