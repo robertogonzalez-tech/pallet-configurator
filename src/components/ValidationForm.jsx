@@ -25,6 +25,11 @@ export default function ValidationForm() {
   const [success, setSuccess] = useState(null)
   const [prediction, setPrediction] = useState(null)
 
+  // Feedback state — per-item corrections from Chad
+  const [itemFeedback, setItemFeedback] = useState({})
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState(false)
+  const [feedbackSubmitting, setFeedbackSubmitting] = useState(false)
+
   const supabaseStatus = getSupabaseStatus()
 
   // Add a new pallet row
@@ -34,7 +39,7 @@ export default function ValidationForm() {
 
   // Remove a pallet row
   const removePallet = (index) => {
-    if (pallets.length === 1) return // Keep at least one
+    if (pallets.length === 1) return
     setPallets(pallets.filter((_, i) => i !== index))
   }
 
@@ -51,17 +56,12 @@ export default function ValidationForm() {
 
   // Validate form
   const validateForm = () => {
-    // SO# must be 4+ digits
     if (!/^\d{4,}$/.test(soNumber)) {
       return 'Sales Order # must be at least 4 digits'
     }
-
-    // At least 1 pallet
     if (pallets.length === 0) {
       return 'At least one pallet is required'
     }
-
-    // All pallet fields must be filled
     for (let i = 0; i < pallets.length; i++) {
       const p = pallets[i]
       if (!p.weight || !p.length || !p.width || !p.height) {
@@ -71,8 +71,85 @@ export default function ValidationForm() {
         return `Pallet ${i + 1}: Weight must be greater than 0`
       }
     }
-
     return null
+  }
+
+  // Toggle item flagged as wrong
+  const toggleItemFlag = (index) => {
+    setItemFeedback(prev => {
+      const current = prev[index] || {}
+      return {
+        ...prev,
+        [index]: { ...current, flagged: !current.flagged }
+      }
+    })
+  }
+
+  // Update item correction note
+  const updateItemNote = (index, note) => {
+    setItemFeedback(prev => ({
+      ...prev,
+      [index]: { ...(prev[index] || {}), note, flagged: true }
+    }))
+  }
+
+  // Update item actual pallet count
+  const updateItemActualPallets = (index, count) => {
+    setItemFeedback(prev => ({
+      ...prev,
+      [index]: { ...(prev[index] || {}), actualPallets: count, flagged: true }
+    }))
+  }
+
+  // Submit corrections to Supabase
+  const submitFeedback = async () => {
+    const flaggedItems = Object.entries(itemFeedback).filter(([_, fb]) => fb.flagged)
+    if (flaggedItems.length === 0) return
+
+    setFeedbackSubmitting(true)
+    try {
+      const breakdown = success?.breakdown || []
+      const corrections = flaggedItems.map(([idx, fb]) => {
+        const item = breakdown[parseInt(idx)]
+        return {
+          validation_id: success?.validationId || null,
+          sku: item?.sku || 'UNKNOWN',
+          field: 'per_pallet',
+          predicted_value: item?.pallets || 0,
+          actual_value: fb.actualPallets != null ? parseFloat(fb.actualPallets) : null,
+          notes: fb.note || null,
+        }
+      }).filter(c => c.sku !== 'UNKNOWN')
+
+      if (corrections.length > 0 && supabase) {
+        const { error: insertError } = await supabase.from('corrections').insert(corrections)
+        if (insertError) {
+          console.error('Corrections save error:', insertError)
+        }
+      }
+
+      // Also update the validation record notes with correction summary
+      if (success?.validationId && supabase) {
+        const feedbackSummary = flaggedItems.map(([idx, fb]) => {
+          const item = breakdown[parseInt(idx)]
+          const parts = [`${item?.sku}: predicted ${item?.pallets} pallets`]
+          if (fb.actualPallets != null) parts.push(`actual ${fb.actualPallets}`)
+          if (fb.note) parts.push(`"${fb.note}"`)
+          return parts.join(' — ')
+        }).join('; ')
+
+        await supabase
+          .from('validations')
+          .update({ notes: `${success?.existingNotes || ''}\n[CORRECTIONS] ${feedbackSummary}`.trim() })
+          .eq('id', success.validationId)
+      }
+
+      setFeedbackSubmitted(true)
+    } catch (err) {
+      console.error('Feedback submit error:', err)
+    } finally {
+      setFeedbackSubmitting(false)
+    }
   }
 
   // Submit validation
@@ -86,9 +163,10 @@ export default function ValidationForm() {
     setSubmitting(true)
     setError(null)
     setSuccess(null)
+    setItemFeedback({})
+    setFeedbackSubmitted(false)
 
     try {
-      // Call the API endpoint
       const response = await fetch('/api/validate-shipment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -112,22 +190,24 @@ export default function ValidationForm() {
         throw new Error(data.error || 'Failed to submit validation')
       }
 
-      // Store prediction and diagnostics for display
       setPrediction(data)
 
-      // Show success — use correct API response fields
+      const palletVar = totalPallets - (data.predicted?.pallets || 0)
       setSuccess({
+        validationId: data.validationId,
         soNumber: `SO${soNumber}`,
         actualPallets: totalPallets,
         actualWeight: totalWeight,
         predictedPallets: data.predicted?.pallets || 0,
         predictedWeight: data.predicted?.weight || 0,
+        breakdown: data.predicted?.breakdown || [],
         variance: data.variance || {
-          pallets: totalPallets - (data.predicted?.pallets || 0),
+          pallets: palletVar,
           weight: totalWeight - (data.predicted?.weight || 0),
         },
         severity: data.variance?.severity || 'unknown',
         diagnostics: data.diagnostics || null,
+        existingNotes: notes.trim(),
       })
 
       // Clear form for next entry
@@ -147,7 +227,11 @@ export default function ValidationForm() {
   const handleNewValidation = () => {
     setSuccess(null)
     setPrediction(null)
+    setItemFeedback({})
+    setFeedbackSubmitted(false)
   }
+
+  const flaggedCount = Object.values(itemFeedback).filter(fb => fb.flagged).length
 
   return (
     <div className="validation-form-container">
@@ -162,72 +246,183 @@ export default function ValidationForm() {
         )}
       </div>
 
-      {/* Success State */}
+      {/* ============ RESULTS VIEW (after submission) ============ */}
       {success && (
-        <div className="success-card">
-          <div className="success-icon">Saved</div>
-          <h3>Validation saved for {success.soNumber}</h3>
+        <div className="results-container">
 
-          <div className="comparison-grid">
-            <div className="comparison-item">
-              <span className="label">Predicted</span>
-              <span className="value">{success.predictedPallets} pallets</span>
-              <span className="weight">{success.predictedWeight.toLocaleString()} lbs</span>
-            </div>
-            <div className="comparison-arrow">vs</div>
-            <div className="comparison-item">
-              <span className="label">Actual</span>
-              <span className="value">{success.actualPallets} pallets</span>
-              <span className="weight">{success.actualWeight.toLocaleString()} lbs</span>
+          {/* Header with SO# and status */}
+          <div className="results-header">
+            <div className="results-title-row">
+              <h3>{success.soNumber} — Validation Results</h3>
+              <span className="saved-badge">Saved</span>
             </div>
           </div>
 
-          <div className={`variance-badge ${success.variance.pallets === 0 ? 'exact' : Math.abs(success.variance.pallets) <= 1 ? 'close' : Math.abs(success.variance.pallets) <= 2 ? 'over' : 'high'}`}>
-            {success.variance.pallets === 0
-              ? 'Exact Match!'
-              : `${success.variance.pallets > 0 ? '+' : ''}${success.variance.pallets} pallet${Math.abs(success.variance.pallets) !== 1 ? 's' : ''}`
-            }
+          {/* Predicted vs Actual comparison */}
+          <div className="comparison-card">
+            <div className="comparison-grid">
+              <div className="comparison-item predicted-side">
+                <span className="comp-label">System Predicted</span>
+                <span className="comp-pallets">{success.predictedPallets}</span>
+                <span className="comp-unit">pallets</span>
+                <span className="comp-weight">{success.predictedWeight.toLocaleString()} lbs</span>
+              </div>
+              <div className="comparison-vs">
+                <div className={`variance-circle ${success.variance.pallets === 0 ? 'exact' : Math.abs(success.variance.pallets) <= 1 ? 'close' : Math.abs(success.variance.pallets) <= 2 ? 'over' : 'high'}`}>
+                  {success.variance.pallets === 0
+                    ? '\u2713'
+                    : `${success.variance.pallets > 0 ? '+' : ''}${success.variance.pallets}`
+                  }
+                </div>
+                <span className="variance-label">
+                  {success.variance.pallets === 0
+                    ? 'Exact Match'
+                    : Math.abs(success.variance.pallets) <= 1
+                    ? 'Close'
+                    : `Off by ${Math.abs(success.variance.pallets)}`
+                  }
+                </span>
+              </div>
+              <div className="comparison-item actual-side">
+                <span className="comp-label">You Counted</span>
+                <span className="comp-pallets">{success.actualPallets}</span>
+                <span className="comp-unit">pallets</span>
+                <span className="comp-weight">{success.actualWeight.toLocaleString()} lbs</span>
+              </div>
+            </div>
           </div>
 
-          {/* Diagnostics Panel */}
+          {/* Diagnostics summary (collapsed) */}
           {success.diagnostics && (
-            <div className="diagnostics-panel">
-              <div className={`confidence-badge confidence-${success.diagnostics.confidenceLevel}`}>
-                Prediction confidence: {success.diagnostics.confidenceScore}% ({success.diagnostics.confidenceLevel})
+            <div className="diagnostics-bar">
+              <span className={`conf-pill conf-${success.diagnostics.confidenceLevel}`}>
+                {success.diagnostics.confidenceScore}% confidence
+              </span>
+              <span className="diag-summary">
+                {success.diagnostics.totalLines} lines &rarr; {success.diagnostics.filteredNonShippable + success.diagnostics.filteredHardware + success.diagnostics.filteredPackaging + success.diagnostics.filteredComponents} filtered, {success.diagnostics.knownProducts} known, {success.diagnostics.unknownProducts} unknown
+              </span>
+            </div>
+          )}
+
+          {/* ======= ITEM BREAKDOWN — the key feedback section ======= */}
+          {success.breakdown && success.breakdown.length > 0 && (
+            <div className="breakdown-section">
+              <div className="breakdown-header">
+                <h4>What the system counted</h4>
+                <p className="breakdown-hint">
+                  {feedbackSubmitted
+                    ? `${flaggedCount} correction${flaggedCount !== 1 ? 's' : ''} saved \u2014 thank you!`
+                    : 'Tap any item that looks wrong to flag it'
+                  }
+                </p>
               </div>
-              <div className="diagnostics-grid">
-                <div className="diag-item">
-                  <span className="diag-value">{success.diagnostics.totalLines}</span>
-                  <span className="diag-label">Total lines</span>
-                </div>
-                <div className="diag-item">
-                  <span className="diag-value">{success.diagnostics.filteredNonShippable + success.diagnostics.filteredHardware + success.diagnostics.filteredPackaging + success.diagnostics.filteredComponents}</span>
-                  <span className="diag-label">Filtered out</span>
-                </div>
-                <div className="diag-item">
-                  <span className="diag-value">{success.diagnostics.knownProducts}</span>
-                  <span className="diag-label">Known products</span>
-                </div>
-                <div className="diag-item">
-                  <span className="diag-value">{success.diagnostics.unknownProducts}</span>
-                  <span className="diag-label">Unknown</span>
-                </div>
+
+              <div className="breakdown-list">
+                {success.breakdown.map((item, idx) => {
+                  const fb = itemFeedback[idx] || {}
+                  const isUnknown = item.matched === 'UNKNOWN'
+                  return (
+                    <div
+                      key={idx}
+                      className={`breakdown-item ${fb.flagged ? 'flagged' : ''} ${isUnknown ? 'unknown' : ''}`}
+                    >
+                      <div className="item-main" onClick={() => !feedbackSubmitted && toggleItemFlag(idx)}>
+                        <div className="item-info">
+                          <span className="item-sku">{item.sku}</span>
+                          <span className="item-name">{item.name || item.matched}</span>
+                        </div>
+                        <div className="item-stats">
+                          <span className="item-qty">qty {item.qty}</span>
+                          <span className="item-arrow">&rarr;</span>
+                          <span className="item-pallets">{item.pallets} pallet{item.pallets !== 1 ? 's' : ''}</span>
+                          <span className="item-weight">{item.weight?.toLocaleString()} lbs</span>
+                        </div>
+                        <div className="item-family">
+                          {isUnknown
+                            ? <span className="family-unknown">Unknown product</span>
+                            : <span className="family-known">{item.matched}</span>
+                          }
+                        </div>
+                      </div>
+
+                      {/* Expanded correction form when flagged */}
+                      {fb.flagged && !feedbackSubmitted && (
+                        <div className="item-correction">
+                          <div className="correction-row">
+                            <div className="correction-field">
+                              <label>Actually needed:</label>
+                              <div className="pallet-adjuster">
+                                <input
+                                  type="number"
+                                  inputMode="numeric"
+                                  min="0"
+                                  max="99"
+                                  value={fb.actualPallets ?? ''}
+                                  onChange={(e) => updateItemActualPallets(idx, e.target.value)}
+                                  placeholder={String(item.pallets)}
+                                  className="correction-input"
+                                />
+                                <span className="correction-unit">pallets</span>
+                              </div>
+                            </div>
+                            <div className="correction-field note-field">
+                              <label>What's wrong?</label>
+                              <input
+                                type="text"
+                                value={fb.note || ''}
+                                onChange={(e) => updateItemNote(idx, e.target.value)}
+                                placeholder="e.g. These fit on 1 pallet, not 4"
+                                className="correction-note"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Show saved correction */}
+                      {fb.flagged && feedbackSubmitted && (
+                        <div className="item-correction-saved">
+                          Correction saved
+                          {fb.actualPallets != null ? ` \u2014 actually ${fb.actualPallets} pallet${fb.actualPallets != 1 ? 's' : ''}` : ''}
+                          {fb.note ? ` \u2014 "${fb.note}"` : ''}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
-              {success.diagnostics.unknownSkus?.length > 0 && (
-                <div className="unknown-skus">
-                  Unknown SKUs: {success.diagnostics.unknownSkus.join(', ')}
+
+              {/* Unknown SKUs callout */}
+              {success.diagnostics?.unknownSkus?.length > 0 && (
+                <div className="unknown-callout">
+                  <strong>{success.diagnostics.unknownSkus.length} unknown SKU{success.diagnostics.unknownSkus.length !== 1 ? 's' : ''}</strong> &mdash; these default to 1 pallet per 10 units. Flag them above if the count is wrong.
                 </div>
               )}
             </div>
           )}
 
+          {/* Submit corrections button */}
+          {flaggedCount > 0 && !feedbackSubmitted && (
+            <button
+              className="submit-corrections-btn"
+              onClick={submitFeedback}
+              disabled={feedbackSubmitting}
+            >
+              {feedbackSubmitting
+                ? 'Saving corrections...'
+                : `Submit ${flaggedCount} Correction${flaggedCount !== 1 ? 's' : ''}`
+              }
+            </button>
+          )}
+
+          {/* New validation button */}
           <button className="new-btn" onClick={handleNewValidation}>
             Validate Another Shipment
           </button>
         </div>
       )}
 
-      {/* Form */}
+      {/* ============ FORM (before submission) ============ */}
       {!success && (
         <>
           {/* Top Section */}
@@ -413,325 +608,243 @@ export default function ValidationForm() {
         }
 
         .form-header h2 {
-          font-size: 28px;
+          font-size: 24px;
           font-weight: 700;
-          margin-bottom: 8px;
+          margin: 0;
+          color: #f1f5f9;
         }
 
         .subtitle {
           color: #94a3b8;
-          font-size: 16px;
+          font-size: 14px;
+          margin-top: 4px;
         }
 
         .warning-banner {
-          background: #fef3c7;
-          color: #92400e;
-          padding: 12px 16px;
+          background: #78350f;
+          color: #fbbf24;
+          padding: 8px 12px;
           border-radius: 8px;
+          font-size: 13px;
           margin-top: 12px;
-          font-size: 14px;
         }
 
-        /* Form Section */
         .form-section {
-          background: #1e293b;
-          border-radius: 12px;
-          padding: 20px;
           margin-bottom: 20px;
         }
 
         .form-row {
           display: flex;
           gap: 16px;
-          margin-bottom: 16px;
+          margin-bottom: 12px;
         }
 
         .form-group {
           display: flex;
           flex-direction: column;
-          gap: 8px;
+          gap: 6px;
         }
 
         .form-group label {
-          font-size: 14px;
+          font-size: 13px;
           font-weight: 600;
           color: #94a3b8;
         }
 
-        .so-number {
-          flex: 1;
-        }
+        .so-number { flex: 1; }
+        .validator { min-width: 160px; }
 
         .so-input-wrapper {
           display: flex;
           align-items: center;
-          background: #0f172a;
-          border: 2px solid #475569;
+          background: #1e293b;
+          border: 1px solid #334155;
           border-radius: 8px;
           overflow: hidden;
         }
 
         .so-prefix {
-          padding: 14px 12px;
+          padding: 10px 12px;
           background: #334155;
           color: #94a3b8;
           font-weight: 600;
-          font-size: 18px;
+          font-size: 16px;
         }
 
         .so-input {
           flex: 1;
-          padding: 14px 12px;
-          border: none;
           background: transparent;
+          border: none;
           color: white;
-          font-size: 20px;
-          font-weight: 600;
-          min-width: 0;
-        }
-
-        .so-input:focus {
+          padding: 10px 12px;
+          font-size: 18px;
+          font-weight: 700;
           outline: none;
-        }
-
-        .so-input-wrapper:focus-within {
-          border-color: #3b82f6;
-        }
-
-        .validator {
-          min-width: 140px;
         }
 
         .validator-select {
-          padding: 14px 12px;
-          border: 2px solid #475569;
+          background: #1e293b;
+          border: 1px solid #334155;
           border-radius: 8px;
-          background: #0f172a;
           color: white;
+          padding: 10px 12px;
           font-size: 16px;
-          font-weight: 500;
-          cursor: pointer;
-        }
-
-        .validator-select:focus {
-          outline: none;
-          border-color: #3b82f6;
-        }
-
-        .notes-group {
-          margin-bottom: 0;
         }
 
         .notes-group textarea {
-          padding: 12px;
-          border: 2px solid #475569;
+          background: #1e293b;
+          border: 1px solid #334155;
           border-radius: 8px;
-          background: #0f172a;
           color: white;
-          font-size: 16px;
+          padding: 10px 12px;
+          font-size: 14px;
           resize: vertical;
-          min-height: 60px;
         }
 
-        .notes-group textarea:focus {
-          outline: none;
-          border-color: #3b82f6;
-        }
-
-        /* Pallet Section */
         .pallet-section {
           background: #1e293b;
           border-radius: 12px;
-          padding: 20px;
-          margin-bottom: 20px;
+          padding: 16px;
+          margin-bottom: 16px;
         }
 
         .section-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 16px;
+          margin-bottom: 12px;
         }
 
         .section-header h3 {
-          font-size: 18px;
+          font-size: 16px;
           font-weight: 600;
+          color: #e2e8f0;
+          margin: 0;
         }
 
         .add-pallet-btn {
-          padding: 10px 16px;
-          background: #3b82f6;
+          background: #0d9488;
           color: white;
           border: none;
-          border-radius: 8px;
+          border-radius: 6px;
+          padding: 6px 14px;
+          font-size: 13px;
           font-weight: 600;
-          font-size: 14px;
           cursor: pointer;
-          touch-action: manipulation;
         }
 
         .add-pallet-btn:active {
-          background: #2563eb;
+          background: #0f766e;
         }
 
-        /* Table Header (Desktop) */
         .pallet-table-header {
-          display: none;
-          padding: 12px 8px;
-          background: #0f172a;
-          border-radius: 8px;
-          margin-bottom: 8px;
-          font-size: 13px;
-          font-weight: 600;
-          color: #64748b;
-        }
-
-        @media (min-width: 640px) {
-          .pallet-table-header {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-          }
-        }
-
-        .col-num { width: 32px; text-align: center; }
-        .col-dim { width: 70px; text-align: center; }
-        .col-weight { flex: 2; min-width: 150px; }
-        .col-action { width: 44px; }
-
-        /* Pallet Rows */
-        .pallet-rows {
           display: flex;
-          flex-direction: column;
-          gap: 12px;
+          padding: 6px 8px;
+          gap: 8px;
+          color: #64748b;
+          font-size: 12px;
+          font-weight: 600;
+          border-bottom: 1px solid #334155;
+          margin-bottom: 8px;
+        }
+
+        .col-num { width: 28px; text-align: center; }
+        .col-dim { flex: 1; text-align: center; }
+        .col-weight { width: 100px; text-align: center; }
+        .col-action { width: 36px; }
+
+        @media (max-width: 600px) {
+          .pallet-table-header { display: none; }
         }
 
         .pallet-row {
           display: flex;
-          align-items: flex-start;
-          gap: 12px;
-          padding: 16px;
+          align-items: center;
+          gap: 8px;
+          padding: 8px;
           background: #0f172a;
-          border-radius: 10px;
-          border: 2px solid #334155;
+          border-radius: 8px;
+          margin-bottom: 8px;
         }
 
         .pallet-num {
-          width: 32px;
-          height: 32px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: #3b82f6;
-          color: white;
+          width: 28px;
+          text-align: center;
           font-weight: 700;
+          color: #64748b;
           font-size: 14px;
-          border-radius: 50%;
-          flex-shrink: 0;
         }
 
         .pallet-fields {
           flex: 1;
           display: flex;
-          flex-direction: column;
-          gap: 12px;
-        }
-
-        .mobile-label {
-          display: block;
-          font-size: 12px;
-          color: #64748b;
-          margin-bottom: 4px;
-        }
-
-        @media (min-width: 640px) {
-          .mobile-label {
-            display: none;
-          }
-
-          .pallet-fields {
-            flex-direction: row;
-            align-items: center;
-            gap: 12px;
-          }
-        }
-
-        .weight-field {
-          flex: 2;
-          min-width: 150px;
-        }
-
-        .input-weight {
-          width: 100%;
-          padding: 14px 12px;
-          border: 2px solid #475569;
-          border-radius: 8px;
-          background: #1e293b;
-          color: white;
-          font-size: 18px;
-          font-weight: 600;
-          text-align: center;
-        }
-
-        .input-weight:focus {
-          outline: none;
-          border-color: #3b82f6;
+          align-items: center;
+          gap: 10px;
         }
 
         .dims-group {
           display: flex;
           align-items: center;
-          gap: 8px;
-        }
-
-        .dims-group .field-group {
+          gap: 4px;
           flex: 1;
         }
 
-        .dim-separator {
+        .field-group { flex: 1; }
+
+        .mobile-label {
+          display: none;
+          font-size: 11px;
           color: #64748b;
+        }
+
+        @media (max-width: 600px) {
+          .mobile-label { display: block; }
+          .pallet-fields { flex-direction: column; gap: 8px; }
+          .dims-group { width: 100%; }
+          .weight-field { width: 100%; }
+        }
+
+        .dim-separator {
+          color: #475569;
           font-weight: 600;
-          padding-top: 20px;
+          padding: 0 2px;
         }
 
-        @media (min-width: 640px) {
-          .dim-separator {
-            padding-top: 0;
-          }
-        }
-
-        .input-dim {
+        .input-dim, .input-weight {
           width: 100%;
-          padding: 12px 8px;
-          border: 2px solid #475569;
-          border-radius: 8px;
           background: #1e293b;
+          border: 1px solid #334155;
+          border-radius: 6px;
           color: white;
+          padding: 8px;
           font-size: 16px;
-          font-weight: 500;
           text-align: center;
         }
 
-        .input-dim:focus {
+        .input-weight {
+          width: 100px;
+          text-align: center;
+        }
+
+        @media (max-width: 600px) {
+          .input-weight { width: 100%; }
+        }
+
+        .input-dim:focus, .input-weight:focus {
+          border-color: #0d9488;
           outline: none;
-          border-color: #3b82f6;
         }
 
         .remove-pallet-btn {
-          width: 44px;
-          height: 44px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
+          width: 36px;
+          height: 36px;
           background: #dc2626;
           color: white;
           border: none;
           border-radius: 8px;
           font-weight: 700;
-          font-size: 16px;
+          font-size: 14px;
           cursor: pointer;
-          flex-shrink: 0;
-          touch-action: manipulation;
         }
 
         .remove-pallet-btn:disabled {
@@ -743,7 +856,6 @@ export default function ValidationForm() {
           background: #b91c1c;
         }
 
-        /* Totals */
         .totals-row {
           display: flex;
           justify-content: flex-end;
@@ -770,7 +882,6 @@ export default function ValidationForm() {
           color: #3b82f6;
         }
 
-        /* Error */
         .error-message {
           background: #450a0a;
           color: #fca5a5;
@@ -780,7 +891,6 @@ export default function ValidationForm() {
           font-size: 14px;
         }
 
-        /* Submit Button */
         .submit-btn {
           width: 100%;
           padding: 18px 24px;
@@ -803,174 +913,435 @@ export default function ValidationForm() {
           background: #16a34a;
         }
 
-        /* Success Card */
-        .success-card {
-          background: #14532d;
-          border-radius: 16px;
-          padding: 32px;
-          text-align: center;
+        /* ================================================
+           RESULTS VIEW
+           ================================================ */
+
+        .results-container {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
         }
 
-        .success-icon {
+        .results-header {
+          padding: 0;
+        }
+
+        .results-title-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+        }
+
+        .results-title-row h3 {
+          font-size: 20px;
+          font-weight: 700;
+          color: #f1f5f9;
+          margin: 0;
+        }
+
+        .saved-badge {
           display: inline-block;
-          padding: 8px 16px;
+          padding: 4px 14px;
           background: #22c55e;
           color: white;
           font-weight: 700;
-          font-size: 14px;
+          font-size: 13px;
           border-radius: 20px;
-          margin-bottom: 16px;
+          flex-shrink: 0;
         }
 
-        .success-card h3 {
-          font-size: 22px;
-          margin-bottom: 24px;
+        .comparison-card {
+          background: #1e293b;
+          border: 1px solid #334155;
+          border-radius: 16px;
+          padding: 24px 16px;
         }
 
         .comparison-grid {
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 24px;
-          margin-bottom: 20px;
+          gap: 16px;
         }
 
         .comparison-item {
+          flex: 1;
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 4px;
+          gap: 2px;
         }
 
-        .comparison-item .label {
-          font-size: 12px;
-          color: #86efac;
+        .comp-label {
+          font-size: 11px;
+          color: #64748b;
           text-transform: uppercase;
-          letter-spacing: 0.05em;
-        }
-
-        .comparison-item .value {
-          font-size: 24px;
-          font-weight: 700;
-        }
-
-        .comparison-item .weight {
-          font-size: 14px;
-          color: #86efac;
-        }
-
-        .comparison-arrow {
-          color: #86efac;
-          font-size: 18px;
+          letter-spacing: 0.06em;
           font-weight: 600;
         }
 
-        .variance-badge {
-          display: inline-block;
-          padding: 8px 20px;
-          border-radius: 20px;
-          font-weight: 700;
-          font-size: 16px;
-          margin-bottom: 24px;
+        .comp-pallets {
+          font-size: 36px;
+          font-weight: 800;
+          line-height: 1.1;
+          color: #f1f5f9;
         }
 
-        .variance-badge.exact {
-          background: #22c55e;
-          color: white;
-        }
-
-        .variance-badge.over {
-          background: #f59e0b;
-          color: #1e293b;
-        }
-
-        .variance-badge.under {
-          background: #3b82f6;
-          color: white;
-        }
-
-        .variance-badge.close {
-          background: #22c55e;
-          color: white;
-        }
-
-        .variance-badge.high {
-          background: #ef4444;
-          color: white;
-        }
-
-        /* Diagnostics Panel */
-        .diagnostics-panel {
-          background: #1e293b;
-          border: 1px solid #334155;
-          border-radius: 12px;
-          padding: 16px;
-          margin: 16px 0;
-          text-align: left;
-        }
-
-        .confidence-badge {
-          display: inline-block;
-          padding: 4px 12px;
-          border-radius: 12px;
+        .comp-unit {
           font-size: 13px;
-          font-weight: 600;
-          margin-bottom: 12px;
+          color: #94a3b8;
+          font-weight: 500;
         }
 
-        .confidence-high {
+        .comp-weight {
+          font-size: 13px;
+          color: #64748b;
+          margin-top: 4px;
+        }
+
+        .comparison-vs {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 6px;
+          padding: 0 8px;
+        }
+
+        .variance-circle {
+          width: 56px;
+          height: 56px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 800;
+          font-size: 18px;
+        }
+
+        .variance-circle.exact {
+          background: #14532d;
+          color: #22c55e;
+          border: 2px solid #22c55e;
+        }
+
+        .variance-circle.close {
           background: #14532d;
           color: #86efac;
+          border: 2px solid #22c55e;
         }
 
-        .confidence-medium {
+        .variance-circle.over {
           background: #422006;
           color: #fbbf24;
+          border: 2px solid #f59e0b;
         }
 
-        .confidence-low {
+        .variance-circle.high {
           background: #450a0a;
           color: #fca5a5;
+          border: 2px solid #ef4444;
         }
 
-        .diagnostics-grid {
-          display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          gap: 8px;
-        }
-
-        .diag-item {
+        .variance-label {
+          font-size: 11px;
+          color: #94a3b8;
+          font-weight: 600;
           text-align: center;
         }
 
-        .diag-value {
-          display: block;
-          font-size: 20px;
-          font-weight: 700;
-          color: white;
-        }
-
-        .diag-label {
-          display: block;
-          font-size: 11px;
-          color: #94a3b8;
-          margin-top: 2px;
-        }
-
-        .unknown-skus {
-          margin-top: 10px;
-          padding: 8px 12px;
-          background: #450a0a;
+        .diagnostics-bar {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 8px 14px;
+          background: #0f172a;
           border-radius: 8px;
-          color: #fca5a5;
+          flex-wrap: wrap;
+        }
+
+        .conf-pill {
+          padding: 3px 10px;
+          border-radius: 10px;
           font-size: 12px;
-          font-family: monospace;
-          word-break: break-all;
+          font-weight: 700;
+          flex-shrink: 0;
+        }
+
+        .conf-high { background: #14532d; color: #86efac; }
+        .conf-medium { background: #422006; color: #fbbf24; }
+        .conf-low { background: #450a0a; color: #fca5a5; }
+
+        .diag-summary {
+          font-size: 12px;
+          color: #64748b;
+        }
+
+        /* ================================================
+           ITEM BREAKDOWN
+           ================================================ */
+
+        .breakdown-section {
+          background: #1e293b;
+          border: 1px solid #334155;
+          border-radius: 16px;
+          padding: 16px;
+        }
+
+        .breakdown-header {
+          margin-bottom: 12px;
+        }
+
+        .breakdown-header h4 {
+          font-size: 16px;
+          font-weight: 700;
+          color: #e2e8f0;
+          margin: 0 0 4px 0;
+        }
+
+        .breakdown-hint {
+          font-size: 13px;
+          color: #64748b;
+          margin: 0;
+        }
+
+        .breakdown-list {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+
+        .breakdown-item {
+          background: #0f172a;
+          border: 1px solid #1e293b;
+          border-radius: 10px;
+          overflow: hidden;
+          transition: border-color 0.15s;
+          cursor: pointer;
+        }
+
+        .breakdown-item:hover {
+          border-color: #334155;
+        }
+
+        .breakdown-item.flagged {
+          border-color: #f59e0b;
+          background: #1c1917;
+        }
+
+        .breakdown-item.unknown {
+          border-left: 3px solid #ef4444;
+        }
+
+        .item-main {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 10px 14px;
+          gap: 12px;
+          flex-wrap: wrap;
+        }
+
+        .item-info {
+          display: flex;
+          flex-direction: column;
+          gap: 1px;
+          min-width: 120px;
+        }
+
+        .item-sku {
+          font-size: 13px;
+          font-weight: 700;
+          color: #e2e8f0;
+          font-family: 'SF Mono', 'Fira Code', monospace;
+        }
+
+        .item-name {
+          font-size: 11px;
+          color: #64748b;
+          max-width: 200px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .item-stats {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .item-qty {
+          font-size: 13px;
+          color: #94a3b8;
+          font-weight: 500;
+        }
+
+        .item-arrow {
+          color: #475569;
+          font-size: 12px;
+        }
+
+        .item-pallets {
+          font-size: 14px;
+          font-weight: 700;
+          color: #f1f5f9;
+          background: #334155;
+          padding: 2px 10px;
+          border-radius: 6px;
+        }
+
+        .item-weight {
+          font-size: 12px;
+          color: #64748b;
+        }
+
+        .item-family {
+          min-width: 80px;
+          text-align: right;
+        }
+
+        .family-known {
+          font-size: 11px;
+          color: #22c55e;
+          background: #14532d;
+          padding: 2px 8px;
+          border-radius: 4px;
+        }
+
+        .family-unknown {
+          font-size: 11px;
+          color: #fca5a5;
+          background: #450a0a;
+          padding: 2px 8px;
+          border-radius: 4px;
+        }
+
+        .item-correction {
+          padding: 10px 14px;
+          background: #292524;
+          border-top: 1px solid #44403c;
+        }
+
+        .correction-row {
+          display: flex;
+          gap: 12px;
+          align-items: flex-end;
+        }
+
+        .correction-field {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+
+        .correction-field label {
+          font-size: 11px;
+          font-weight: 600;
+          color: #a8a29e;
+        }
+
+        .note-field {
+          flex: 1;
+        }
+
+        .pallet-adjuster {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+
+        .correction-input {
+          width: 60px;
+          background: #1c1917;
+          border: 1px solid #57534e;
+          border-radius: 6px;
+          color: #fbbf24;
+          padding: 6px 8px;
+          font-size: 16px;
+          font-weight: 700;
+          text-align: center;
+        }
+
+        .correction-input:focus {
+          outline: none;
+          border-color: #f59e0b;
+        }
+
+        .correction-unit {
+          font-size: 12px;
+          color: #a8a29e;
+        }
+
+        .correction-note {
+          width: 100%;
+          background: #1c1917;
+          border: 1px solid #57534e;
+          border-radius: 6px;
+          color: white;
+          padding: 6px 10px;
+          font-size: 13px;
+        }
+
+        .correction-note:focus {
+          outline: none;
+          border-color: #f59e0b;
+        }
+
+        .correction-note::placeholder {
+          color: #78716c;
+        }
+
+        .item-correction-saved {
+          padding: 8px 14px;
+          background: #14532d;
+          border-top: 1px solid rgba(34, 197, 94, 0.2);
+          font-size: 12px;
+          color: #86efac;
+        }
+
+        .unknown-callout {
+          margin-top: 12px;
+          padding: 10px 14px;
+          background: #450a0a;
+          border: 1px solid #7f1d1d;
+          border-radius: 8px;
+          font-size: 13px;
+          color: #fca5a5;
+        }
+
+        .unknown-callout strong {
+          color: #fecaca;
+        }
+
+        .submit-corrections-btn {
+          width: 100%;
+          padding: 14px 24px;
+          background: #f59e0b;
+          color: #1c1917;
+          border: none;
+          border-radius: 12px;
+          font-size: 16px;
+          font-weight: 700;
+          cursor: pointer;
+          touch-action: manipulation;
+        }
+
+        .submit-corrections-btn:disabled {
+          background: #475569;
+          color: #94a3b8;
+          cursor: not-allowed;
+        }
+
+        .submit-corrections-btn:not(:disabled):active {
+          background: #d97706;
         }
 
         .new-btn {
+          width: 100%;
           padding: 14px 28px;
-          background: #22c55e;
+          background: #0d9488;
           color: white;
           border: none;
           border-radius: 10px;
@@ -981,11 +1352,10 @@ export default function ValidationForm() {
         }
 
         .new-btn:active {
-          background: #16a34a;
+          background: #0f766e;
         }
 
-        /* Mobile Responsive */
-        @media (max-width: 480px) {
+        @media (max-width: 600px) {
           .validation-form-container {
             padding: 12px;
           }
@@ -1009,8 +1379,36 @@ export default function ValidationForm() {
             gap: 16px;
           }
 
-          .comparison-arrow {
-            transform: rotate(90deg);
+          .comparison-vs {
+            flex-direction: row;
+            padding: 0;
+          }
+
+          .results-title-row {
+            flex-direction: column;
+            align-items: flex-start;
+          }
+
+          .item-main {
+            flex-direction: column;
+            align-items: flex-start;
+          }
+
+          .item-stats {
+            width: 100%;
+          }
+
+          .item-family {
+            text-align: left;
+          }
+
+          .correction-row {
+            flex-direction: column;
+          }
+
+          .diagnostics-bar {
+            flex-direction: column;
+            align-items: flex-start;
           }
         }
       `}</style>
