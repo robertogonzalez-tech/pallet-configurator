@@ -91,32 +91,56 @@ const NON_SHIPPABLE_STARTSWITH = [
   'contract note', 'sales order discount',
 ];
 
-// Hardware / fastener / packaging prefixes (ship with main products)
+// Hardware / fastener prefixes — these ship WITH main products, not as own pallets
 const HARDWARE_PREFIXES = [
-  '30006-', '30008-', '31000-', '32000-', '32004-',
+  // Fasteners / screws / bolts (3xxxx series)
+  '3000p-', '3000q-', '30006-', '30008-', '30012-',
+  '31000-',
+  '32000-', '32001-', '32004-',
   '34002-', '34010-', '34051-',
+  // Misc hardware
   '39000-', '39010-', '39100-',
-  '40103-', '40304-', '40802-', '41002-',
-  '50801-',
-  '81004-',
+  // Plastic parts / caps / guards (4xxxx series — assembly sub-components)
+  '40103-', '40108-', '40110-', '40111-', '40304-',
+  '40501-', '40602-', '40802-', '41002-',
+  // Cross tubes / structural sub-components
+  '50301-', '50801-',
+  // All DD/general hardware kits (81000 series)
+  '81000-', '81004-',
+  // Packaging / label items
   '91000-',
 ];
 
-const HARDWARE_STARTSWITH = ['sik', 'wak'];
-const HARDWARE_CONTAINS = ['anchor kit', 'polybag', 'trident nut driver'];
+const HARDWARE_STARTSWITH = ['sik', 'wak', 'locker stacking'];
+const HARDWARE_CONTAINS = [
+  'anchor kit', 'polybag', 'trident nut driver',
+  'hardware kit', 'install kit', 'hardware,',
+  'toggle bolt', 'channel nut', 'carriage bolt kit',
+  'u-bolt kit', 'anchoring kit', 'stacking hardware',
+];
+
+// Service / coating lines — these are work orders, not physical products
+const SERVICE_COATING_PREFIXES = ['60900-'];
 
 // Component suppression: parent prefix → child prefixes to skip
 const COMPONENT_SUPPRESSION = {
   'dd-': [
-    '80101-0050', '80301-0250', '80301-0252', '80301-0253',
-    '80301-0257', '50101-0256', '80101-0257',
+    '80101-0050', '80101-0258', '80301-0250', '80301-0252', '80301-0253',
+    '80301-0257', '80301-0258', '50101-0256', '80101-0257',
   ],
   '90101-2287': [
-    '80101-0088', '80101-0287', '61211-0002', '61211-0004',
-    '61211-0005', '71003-0088',
+    '80101-0088', '80101-0287', '80301-0088',
+    '61211-0002', '61211-0004', '61211-0005',
+    '71003-0088',
   ],
   '90101-0172': [
     '80101-0172',
+  ],
+  '89901-0163': [
+    '80301-0163',
+  ],
+  '80101-0202': [
+    '80301-0202',
   ],
 };
 
@@ -127,12 +151,23 @@ function classifyItem(sku, name, orderHasParents) {
   const skuLower = (sku || '').toLowerCase().trim();
   const nameLower = (name || '').toLowerCase().trim();
 
+  // 1. Non-shippable (fees, services, notes)
   if (NON_SHIPPABLE_EXACT.has(skuLower) || NON_SHIPPABLE_EXACT.has(nameLower)) return 'non_shippable';
   for (const prefix of NON_SHIPPABLE_STARTSWITH) {
     if (skuLower.startsWith(prefix) || nameLower.startsWith(prefix)) return 'non_shippable';
   }
   if (skuLower === 'unknown' && nameLower === 'unknown item') return 'non_shippable';
 
+  // 2. RAW manufacturing intermediates — never ship as finished goods
+  if (skuLower.endsWith('-raw') || skuLower.includes('-raw ') || skuLower.includes('-raw(')) return 'hardware';
+
+  // 3. Service / coating lines (60900- series)
+  for (const prefix of SERVICE_COATING_PREFIXES) {
+    if (skuLower.startsWith(prefix)) return 'hardware';
+  }
+  if (nameLower.includes('service, coating') || nameLower.includes('service,  coating')) return 'hardware';
+
+  // 4. Hardware / fastener prefixes
   for (const prefix of HARDWARE_PREFIXES) {
     if (skuLower.startsWith(prefix)) return 'hardware';
   }
@@ -143,10 +178,12 @@ function classifyItem(sku, name, orderHasParents) {
     if (nameLower.includes(kw)) return 'hardware';
   }
 
+  // 5. Packaging
   for (const prefix of PACKAGING_PREFIXES) {
     if (skuLower.startsWith(prefix)) return 'packaging';
   }
 
+  // 6. Component suppression (child parts when parent is on the order)
   for (const [parentPrefix, componentPrefixes] of Object.entries(COMPONENT_SUPPRESSION)) {
     if (orderHasParents.has(parentPrefix)) {
       for (const compPrefix of componentPrefixes) {
@@ -182,14 +219,17 @@ function lookupProduct(sku) {
     'dd-ss-04': 'Double Docker', 'dd-ss-06': 'Double Docker',
     'dd-ds-04': 'Double Docker', 'dd-ds-06': 'Double Docker',
     '90101-2287': 'Varsity', '90101-0172': 'VR2 Offset',
+    'vr-vr2': 'VR2 Offset',
     '89901-2050': 'Dismount', '89901-121': 'Skatedock',
     'sm10x': 'Skatedock', 'sd6x': 'Skatedock',
+    '80101-1210': 'Skatedock',
     'ss120': 'Base Station', 'ss95': 'Base Station', 'ss66': 'Base Station', 'ss38': 'Base Station',
     'cs120': 'Base Station', 'cs95': 'Base Station', 'cs66': 'Base Station', 'cs38': 'Base Station',
     'ssa': 'Base Station', 'csa': 'Base Station',
     '80301-0166': 'Hoop Runner', '80301-0151': 'Circle Series (Omega)',
+    '89901-0163': 'Hoop Runner', '80101-0163': 'Hoop Runner',
     'visi2': 'Metal Bike Vault / VisiLocker', 'mbv2': 'Metal Bike Vault / VisiLocker',
-    'mbv1': 'MBA',
+    'mbv1': 'MBA', '89901-0407': 'MBA', '90101-0407': 'MBA',
     '80101-0370': 'Undergrad', '80101-0363': 'Undergrad', '80101-0364': 'Undergrad',
     '80101-0365': 'Undergrad', '80101-0366': 'Undergrad', '80101-0368': 'Undergrad',
     '80101-0281': '2UP',
@@ -198,9 +238,10 @@ function lookupProduct(sku) {
     '26246': 'Pump & Repair',
     '89904': 'Skatedock',
     '89901-1210': 'Skatedock',
-    '89901-1172': 'VR1 XL',
+    '89901-1172': 'VR1 XL', '80101-1172': 'VR1 XL',
     '80101-0230': 'Base Station',
     '80101-0232': 'Base Station',
+    '80101-0202': 'Radius',
   };
 
   for (const [prefix, family] of Object.entries(familyPrefixes)) {
@@ -249,9 +290,8 @@ function predictPallets(items) {
     }
   }
 
-  let totalPallets = 0;
-  let totalWeight = 0;
-  const breakdown = [];
+  // STEP 1: Classify and aggregate by SKU
+  // Multiple fulfillment lines for the same SKU get combined
   const diagnostics = {
     totalLines: items.length,
     filteredNonShippable: 0,
@@ -263,6 +303,7 @@ function predictPallets(items) {
     unknownSkus: [],
   };
 
+  const aggregated = {};
   for (const item of items) {
     if (!item.qty || item.qty === 0) {
       diagnostics.filteredNonShippable++;
@@ -270,13 +311,25 @@ function predictPallets(items) {
     }
 
     const classification = classifyItem(item.sku, item.name, orderHasParents);
-
     if (classification === 'non_shippable') { diagnostics.filteredNonShippable++; continue; }
     if (classification === 'hardware') { diagnostics.filteredHardware++; continue; }
     if (classification === 'packaging') { diagnostics.filteredPackaging++; continue; }
     if (classification === 'component_of_parent') { diagnostics.filteredComponents++; continue; }
 
-    // Real product — look up in catalog
+    // Normalize SKU for aggregation (strip parenthetical suffixes)
+    const skuKey = (item.sku || 'UNKNOWN').toUpperCase().trim();
+    if (!aggregated[skuKey]) {
+      aggregated[skuKey] = { sku: item.sku, name: item.name, qty: 0 };
+    }
+    aggregated[skuKey].qty += item.qty;
+  }
+
+  // STEP 2: Calculate pallets per aggregated product
+  let totalPallets = 0;
+  let totalWeight = 0;
+  const breakdown = [];
+
+  for (const item of Object.values(aggregated)) {
     const product = lookupProduct(item.sku);
     let pallets, weight, matched;
 
