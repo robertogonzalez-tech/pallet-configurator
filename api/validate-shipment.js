@@ -301,11 +301,18 @@ const UNITS_PER_PALLET = {
 
 function estimateDDPallets(qty, bikeCount) {
   if (bikeCount === 4) {
-    return Math.ceil((qty * 2) / 21) + Math.ceil(qty / 32) + Math.ceil(qty / 40);
+    const trays = Math.ceil((qty * 2) / 21);
+    const legs = Math.ceil(qty / 32);
+    const manifolds = Math.ceil(qty / 40);
+    return { total: trays + legs + manifolds, trays, legs, manifolds };
   } else if (bikeCount === 6) {
-    return Math.ceil((qty * 2) / 14) + Math.ceil(qty / 20) + Math.ceil(qty / 30);
+    const trays = Math.ceil((qty * 2) / 14);
+    const legs = Math.ceil(qty / 20);
+    const manifolds = Math.ceil(qty / 30);
+    return { total: trays + legs + manifolds, trays, legs, manifolds };
   }
-  return Math.ceil(qty * 4 / 10);
+  const total = Math.ceil(qty * 4 / 10);
+  return { total, trays: total, legs: 0, manifolds: 0 };
 }
 
 function predictPallets(items) {
@@ -371,8 +378,32 @@ function predictPallets(items) {
 
       if (product.family === 'Double Docker') {
         const bikeCount = (item.sku || '').includes('04') ? 4 : 6;
-        pallets = estimateDDPallets(item.qty, bikeCount);
+        const dd = estimateDDPallets(item.qty, bikeCount);
+        pallets = dd.total;
         weight = item.qty * wpu;
+
+        // Push component-level breakdown for DD
+        totalPallets += pallets;
+        totalWeight += weight;
+        const trayWeight = Math.round(weight * 0.5);
+        const legWeight = Math.round(weight * 0.3);
+        const manifoldWeight = Math.round(weight * 0.2);
+        breakdown.push({
+          sku: item.sku, name: `${item.name} — Trays`,
+          qty: item.qty * 2, pallets: dd.trays,
+          weight: trayWeight, matched: 'Double Docker',
+        });
+        breakdown.push({
+          sku: item.sku, name: `${item.name} — Legs`,
+          qty: item.qty, pallets: dd.legs,
+          weight: legWeight, matched: 'Double Docker',
+        });
+        breakdown.push({
+          sku: item.sku, name: `${item.name} — Manifolds`,
+          qty: item.qty, pallets: dd.manifolds,
+          weight: manifoldWeight, matched: 'Double Docker',
+        });
+        continue; // skip the generic push below
       } else {
         pallets = Math.ceil(item.qty / upp);
         weight = item.qty * wpu;
