@@ -1,7 +1,13 @@
 const crypto = require('crypto');
 const OAuth = require('oauth-1.0a');
 const { createClient } = require('@supabase/supabase-js');
-const { sendValidationEmail, saveToGoogleSheets } = require('./lib/notifications');
+let sendValidationEmail = async () => {};
+let saveToGoogleSheets = async () => {};
+try {
+  ({ sendValidationEmail, saveToGoogleSheets } = require('./lib/notifications'));
+} catch (e) {
+  console.warn('[NOTIFICATIONS] Optional notifications module unavailable:', e.message);
+}
 const fs = require('fs');
 const path = require('path');
 
