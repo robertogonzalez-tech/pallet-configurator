@@ -151,13 +151,17 @@ const COMPONENT_SUPPRESSION = {
 };
 
 // Sub-component SKUs that should ALWAYS be filtered regardless of parent presence
-// (these are manufacturing intermediates / unassembled parts, never finished goods)
+// NOTE: With pick ticket filter (fulfillable=T, assemblyComponent=F, kitComponent check),
+// most of these are already filtered at the SuiteQL or kitComponent level.
+// This list is kept as a safety net for edge cases.
+// IMPORTANT: Do NOT include Kit parent prefixes (80101-0257, 80101-0258) — those are
+// now the product-level DD items returned by the pick ticket filter.
 const ALWAYS_SUPPRESS_PREFIXES = [
   '80301-0088', '80301-0287',  // Varsity DV215 unassembled parts
   '80101-0088', '80101-0287',  // Varsity assembled sub-parts
-  '80101-0050',                 // DD sub-part
-  '80301-0250', '80301-0252', '80301-0253', '80301-0257', '80301-0258', // DD manifold/rail parts
-  '80101-0257', '80101-0258',  // DD kit parts
+  '80101-0050',                 // DD slide assembly (kitComponent=T catches this, but just in case)
+  '80301-0250', '80301-0252', '80301-0253', // DD manifold/rail/leg parts
+  '80301-0257', '80301-0258',  // DD manifold weldments (NOT the -KIT variants!)
   '80301-2048', '80301-2049', '80301-2050', '80301-2051', '80301-2052', // Dismount welded assemblies
   '80101-2050',                 // Dismount head
   '80301-1172',                 // VR1 raw
@@ -244,24 +248,39 @@ function lookupProduct(sku) {
   // Family-based prefix matching
   const skuLower = (sku || '').toLowerCase();
   const familyPrefixes = {
+    // DD Group parents (legacy — these won't appear with pick ticket filter,
+    // but kept for backward compatibility if items are passed without filter)
     'dd-ss-04': 'Double Docker', 'dd-ss-06': 'Double Docker',
     'dd-ds-04': 'Double Docker', 'dd-ds-06': 'Double Docker',
+    // DD Kit parents (NEW — these replace Group parents with pick ticket filter)
+    '80101-0257': 'Double Docker',  // DD 4-bike kit
+    '80101-0258': 'Double Docker',  // DD 6-bike kit
+    // Varsity
     '90101-2287': 'Varsity', '90101-0172': 'VR2 Offset',
     'vr-vr2': 'VR2 Offset',
+    // Dismount / Skatedock / Snowdock
     '89901-2050': 'Dismount', '89901-121': 'Skatedock',
     'sm10x': 'Skatedock', 'sd6x': 'Skatedock',
     '80101-1210': 'Skatedock',
+    '89901-1406': 'Snowdock', '80101-1406': 'Snowdock',
+    // Base Station
     'ss120': 'Base Station', 'ss95': 'Base Station', 'ss66': 'Base Station', 'ss38': 'Base Station',
     'cs120': 'Base Station', 'cs95': 'Base Station', 'cs66': 'Base Station', 'cs38': 'Base Station',
     'ssa': 'Base Station', 'csa': 'Base Station',
+    // Hoop Runner / Circle Series
     '80301-0166': 'Hoop Runner', '80301-0151': 'Circle Series (Omega)',
     '89901-0163': 'Hoop Runner', '80101-0163': 'Hoop Runner',
+    // Lockers / Vaults
     'visi2': 'Metal Bike Vault / VisiLocker', 'mbv2': 'Metal Bike Vault / VisiLocker',
     '89901-0418': 'Metal Bike Vault / VisiLocker',
     'mbv1': 'MBA', '89901-0407': 'MBA',
+    // Undergrad
     '80101-0370': 'Undergrad', '80101-0363': 'Undergrad', '80101-0364': 'Undergrad',
     '80101-0365': 'Undergrad', '80101-0366': 'Undergrad', '80101-0368': 'Undergrad',
-    '80101-0281': '2UP',
+    '80301-0363': 'Undergrad', '80301-0364': 'Undergrad', '80301-0365': 'Undergrad',
+    '80301-0368': 'Undergrad',
+    // Other
+    '80101-0281': '2UP', '80301-0281': '2UP',
     'sm-wave': 'Wave Runner',
     '26302c': 'Pump & Repair',
     '26246': 'Pump & Repair',
@@ -296,7 +315,7 @@ const UNITS_PER_PALLET = {
   'Metal Bike Vault / VisiLocker': 2, 'MBA': 2,
   'Pump & Repair': 10, 'Cane Detection': 10, '2UP': 24,
   'Strut Install Kit': 20, 'Saris': 10, 'Fiberglass Bike Vault': 2,
-  'Radius': 6, 'Guardian': 6,
+  'Radius': 6, 'Guardian': 6, 'Snowdock': 8,
 };
 
 function estimateDDPallets(qty, bikeCount) {
@@ -316,19 +335,11 @@ function estimateDDPallets(qty, bikeCount) {
 }
 
 function predictPallets(items) {
-  // Identify parent products on the order
-  const orderHasParents = new Set();
-  for (const item of items) {
-    const skuLower = (item.sku || '').toLowerCase();
-    for (const parentPrefix of Object.keys(COMPONENT_SUPPRESSION)) {
-      if (skuLower.startsWith(parentPrefix) || skuLower.includes(parentPrefix)) {
-        orderHasParents.add(parentPrefix);
-      }
-    }
-  }
+  // With the pick ticket filter (fulfillable=T, assemblyComponent=F),
+  // items are already pre-filtered by NetSuite. We now split by kitComponent:
+  // - kitComponent=false → product-level items (what we predict pallets for)
+  // - kitComponent=true → kit sub-components (ship inside kit parents, no extra pallets)
 
-  // STEP 1: Classify and aggregate by SKU
-  // Multiple fulfillment lines for the same SKU get combined
   const diagnostics = {
     totalLines: items.length,
     filteredNonShippable: 0,
@@ -340,6 +351,7 @@ function predictPallets(items) {
     unknownSkus: [],
   };
 
+  // STEP 1: Classify and aggregate product-level items
   const aggregated = {};
   for (const item of items) {
     if (!item.qty || item.qty === 0) {
@@ -347,13 +359,22 @@ function predictPallets(items) {
       continue;
     }
 
-    const classification = classifyItem(item.sku, item.name, orderHasParents);
+    // Kit components (manifolds, slides, legs, individual hardware) ship
+    // inside their kit parents — don't count separately for pallets
+    if (item.kitComponent) {
+      diagnostics.filteredComponents++;
+      continue;
+    }
+
+    // Lightweight classification for remaining edge cases
+    // (SuiteQL filter already removed ~80% of noise)
+    const classification = classifyItem(item.sku, item.name, new Set());
     if (classification === 'non_shippable') { diagnostics.filteredNonShippable++; continue; }
     if (classification === 'hardware') { diagnostics.filteredHardware++; continue; }
     if (classification === 'packaging') { diagnostics.filteredPackaging++; continue; }
     if (classification === 'component_of_parent') { diagnostics.filteredComponents++; continue; }
 
-    // Normalize SKU for aggregation (strip parenthetical suffixes)
+    // Normalize SKU for aggregation
     const skuKey = (item.sku || 'UNKNOWN').toUpperCase().trim();
     if (!aggregated[skuKey]) {
       aggregated[skuKey] = { sku: item.sku, name: item.name, qty: 0 };
@@ -377,7 +398,14 @@ function predictPallets(items) {
       const wpu = product.weight || 50;
 
       if (product.family === 'Double Docker') {
-        const bikeCount = (item.sku || '').includes('04') ? 4 : 6;
+        // Detect bike count from SKU pattern:
+        // Group parents: DD-SS-04-GAV (contains '04'), DD-SS-06-GAV (contains '06')
+        // Kit parents: 80101-0257-GAV-KIT (0257=4-bike), 80101-0258-GAV-KIT (0258=6-bike)
+        const skuLower = (item.sku || '').toLowerCase();
+        let bikeCount = 4; // default
+        if (skuLower.includes('06') || skuLower.includes('0258')) {
+          bikeCount = 6;
+        }
         const dd = estimateDDPallets(item.qty, bikeCount);
         pallets = dd.total;
         weight = item.qty * wpu;
@@ -483,11 +511,21 @@ async function getSalesOrderViaSuiteQL(soNumber) {
 
   const soId = soData.items[0].id;
 
+  // Pick ticket filter: only items that appear on physical pick tickets
+  // fulfillable=T excludes Group headers, services, shipping
+  // assemblyComponent=F excludes BOM components (raw materials, coating services)
+  // itemType filter excludes non-physical line types
   const itemsQuery = `
-    SELECT i.itemid AS sku, i.displayname AS name, tl.quantity
+    SELECT i.itemid AS sku, i.displayname AS name, tl.quantity,
+           tl.kitComponent, tl.itemType
     FROM transactionline tl
     LEFT JOIN item i ON i.id = tl.item
-    WHERE tl.transaction = ${soId} AND tl.mainline = 'F' AND tl.item IS NOT NULL
+    WHERE tl.transaction = ${soId}
+      AND tl.mainLine = 'F'
+      AND tl.item IS NOT NULL
+      AND tl.fulfillable = 'T'
+      AND tl.assemblyComponent = 'F'
+      AND tl.itemType NOT IN ('Service', 'ShipItem', 'TaxGroup')
   `;
 
   const itemsUrl = `https://${config.accountId}.suitetalk.api.netsuite.com/services/rest/query/v1/suiteql?limit=1000&offset=0`;
@@ -514,7 +552,9 @@ async function getSalesOrderViaSuiteQL(soNumber) {
   const items = itemsData.items.map(row => ({
     sku: row.sku || row.itemid || 'UNKNOWN',
     name: row.name || row.displayname || 'Unknown Item',
-    qty: Math.abs(parseInt(row.quantity, 10) || 0)
+    qty: Math.abs(parseInt(row.quantity, 10) || 0),
+    kitComponent: row.kitcomponent === 'T',
+    itemType: row.itemtype || '',
   }));
 
   return { success: true, items };
