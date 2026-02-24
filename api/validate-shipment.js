@@ -353,9 +353,29 @@ const RIDE_ALONG_SKUS = new Set([
   '26246', // HSO pump
   '26248', // HSI pump (legacy)
   '26302C', // work stand
+  '25974', // CC reader
+  '99100-0009-050', // epoxy epopro
   '80301-0254-GAV', // DD lower track extension legacy
   '80301-0254-BLK13',
 ]);
+
+function normalizeSku(sku) {
+  return String(sku || '')
+    .toUpperCase()
+    .replace(/\s*\([^)]*\)/g, '') // remove parenthetical descriptors
+    .trim();
+}
+
+function isRideAlongItem(item) {
+  const rawSku = String(item?.sku || '').toUpperCase();
+  const normSku = normalizeSku(item?.sku);
+  const name = String(item?.name || '').toLowerCase();
+
+  if (RIDE_ALONG_SKUS.has(rawSku) || RIDE_ALONG_SKUS.has(normSku)) return true;
+  if (rawSku.includes('26246') || rawSku.includes('26248') || rawSku.includes('26302C')) return true;
+  if (name.includes('pump') || name.includes('work stand') || name.includes('epopro') || name.includes('cc reader')) return true;
+  return false;
+}
 
 function estimateDDPallets(qty, bikeCount) {
   if (bikeCount === 4) {
@@ -413,12 +433,24 @@ function predictPallets(items) {
     if (classification === 'packaging') { diagnostics.filteredPackaging++; continue; }
     if (classification === 'component_of_parent') { diagnostics.filteredComponents++; continue; }
 
-    // Normalize SKU for aggregation
-    const skuKey = (item.sku || 'UNKNOWN').toUpperCase().trim();
-    if (!aggregated[skuKey]) {
-      aggregated[skuKey] = { sku: item.sku, name: item.name, qty: 0 };
+    const product = lookupProduct(item.sku);
+    const normSku = normalizeSku(item.sku || 'UNKNOWN');
+
+    // Consolidate ALL base-station strut SKUs into one pallet pool (50/pallet)
+    const aggregationKey = product?.family === 'Base Station' ? 'BASE_STATION_CONSOLIDATED' : normSku;
+
+    if (!aggregated[aggregationKey]) {
+      aggregated[aggregationKey] = {
+        sku: normSku,
+        name: product?.family === 'Base Station' ? 'Base Station (Consolidated Struts)' : item.name,
+        qty: 0,
+        product,
+        rideAlong: false,
+      };
     }
-    aggregated[skuKey].qty += item.qty;
+
+    aggregated[aggregationKey].qty += item.qty;
+    aggregated[aggregationKey].rideAlong = aggregated[aggregationKey].rideAlong || isRideAlongItem(item);
   }
 
   // STEP 2: Calculate pallets per aggregated product
@@ -427,15 +459,23 @@ function predictPallets(items) {
   const breakdown = [];
 
   for (const item of Object.values(aggregated)) {
-    const skuUpper = (item.sku || '').toUpperCase().trim();
+    const skuUpper = normalizeSku(item.sku);
 
-    // Ride-along items should never force their own pallet; they piggyback on order pallets
-    if (RIDE_ALONG_SKUS.has(skuUpper)) {
+    // Ride-along items should appear in breakdown with pallets=0 (for validator visibility)
+    if (item.rideAlong) {
       diagnostics.filteredHardware++;
+      breakdown.push({
+        sku: item.sku,
+        name: item.name,
+        qty: item.qty,
+        pallets: 0,
+        weight: 0,
+        matched: 'RIDE_ALONG',
+      });
       continue;
     }
 
-    const product = lookupProduct(item.sku);
+    const product = item.product || lookupProduct(item.sku);
     let pallets, weight, matched;
 
     if (product) {
