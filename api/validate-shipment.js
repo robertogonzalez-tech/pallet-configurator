@@ -89,6 +89,13 @@ const NON_SHIPPABLE_EXACT = new Set([
   'add/alternate', 'sales order discounts - line level', 'desc',
   'product summary', 'lead time', 'installation mobilization',
   'freight', 'change order note',
+  // Additional non-physical lines from warehouse validation review
+  'custom color set up fee', 'packing materials',
+  'sidestage price adjustment', 'sidestage addon price adjustment',
+  'cc reader', '25974',
+  // Pallet/material adjunct lines that should never count as product pallets
+  'epoxy epopro', '99100-0009-050',
+  '4-way pallet', '85001-4840',
 ]);
 
 const NON_SHIPPABLE_STARTSWITH = [
@@ -297,6 +304,9 @@ function lookupProduct(sku) {
     '80101-0232': 'Base Station',
     '80101-0202': 'Radius',
     '80101-0335': 'Guardian',
+    '90101-0335': 'Guardian', // legacy/discontinued Guardian prefix
+    '89901-0172': 'VR2 Offset', // duraplas/discontinued alias
+    '89901-2287': 'Varsity', // duraplas/discontinued alias
   };
 
   for (const [prefix, family] of Object.entries(familyPrefixes)) {
@@ -316,13 +326,36 @@ function lookupProduct(sku) {
 const UNITS_PER_PALLET = {
   'Varsity': 70, 'VR2 Offset': 40, 'VR1 XL': 40,
   'Double Docker': 1, 'Hoop Runner': 60, 'Undergrad': 2,
-  'Skatedock': 16, 'Dismount': 15, 'Base Station': 6,
+  'Skatedock': 16, 'Dismount': 15,
+  // Chad warehouse guidance: base-station struts fit ~50 pieces/pallet
+  'Base Station': 50,
   'Wave Runner': 4, 'Circle Series (Omega)': 10,
   'Metal Bike Vault / VisiLocker': 2, 'MBA': 2,
   'Pump & Repair': 10, 'Cane Detection': 10, '2UP': 24,
   'Strut Install Kit': 20, 'Saris': 10, 'Fiberglass Bike Vault': 2,
   'Radius': 6, 'Guardian': 6, 'Snowdock': 8,
 };
+
+// Explicit SKU-level overrides from Chad's validation review
+const SKU_UNITS_PER_PALLET = {
+  '89905-0003-08BLK': 10, // MBA Base 8#
+  '80301-0093-C-ZRP': 50, // Varsity Stinger ZRP
+  'DV215-CUST13': 25,
+  '89901-0417-GRY14-KIT': 7, // VISI1 approx 6-7 per large crate
+  '89901-0408-GRY14-KIT': 5, // MBV2 approx 4-5 per large crate
+  '90101-0151-SS': 15,
+  '80301-0207-GAV': 10,
+  '80301-0205-GAV': 10,
+  '89901-0166-BLK23': 20,
+};
+
+const RIDE_ALONG_SKUS = new Set([
+  '26246', // HSO pump
+  '26248', // HSI pump (legacy)
+  '26302C', // work stand
+  '80301-0254-GAV', // DD lower track extension legacy
+  '80301-0254-BLK13',
+]);
 
 function estimateDDPallets(qty, bikeCount) {
   if (bikeCount === 4) {
@@ -394,13 +427,21 @@ function predictPallets(items) {
   const breakdown = [];
 
   for (const item of Object.values(aggregated)) {
+    const skuUpper = (item.sku || '').toUpperCase().trim();
+
+    // Ride-along items should never force their own pallet; they piggyback on order pallets
+    if (RIDE_ALONG_SKUS.has(skuUpper)) {
+      diagnostics.filteredHardware++;
+      continue;
+    }
+
     const product = lookupProduct(item.sku);
     let pallets, weight, matched;
 
     if (product) {
       diagnostics.knownProducts++;
       matched = product.family;
-      const upp = UNITS_PER_PALLET[product.family] || 10;
+      const upp = SKU_UNITS_PER_PALLET[skuUpper] || UNITS_PER_PALLET[product.family] || 10;
       const wpu = product.weight || 50;
 
       if (product.family === 'Double Docker') {
@@ -439,15 +480,34 @@ function predictPallets(items) {
         });
         continue; // skip the generic push below
       } else {
-        pallets = Math.ceil(item.qty / upp);
+        // Locker crate approximations from warehouse guidance:
+        // VISI2/MBV2 are 3-box systems, VISI1/MBV1 are 2-box systems.
+        // Chad guidance: ~15 mixed boxes per large crate (tetris packed).
+        const skuLower = (item.sku || '').toLowerCase();
+        if (skuLower.includes('89901-0418') || skuLower.includes('89901-0408')) {
+          pallets = Math.ceil((item.qty * 3) / 15); // ~5 units per crate
+        } else if (skuLower.includes('89901-0417') || skuLower.includes('89901-0407')) {
+          pallets = Math.ceil((item.qty * 2) / 15); // ~7.5 units per crate
+        } else {
+          pallets = Math.ceil(item.qty / upp);
+        }
         weight = item.qty * wpu;
       }
     } else {
-      diagnostics.unknownProducts++;
-      diagnostics.unknownSkus.push(item.sku);
-      matched = null;
-      pallets = Math.ceil(item.qty / 10);
-      weight = item.qty * 25;
+      // Unknown SKU fallback with explicit warehouse overrides first
+      const overrideUpp = SKU_UNITS_PER_PALLET[skuUpper];
+      if (overrideUpp) {
+        diagnostics.knownProducts++;
+        matched = 'SKU_OVERRIDE';
+        pallets = Math.ceil(item.qty / overrideUpp);
+        weight = item.qty * 50;
+      } else {
+        diagnostics.unknownProducts++;
+        diagnostics.unknownSkus.push(item.sku);
+        matched = null;
+        pallets = Math.ceil(item.qty / 10);
+        weight = item.qty * 25;
+      }
     }
 
     totalPallets += pallets;

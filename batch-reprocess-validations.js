@@ -148,7 +148,6 @@ function calcAccuracy(rows, useNew = false) {
             predicted_pallets: prediction.pallets,
             predicted_weight: prediction.weight,
             predicted_breakdown: prediction.breakdown,
-            updated_at: new Date().toISOString(),
           })
           .eq('id', row.id);
         if (error) throw error;
