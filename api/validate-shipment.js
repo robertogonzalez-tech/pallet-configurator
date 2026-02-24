@@ -572,10 +572,21 @@ module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'Method not allowed' });
 
   try {
-    const { soNumber, pallets, validatedBy, notes } = req.body;
-    console.log('=== VALIDATE SO' + soNumber + ' ===');
+    const body = req.body || {};
+    const soInput = body.soNumber || body.salesOrderNumber || body.sales_order_id;
+    const soNumber = String(soInput || '').replace(/^SO/i, '');
+    const skipSave = body.skipSave === true;
+    const pallets = Array.isArray(body.pallets) ? body.pallets : [];
+    const validatedBy = body.validatedBy || 'batch-reprocess';
+    const notes = body.notes;
 
-    if (!soNumber || !pallets || !validatedBy) {
+    console.log('=== VALIDATE SO' + soNumber + ` (skipSave=${skipSave}) ===`);
+
+    if (!soNumber) {
+      return res.status(400).json({ success: false, error: 'Missing required field: soNumber or salesOrderNumber' });
+    }
+
+    if (!skipSave && (!Array.isArray(body.pallets) || !body.validatedBy)) {
       return res.status(400).json({ success: false, error: 'Missing required fields: soNumber, pallets, validatedBy' });
     }
 
@@ -600,9 +611,9 @@ module.exports = async (req, res) => {
     const absDelta = Math.abs(palletVariance);
     const severity = absDelta === 0 ? 'exact' : absDelta <= 1 ? 'low' : absDelta <= 2 ? 'medium' : 'high';
 
-    // 5. Save to Supabase
+    // 5. Save to Supabase (skip for batch reprocessing)
     let validationId = null;
-    if (supabase) {
+    if (!skipSave && supabase) {
       const result = await supabase.from('validations').insert({
         pick_ticket_id: `SO${soNumber}`,
         sales_order_id: `SO${soNumber}`,
@@ -626,21 +637,32 @@ module.exports = async (req, res) => {
     }
 
     // 6. Notifications (non-blocking)
-    Promise.all([
-      sendValidationEmail({ soNumber: `SO${soNumber}`, validatedBy, notes, predicted: { pallets: prediction.totalPallets, weight: prediction.totalWeight }, actual: { pallets: actualPallets, weight: actualWeight }, variance: { pallets: palletVariance, weight: weightVariance } }).catch(() => {}),
-      saveToGoogleSheets({ soNumber: `SO${soNumber}`, validatedBy, notes, predicted: { pallets: prediction.totalPallets, weight: prediction.totalWeight }, actual: { pallets: actualPallets, weight: actualWeight }, variance: { pallets: palletVariance, weight: weightVariance } }).catch(() => {})
-    ]);
+    if (!skipSave) {
+      Promise.all([
+        sendValidationEmail({ soNumber: `SO${soNumber}`, validatedBy, notes, predicted: { pallets: prediction.totalPallets, weight: prediction.totalWeight }, actual: { pallets: actualPallets, weight: actualWeight }, variance: { pallets: palletVariance, weight: weightVariance } }).catch(() => {}),
+        saveToGoogleSheets({ soNumber: `SO${soNumber}`, validatedBy, notes, predicted: { pallets: prediction.totalPallets, weight: prediction.totalWeight }, actual: { pallets: actualPallets, weight: actualWeight }, variance: { pallets: palletVariance, weight: weightVariance } }).catch(() => {})
+      ]);
+    }
 
     // 7. Response
     return res.status(200).json({
       success: true,
       validationId,
       soNumber: `SO${soNumber}`,
+      skipSave,
       predicted: {
         pallets: prediction.totalPallets,
         weight: prediction.totalWeight,
         breakdown: prediction.breakdown
       },
+      prediction: {
+        totalPallets: prediction.totalPallets,
+        totalWeight: prediction.totalWeight,
+        breakdown: prediction.breakdown
+      },
+      predicted_pallets: prediction.totalPallets,
+      predicted_weight: prediction.totalWeight,
+      predicted_breakdown: prediction.breakdown,
       actual: { pallets: actualPallets, weight: actualWeight, dimensions: pallets },
       variance: {
         pallets: palletVariance,
