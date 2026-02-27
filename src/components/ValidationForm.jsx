@@ -10,11 +10,16 @@ const DEFAULT_PALLET = {
 }
 
 const VALIDATORS = ['Anisa', 'Avianna', 'Berto', 'Chad', 'Tristan']
+const SHIPMENT_COMPLETENESS_OPTIONS = ['complete', 'partial', 'unknown']
+const ACTUAL_UNIT_BASIS_OPTIONS = ['package_count', 'pallet_positions', 'unknown']
 
 export default function ValidationForm() {
   // Form state
   const [soNumber, setSoNumber] = useState('')
   const [validatedBy, setValidatedBy] = useState('Chad')
+  const [shipmentCompleteness, setShipmentCompleteness] = useState('complete')
+  const [actualUnitBasis, setActualUnitBasis] = useState('package_count')
+  const [actualPositions, setActualPositions] = useState('')
   const [notes, setNotes] = useState('')
   const [pallets, setPallets] = useState([{ ...DEFAULT_PALLET }])
 
@@ -70,6 +75,18 @@ export default function ValidationForm() {
       if (parseFloat(p.weight) <= 0) {
         return `Pallet ${i + 1}: Weight must be greater than 0`
       }
+    }
+    if (!SHIPMENT_COMPLETENESS_OPTIONS.includes(shipmentCompleteness)) {
+      return 'Shipment completeness is required'
+    }
+    if (!ACTUAL_UNIT_BASIS_OPTIONS.includes(actualUnitBasis)) {
+      return 'Actual unit basis is required'
+    }
+    if (actualUnitBasis === 'pallet_positions') {
+      if (!actualPositions) return 'Actual positions is required when basis is pallet_positions'
+      if ((parseInt(actualPositions, 10) || 0) <= 0) return 'Actual positions must be greater than 0'
+    } else if (actualPositions && (parseInt(actualPositions, 10) || 0) <= 0) {
+      return 'Actual positions must be greater than 0'
     }
     return null
   }
@@ -173,6 +190,9 @@ export default function ValidationForm() {
         body: JSON.stringify({
           soNumber: soNumber.trim(),
           validatedBy,
+          shipmentCompleteness,
+          actualUnitBasis,
+          actualPositions: actualPositions ? parseInt(actualPositions, 10) : null,
           notes: notes.trim(),
           pallets: pallets.map((p, i) => ({
             palletNum: i + 1,
@@ -212,6 +232,9 @@ export default function ValidationForm() {
 
       // Clear form for next entry
       setSoNumber('')
+      setShipmentCompleteness('complete')
+      setActualUnitBasis('package_count')
+      setActualPositions('')
       setNotes('')
       setPallets([{ ...DEFAULT_PALLET }])
 
@@ -457,6 +480,50 @@ export default function ValidationForm() {
                     <option key={name} value={name}>{name}</option>
                   ))}
                 </select>
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="form-group validator">
+                <label htmlFor="shipment-completeness">Shipment Completeness</label>
+                <select
+                  id="shipment-completeness"
+                  value={shipmentCompleteness}
+                  onChange={(e) => setShipmentCompleteness(e.target.value)}
+                  className="validator-select"
+                >
+                  {SHIPMENT_COMPLETENESS_OPTIONS.map(value => (
+                    <option key={value} value={value}>{value}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group validator">
+                <label htmlFor="actual-unit-basis">Actual Unit Basis</label>
+                <select
+                  id="actual-unit-basis"
+                  value={actualUnitBasis}
+                  onChange={(e) => setActualUnitBasis(e.target.value)}
+                  className="validator-select"
+                >
+                  {ACTUAL_UNIT_BASIS_OPTIONS.map(value => (
+                    <option key={value} value={value}>{value}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group validator">
+                <label htmlFor="actual-positions">Actual Positions</label>
+                <input
+                  id="actual-positions"
+                  type="number"
+                  inputMode="numeric"
+                  min="1"
+                  value={actualPositions}
+                  onChange={(e) => setActualPositions(e.target.value.replace(/\D/g, ''))}
+                  placeholder={actualUnitBasis === 'pallet_positions' ? 'Required' : 'Optional'}
+                  className="validator-select"
+                />
               </div>
             </div>
 

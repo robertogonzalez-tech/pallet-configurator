@@ -185,16 +185,33 @@ function dedupeCleanRows(rows) {
 }
 
 async function fetchValidatedRows() {
+  const selectWithBasis = 'id,sales_order_id,pick_ticket_id,status,shipment_completeness,actual_unit_basis,predicted_pallets,actual_pallets,predicted_breakdown,validated_at,created_at';
+  const selectLegacy = 'id,sales_order_id,pick_ticket_id,status,shipment_completeness,predicted_pallets,actual_pallets,predicted_breakdown,validated_at,created_at';
+  let selectClause = selectWithBasis;
   const pageSize = 1000;
   let from = 0;
   const all = [];
   while (true) {
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('validations')
-      .select('id,sales_order_id,pick_ticket_id,status,shipment_completeness,predicted_pallets,actual_pallets,predicted_breakdown,validated_at,created_at')
+      .select(selectClause)
       .eq('status', 'validated')
       .order('validated_at', { ascending: true })
       .range(from, from + pageSize - 1);
+
+    if (error && /actual_unit_basis/i.test(error.message || '') && selectClause === selectWithBasis) {
+      // Migration-safe fallback for environments where basis column is not yet applied.
+      selectClause = selectLegacy;
+      ({ data, error } = await supabase
+        .from('validations')
+        .select(selectClause)
+        .eq('status', 'validated')
+        .order('validated_at', { ascending: true })
+        .range(from, from + pageSize - 1));
+      if (!error && Array.isArray(data)) {
+        data = data.map((row) => ({ ...row, actual_unit_basis: 'unknown' }));
+      }
+    }
 
     if (error) throw error;
     if (!data || data.length === 0) break;
@@ -212,11 +229,21 @@ function toMarkdown(report) {
   md.push('');
   md.push('## Dataset');
   md.push(`- validated rows: ${report.dataset.validated_rows}`);
-  md.push(`- clean rows (complete + deduped): ${report.dataset.clean_rows}`);
+  if (typeof report.dataset.complete_rows === 'number') {
+    md.push(`- complete rows: ${report.dataset.complete_rows}`);
+  }
+  if (typeof report.dataset.package_count_rows === 'number') {
+    md.push(`- complete + package_count rows: ${report.dataset.package_count_rows}`);
+  }
+  md.push(`- clean rows (complete + package_count + deduped): ${report.dataset.clean_rows}`);
   if (typeof report.dataset.consistent_rows === 'number') {
     md.push(`- consistent clean rows (clean - legacy ambiguity - sentinel fallback): ${report.dataset.consistent_rows}`);
   }
   md.push(`- shipment completeness counts: \`${JSON.stringify(report.dataset.shipment_completeness_counts)}\``);
+  md.push(`- actual unit basis counts: \`${JSON.stringify(report.dataset.actual_unit_basis_counts)}\``);
+  if (report.dataset.basis_filter_fallback) {
+    md.push('- basis filter fallback: `true` (no package_count rows found, used complete rows)');
+  }
   md.push('');
   md.push('## Metrics');
   md.push('');
@@ -251,7 +278,7 @@ function toMarkdown(report) {
   md.push('');
   md.push('## SQL Used (Reference)');
   md.push('```sql');
-  md.push(`SELECT id, sales_order_id, pick_ticket_id, status, shipment_completeness, predicted_pallets, actual_pallets, predicted_breakdown, validated_at, created_at`);
+  md.push(`SELECT id, sales_order_id, pick_ticket_id, status, shipment_completeness, actual_unit_basis, predicted_pallets, actual_pallets, predicted_breakdown, validated_at, created_at`);
   md.push(`FROM validations`);
   md.push(`WHERE status = 'validated';`);
   md.push('```');
@@ -266,17 +293,29 @@ function toMarkdown(report) {
     return acc;
   }, {});
 
+  const unitBasisCounts = rows.reduce((acc, row) => {
+    const key = row.actual_unit_basis || 'null';
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+
   const completeRows = rows.filter((row) => String(row.shipment_completeness || '').toLowerCase() === 'complete');
-  const cleanRows = dedupeCleanRows(completeRows);
+  const packageCountRows = completeRows.filter((row) => String(row.actual_unit_basis || '').toLowerCase() === 'package_count');
+  const fallbackToComplete = packageCountRows.length === 0 && completeRows.length > 0;
+  const cleanRows = dedupeCleanRows(fallbackToComplete ? completeRows : packageCountRows);
   const consistentRows = cleanRows.filter((row) => !isLegacySo(row) && !hasSentinelFallback(row.predicted_breakdown));
 
   const report = {
     generated_at: new Date().toISOString(),
     dataset: {
       validated_rows: rows.length,
+      complete_rows: completeRows.length,
+      package_count_rows: packageCountRows.length,
       clean_rows: cleanRows.length,
       consistent_rows: consistentRows.length,
       shipment_completeness_counts: completenessCounts,
+      actual_unit_basis_counts: unitBasisCounts,
+      basis_filter_fallback: fallbackToComplete,
     },
     metrics_all: computeMetrics(rows),
     metrics_clean: computeMetrics(cleanRows),

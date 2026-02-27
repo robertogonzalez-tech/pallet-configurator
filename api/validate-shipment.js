@@ -39,6 +39,15 @@ const REASON_CODES = {
   PRODUCT_FAMILY: 'PRODUCT_FAMILY',
 };
 
+const SHIPMENT_COMPLETENESS_VALUES = new Set(['complete', 'partial', 'unknown']);
+const ACTUAL_UNIT_BASIS_VALUES = new Set(['package_count', 'pallet_positions', 'unknown']);
+
+function normalizeEnumValue(value, allowedValues, defaultValue) {
+  const normalized = String(value ?? defaultValue).trim().toLowerCase();
+  if (allowedValues.has(normalized)) return normalized;
+  return null;
+}
+
 function boolish(value) {
   return value === true || value === 'T' || value === 'true' || value === 1;
 }
@@ -1663,6 +1672,19 @@ const handler = async (req, res) => {
     const pallets = Array.isArray(body.pallets) ? body.pallets : [];
     const validatedBy = body.validatedBy || 'batch-reprocess';
     const notes = body.notes;
+    const shipmentCompleteness = normalizeEnumValue(
+      body.shipmentCompleteness ?? body.shipment_completeness,
+      SHIPMENT_COMPLETENESS_VALUES,
+      'unknown'
+    );
+    const actualUnitBasis = normalizeEnumValue(
+      body.actualUnitBasis ?? body.actual_unit_basis,
+      ACTUAL_UNIT_BASIS_VALUES,
+      'unknown'
+    );
+    const actualPositionsRaw = body.actualPositions ?? body.actual_positions;
+    const hasActualPositions = actualPositionsRaw !== undefined && actualPositionsRaw !== null && String(actualPositionsRaw).trim() !== '';
+    const actualPositions = hasActualPositions ? parseInt(actualPositionsRaw, 10) : null;
     const directItems = normalizeInputItems(body.items || body.lines);
     const usingDirectItems = directItems.length > 0;
     const requestLabel = soNumber ? `SO${soNumber}` : String(referenceNumber || 'DIRECT_ITEMS');
@@ -1675,6 +1697,34 @@ const handler = async (req, res) => {
 
     if (!skipSave && (!soNumber || !Array.isArray(body.pallets) || !body.validatedBy)) {
       return res.status(400).json({ success: false, error: 'Missing required fields: soNumber, pallets, validatedBy' });
+    }
+
+    if (!shipmentCompleteness) {
+      return res.status(400).json({
+        success: false,
+        error: "Invalid shipmentCompleteness. Allowed values: complete, partial, unknown",
+      });
+    }
+
+    if (!actualUnitBasis) {
+      return res.status(400).json({
+        success: false,
+        error: "Invalid actualUnitBasis. Allowed values: package_count, pallet_positions, unknown",
+      });
+    }
+
+    if (hasActualPositions && (!Number.isInteger(actualPositions) || actualPositions <= 0)) {
+      return res.status(400).json({
+        success: false,
+        error: 'actualPositions must be a positive integer when provided',
+      });
+    }
+
+    if (!skipSave && actualUnitBasis === 'pallet_positions' && !hasActualPositions) {
+      return res.status(400).json({
+        success: false,
+        error: 'actualPositions is required when actualUnitBasis is pallet_positions',
+      });
     }
 
     // 1. Input lookup
@@ -1710,7 +1760,7 @@ const handler = async (req, res) => {
     // 5. Save to Supabase (skip for batch reprocessing)
     let validationId = null;
     if (!skipSave && supabase && soNumber) {
-      const result = await supabase.from('validations').insert({
+      const insertPayload = {
         pick_ticket_id: `SO${soNumber}`,
         sales_order_id: `SO${soNumber}`,
         predicted_pallets: prediction.totalPallets,
@@ -1719,11 +1769,27 @@ const handler = async (req, res) => {
         actual_pallets: actualPallets,
         actual_weight: actualWeight,
         actual_dimensions: pallets,
+        shipment_completeness: shipmentCompleteness,
+        actual_unit_basis: actualUnitBasis,
+        actual_positions: actualPositions,
         actual_notes: notes || null,
         validated_by: validatedBy,
         validated_at: new Date().toISOString(),
         status: 'validated'
-      }).select('id');
+      };
+
+      let result = await supabase.from('validations').insert(insertPayload).select('id');
+
+      // Migration-safe fallback if semantics columns are not yet present.
+      if (result.error && /actual_unit_basis|actual_positions|shipment_completeness/i.test(result.error.message || '')) {
+        const {
+          shipment_completeness: _ignoredCompleteness,
+          actual_unit_basis: _ignoredBasis,
+          actual_positions: _ignoredPositions,
+          ...legacyPayload
+        } = insertPayload;
+        result = await supabase.from('validations').insert(legacyPayload).select('id');
+      }
 
       if (result.error) {
         console.error('Supabase error:', result.error);
@@ -1760,7 +1826,14 @@ const handler = async (req, res) => {
       predicted_weight: predictionResult.predicted_weight,
       predicted_breakdown: predictionResult.predicted_breakdown,
       predicted_packages: predictionResult.predicted_packages,
-      actual: { pallets: actualPallets, weight: actualWeight, dimensions: pallets },
+      actual: {
+        pallets: actualPallets,
+        positions: actualPositions,
+        unitBasis: actualUnitBasis,
+        shipmentCompleteness,
+        weight: actualWeight,
+        dimensions: pallets,
+      },
       variance: {
         pallets: palletVariance,
         weight: weightVariance,

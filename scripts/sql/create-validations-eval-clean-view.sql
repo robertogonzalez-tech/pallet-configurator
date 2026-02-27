@@ -1,5 +1,5 @@
 -- Deterministic clean evaluation slice.
--- Includes only complete shipments and keeps the latest row per SO.
+-- Includes only complete shipments with package-count semantics and keeps latest row per SO.
 -- Rollback:
 --   DROP VIEW IF EXISTS validations_eval_clean;
 
@@ -14,6 +14,7 @@ WITH ranked AS (
   FROM validations v
   WHERE v.status = 'validated'
     AND COALESCE(v.shipment_completeness, 'unknown') = 'complete'
+    AND COALESCE(v.actual_unit_basis, 'unknown') = 'package_count'
 )
 SELECT *
 FROM ranked

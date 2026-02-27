@@ -10,6 +10,9 @@ export default function ValidationMode() {
   const [validation, setValidation] = useState({
     actualPallets: '',
     actualWeight: '',
+    actualPositions: '',
+    shipmentCompleteness: 'complete',
+    actualUnitBasis: 'package_count',
     notes: '',
     validatedBy: 'Chad', // Default
   })
@@ -56,6 +59,9 @@ export default function ValidationMode() {
           setValidation({
             actualPallets: existing.actual_pallets?.toString() || '',
             actualWeight: existing.actual_weight_lbs?.toString() || '',
+            actualPositions: existing.actual_positions?.toString() || '',
+            shipmentCompleteness: existing.shipment_completeness || 'complete',
+            actualUnitBasis: existing.actual_unit_basis || 'package_count',
             notes: existing.actual_notes || '',
             validatedBy: existing.validated_by || 'Chad',
           })
@@ -109,6 +115,10 @@ export default function ValidationMode() {
       setError('Please enter the actual pallet count')
       return
     }
+    if (validation.actualUnitBasis === 'pallet_positions' && !validation.actualPositions) {
+      setError('Please enter actual positions when basis is pallet_positions')
+      return
+    }
     
     setSubmitting(true)
     setError(null)
@@ -128,6 +138,9 @@ export default function ValidationMode() {
             prediction_timestamp: prediction?.timestamp || new Date().toISOString(),
             actual_pallets: parseInt(validation.actualPallets),
             actual_weight_lbs: validation.actualWeight ? parseFloat(validation.actualWeight) : null,
+            actual_positions: validation.actualPositions ? parseInt(validation.actualPositions, 10) : null,
+            shipment_completeness: validation.shipmentCompleteness || 'unknown',
+            actual_unit_basis: validation.actualUnitBasis || 'unknown',
             actual_notes: validation.notes,
             validated_by: validation.validatedBy,
             validation_timestamp: new Date().toISOString(),
@@ -305,6 +318,41 @@ export default function ValidationMode() {
                 placeholder="e.g., Chad"
               />
             </div>
+
+            <div className="form-group">
+              <label>Shipment Completeness *</label>
+              <select
+                value={validation.shipmentCompleteness}
+                onChange={(e) => setValidation({...validation, shipmentCompleteness: e.target.value})}
+              >
+                <option value="complete">complete</option>
+                <option value="partial">partial</option>
+                <option value="unknown">unknown</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label>Actual Unit Basis *</label>
+              <select
+                value={validation.actualUnitBasis}
+                onChange={(e) => setValidation({...validation, actualUnitBasis: e.target.value})}
+              >
+                <option value="package_count">package_count</option>
+                <option value="pallet_positions">pallet_positions</option>
+                <option value="unknown">unknown</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label>Actual Positions {validation.actualUnitBasis === 'pallet_positions' ? '*' : '(optional)'}</label>
+              <input
+                type="number"
+                min="0"
+                value={validation.actualPositions}
+                onChange={(e) => setValidation({...validation, actualPositions: e.target.value})}
+                placeholder="e.g., 4"
+              />
+            </div>
           </div>
           
           <div className="form-group full-width">
@@ -414,7 +462,15 @@ export default function ValidationMode() {
             onClick={() => {
               setPickTicketId('')
               setPrediction(null)
-              setValidation({ actualPallets: '', actualWeight: '', notes: '', validatedBy: 'Chad' })
+              setValidation({
+                actualPallets: '',
+                actualWeight: '',
+                actualPositions: '',
+                shipmentCompleteness: 'complete',
+                actualUnitBasis: 'package_count',
+                notes: '',
+                validatedBy: 'Chad'
+              })
               setCorrections([])
               setPhotos([])
               setSubmitted(false)
