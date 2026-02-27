@@ -654,6 +654,19 @@ function isLongTubeTriggerItem(item) {
   );
 }
 
+function isFlagBypassItem(item) {
+  const normSku = normalizeSku(item?.sku);
+  const name = String(item?.name || '').toUpperCase();
+  if (isLongTubeTriggerItem(item)) return true;
+  // Explicit DD kit parents that represent finished shippable units.
+  if (normSku.startsWith('80101-0257') || normSku.startsWith('80101-0258')) return true;
+  // Legacy DD parent SKUs
+  if (normSku.startsWith('DD-')) return true;
+  // Locker/assembled parents occasionally marked non-fulfillable in NetSuite
+  if (name.includes('LOCKER') && name.includes('KIT')) return true;
+  return false;
+}
+
 function estimateLongTubePallets(state) {
   // Conservative rule:
   // - any 100\"+ rail/tube bundle creates a dedicated long-tube package
@@ -941,7 +954,18 @@ function predictPallets(items) {
 
     const normSku = normalizeSku(item.sku || 'UNKNOWN');
     const configHint = classifyFromSkuConfig(item);
-    const classification = configHint?.classification || classifyItem(item.sku, item.name, orderHasParents);
+    const baseClassification = configHint?.classification || classifyItem(item.sku, item.name, orderHasParents);
+    const flagBypass = isFlagBypassItem(item);
+    let classification = baseClassification;
+
+    // Keep full-line visibility, but avoid component explosion:
+    // most assembly components / non-fulfillable lines are not standalone shipments.
+    if (!flagBypass && item.assemblyComponent) {
+      classification = 'component_of_parent';
+    }
+    if (!flagBypass && item.fulfillable === false && classification === 'product') {
+      classification = 'non_shippable';
+    }
 
     if (classification === 'non_shippable') {
       diagnostics.filteredNonShippable++;
