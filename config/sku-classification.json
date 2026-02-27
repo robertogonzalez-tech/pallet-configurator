@@ -112,9 +112,11 @@
       "counting_method": "Count LOCKER-* SKUs.",
       "primary_skus": [
         {"pattern": "LOCKER-*", "note": "Assembled locker units (all models/colors)"},
-        {"pattern": "89901-4*", "note": "VisiLocker kit components"},
-        {"pattern": "90101-4*", "note": "VisiLocker box components (BOXA, BOXB, BOXC)"},
-        {"pattern": "50101-4*", "note": "VisiLocker post components"}
+        {"pattern": "89901-04*", "note": "VisiLocker/MBV kit components"},
+        {"pattern": "90101-04*", "note": "VisiLocker/MBV box components (BOXA, BOXB, BOXC)"},
+        {"pattern": "50101-04*", "note": "VisiLocker/MBV post components"},
+        {"pattern": "MBV*-*", "note": "MBV grouped assembly line"},
+        {"pattern": "VISI*-*", "note": "Visi grouped assembly line"}
       ]
     },
 

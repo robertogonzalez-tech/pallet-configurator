@@ -52,6 +52,19 @@ function familySetFromBreakdown(breakdown) {
   return Array.from(families);
 }
 
+function hasSentinelFallback(breakdown) {
+  if (!Array.isArray(breakdown)) return false;
+  return breakdown.some((row) => {
+    const matched = String(row?.matched || '').trim();
+    return matched === 'ZERO_FLOOR' || matched === 'UNKNOWN_FALLBACK';
+  });
+}
+
+function isLegacySo(row) {
+  const so = String(row?.sales_order_id || row?.pick_ticket_id || '').toUpperCase();
+  return /^SO[56]/.test(so);
+}
+
 function bucketFamilyCount(count) {
   if (count <= 0) return '0';
   if (count === 1) return '1';
@@ -200,6 +213,9 @@ function toMarkdown(report) {
   md.push('## Dataset');
   md.push(`- validated rows: ${report.dataset.validated_rows}`);
   md.push(`- clean rows (complete + deduped): ${report.dataset.clean_rows}`);
+  if (typeof report.dataset.consistent_rows === 'number') {
+    md.push(`- consistent clean rows (clean - legacy ambiguity - sentinel fallback): ${report.dataset.consistent_rows}`);
+  }
   md.push(`- shipment completeness counts: \`${JSON.stringify(report.dataset.shipment_completeness_counts)}\``);
   md.push('');
   md.push('## Metrics');
@@ -209,6 +225,9 @@ function toMarkdown(report) {
   const row = (name, m) => `| ${name} | ${m.rows} | ${fmt(m.exact_pct)} | ${fmt(m.within_1_pct)} | ${fmt(m.within_2_pct)} | ${fmt(m.mae)} | ${fmt(m.bias)} | ${fmt(m.severe_under_rate)} | ${fmt(m.severe_over_rate)} |`;
   md.push(row('all', report.metrics_all.overall));
   md.push(row('clean', report.metrics_clean.overall));
+  if (report.metrics_consistent?.overall) {
+    md.push(row('consistent_clean', report.metrics_consistent.overall));
+  }
   md.push('');
   md.push('## Clean Slice Breakdown');
   for (const [k, v] of Object.entries(report.metrics_clean.by_type)) {
@@ -249,16 +268,19 @@ function toMarkdown(report) {
 
   const completeRows = rows.filter((row) => String(row.shipment_completeness || '').toLowerCase() === 'complete');
   const cleanRows = dedupeCleanRows(completeRows);
+  const consistentRows = cleanRows.filter((row) => !isLegacySo(row) && !hasSentinelFallback(row.predicted_breakdown));
 
   const report = {
     generated_at: new Date().toISOString(),
     dataset: {
       validated_rows: rows.length,
       clean_rows: cleanRows.length,
+      consistent_rows: consistentRows.length,
       shipment_completeness_counts: completenessCounts,
     },
     metrics_all: computeMetrics(rows),
     metrics_clean: computeMetrics(cleanRows),
+    metrics_consistent: computeMetrics(consistentRows),
   };
 
   console.log(JSON.stringify(report, null, 2));
