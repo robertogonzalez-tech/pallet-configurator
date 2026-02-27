@@ -1,0 +1,704 @@
+{
+  "generated_at": "2026-02-27T14:48:53.072Z",
+  "dataset": {
+    "validated_rows": 491,
+    "complete_rows": 491,
+    "package_count_rows": 0,
+    "clean_rows": 477,
+    "consistent_rows": 307,
+    "shipment_completeness_counts": {
+      "complete": 491
+    },
+    "actual_unit_basis_counts": {
+      "unknown": 491
+    },
+    "basis_filter_fallback": true
+  },
+  "metrics_all": {
+    "rows": 491,
+    "overall": {
+      "rows": 491,
+      "exact_pct": 61.91446028513238,
+      "within_1_pct": 90.63136456211812,
+      "within_2_pct": 95.9266802443992,
+      "mae": 0.5560081466395111,
+      "bias": 0.09572301425661914,
+      "severe_under_rate": 4.276985743380855,
+      "severe_over_rate": 5.091649694501019
+    },
+    "by_type": {
+      "single": {
+        "rows": 299,
+        "exact_pct": 74.91638795986621,
+        "within_1_pct": 93.31103678929766,
+        "within_2_pct": 95.31772575250837,
+        "mae": 0.40468227424749165,
+        "bias": -0.14381270903010032,
+        "severe_under_rate": 4.682274247491638,
+        "severe_over_rate": 2.0066889632107023
+      },
+      "multi": {
+        "rows": 180,
+        "exact_pct": 38.333333333333336,
+        "within_1_pct": 86.11111111111111,
+        "within_2_pct": 96.66666666666667,
+        "mae": 0.8333333333333334,
+        "bias": 0.5111111111111111,
+        "severe_under_rate": 3.3333333333333335,
+        "severe_over_rate": 10.555555555555555
+      },
+      "unknown": {
+        "rows": 12,
+        "exact_pct": 91.66666666666666,
+        "within_1_pct": 91.66666666666666,
+        "within_2_pct": 100,
+        "mae": 0.16666666666666666,
+        "bias": -0.16666666666666666,
+        "severe_under_rate": 8.333333333333332,
+        "severe_over_rate": 0
+      }
+    },
+    "by_family_count": {
+      "0": {
+        "rows": 12,
+        "exact_pct": 91.66666666666666,
+        "within_1_pct": 91.66666666666666,
+        "within_2_pct": 100,
+        "mae": 0.16666666666666666,
+        "bias": -0.16666666666666666,
+        "severe_under_rate": 8.333333333333332,
+        "severe_over_rate": 0
+      },
+      "1": {
+        "rows": 299,
+        "exact_pct": 74.91638795986621,
+        "within_1_pct": 93.31103678929766,
+        "within_2_pct": 95.31772575250837,
+        "mae": 0.40468227424749165,
+        "bias": -0.14381270903010032,
+        "severe_under_rate": 4.682274247491638,
+        "severe_over_rate": 2.0066889632107023
+      },
+      "2": {
+        "rows": 108,
+        "exact_pct": 49.074074074074076,
+        "within_1_pct": 90.74074074074075,
+        "within_2_pct": 97.22222222222221,
+        "mae": 0.6296296296296297,
+        "bias": 0.35185185185185186,
+        "severe_under_rate": 2.7777777777777777,
+        "severe_over_rate": 6.481481481481481
+      },
+      "3": {
+        "rows": 36,
+        "exact_pct": 27.77777777777778,
+        "within_1_pct": 91.66666666666666,
+        "within_2_pct": 100,
+        "mae": 0.8055555555555556,
+        "bias": 0.5277777777777778,
+        "severe_under_rate": 2.7777777777777777,
+        "severe_over_rate": 5.555555555555555
+      },
+      "4+": {
+        "rows": 36,
+        "exact_pct": 16.666666666666664,
+        "within_1_pct": 66.66666666666666,
+        "within_2_pct": 91.66666666666666,
+        "mae": 1.4722222222222223,
+        "bias": 0.9722222222222222,
+        "severe_under_rate": 5.555555555555555,
+        "severe_over_rate": 27.77777777777778
+      }
+    },
+    "top_family_error_buckets": [
+      {
+        "family": "VR2 Offset",
+        "count": 19
+      },
+      {
+        "family": "LONG_TUBE",
+        "count": 17
+      },
+      {
+        "family": "Double Docker",
+        "count": 12
+      },
+      {
+        "family": "Hoop Runner",
+        "count": 11
+      },
+      {
+        "family": "Base Station",
+        "count": 10
+      },
+      {
+        "family": "ZERO_FLOOR",
+        "count": 7
+      },
+      {
+        "family": "VR1 XL",
+        "count": 5
+      },
+      {
+        "family": "Varsity",
+        "count": 5
+      },
+      {
+        "family": "Circle Series (Omega)",
+        "count": 4
+      },
+      {
+        "family": "2UP",
+        "count": 3
+      },
+      {
+        "family": "Saris",
+        "count": 3
+      },
+      {
+        "family": "Metal Bike Vault / VisiLocker",
+        "count": 1
+      },
+      {
+        "family": "MBA",
+        "count": 1
+      },
+      {
+        "family": "Guardian",
+        "count": 1
+      }
+    ],
+    "top_sku_error_buckets": [
+      {
+        "sku": "81000-0052",
+        "count": 64
+      },
+      {
+        "sku": "81000-0054-HS",
+        "count": 64
+      },
+      {
+        "sku": "81000-0055",
+        "count": 64
+      },
+      {
+        "sku": "81000-0006",
+        "count": 63
+      },
+      {
+        "sku": "81000-0005",
+        "count": 62
+      },
+      {
+        "sku": "50101-0256-GAV",
+        "count": 59
+      },
+      {
+        "sku": "32000-0380-16SS",
+        "count": 48
+      },
+      {
+        "sku": "31000-0380-0750-SS",
+        "count": 46
+      },
+      {
+        "sku": "81000-0114",
+        "count": 46
+      },
+      {
+        "sku": "34010-0375-375-SS",
+        "count": 43
+      },
+      {
+        "sku": "3000Q-0250-100-BO",
+        "count": 34
+      },
+      {
+        "sku": "50801-0012-GAV-120",
+        "count": 29
+      },
+      {
+        "sku": "81000-0030",
+        "count": 23
+      },
+      {
+        "sku": "81000-0008",
+        "count": 21
+      },
+      {
+        "sku": "81000-0104",
+        "count": 20
+      },
+      {
+        "sku": "LONG-TUBE",
+        "count": 17
+      },
+      {
+        "sku": "91000-0002-HS",
+        "count": 17
+      },
+      {
+        "sku": "50801-0014-BLK13",
+        "count": 17
+      },
+      {
+        "sku": "26246",
+        "count": 16
+      },
+      {
+        "sku": "26268",
+        "count": 16
+      }
+    ]
+  },
+  "metrics_clean": {
+    "rows": 477,
+    "overall": {
+      "rows": 477,
+      "exact_pct": 63.102725366876314,
+      "within_1_pct": 91.61425576519916,
+      "within_2_pct": 96.64570230607966,
+      "mae": 0.5157232704402516,
+      "bias": 0.07547169811320754,
+      "severe_under_rate": 3.9832285115303985,
+      "severe_over_rate": 4.40251572327044
+    },
+    "by_type": {
+      "single": {
+        "rows": 289,
+        "exact_pct": 76.8166089965398,
+        "within_1_pct": 94.4636678200692,
+        "within_2_pct": 96.19377162629758,
+        "mae": 0.3460207612456747,
+        "bias": -0.17993079584775087,
+        "severe_under_rate": 4.498269896193772,
+        "severe_over_rate": 1.0380622837370241
+      },
+      "multi": {
+        "rows": 176,
+        "exact_pct": 38.63636363636363,
+        "within_1_pct": 86.93181818181817,
+        "within_2_pct": 97.1590909090909,
+        "mae": 0.8181818181818182,
+        "bias": 0.5113636363636364,
+        "severe_under_rate": 2.840909090909091,
+        "severe_over_rate": 10.227272727272728
+      },
+      "unknown": {
+        "rows": 12,
+        "exact_pct": 91.66666666666666,
+        "within_1_pct": 91.66666666666666,
+        "within_2_pct": 100,
+        "mae": 0.16666666666666666,
+        "bias": -0.16666666666666666,
+        "severe_under_rate": 8.333333333333332,
+        "severe_over_rate": 0
+      }
+    },
+    "by_family_count": {
+      "0": {
+        "rows": 12,
+        "exact_pct": 91.66666666666666,
+        "within_1_pct": 91.66666666666666,
+        "within_2_pct": 100,
+        "mae": 0.16666666666666666,
+        "bias": -0.16666666666666666,
+        "severe_under_rate": 8.333333333333332,
+        "severe_over_rate": 0
+      },
+      "1": {
+        "rows": 289,
+        "exact_pct": 76.8166089965398,
+        "within_1_pct": 94.4636678200692,
+        "within_2_pct": 96.19377162629758,
+        "mae": 0.3460207612456747,
+        "bias": -0.17993079584775087,
+        "severe_under_rate": 4.498269896193772,
+        "severe_over_rate": 1.0380622837370241
+      },
+      "2": {
+        "rows": 104,
+        "exact_pct": 50,
+        "within_1_pct": 92.3076923076923,
+        "within_2_pct": 98.07692307692307,
+        "mae": 0.5961538461538461,
+        "bias": 0.34615384615384615,
+        "severe_under_rate": 1.9230769230769231,
+        "severe_over_rate": 5.769230769230769
+      },
+      "3": {
+        "rows": 36,
+        "exact_pct": 27.77777777777778,
+        "within_1_pct": 91.66666666666666,
+        "within_2_pct": 100,
+        "mae": 0.8055555555555556,
+        "bias": 0.5277777777777778,
+        "severe_under_rate": 2.7777777777777777,
+        "severe_over_rate": 5.555555555555555
+      },
+      "4+": {
+        "rows": 36,
+        "exact_pct": 16.666666666666664,
+        "within_1_pct": 66.66666666666666,
+        "within_2_pct": 91.66666666666666,
+        "mae": 1.4722222222222223,
+        "bias": 0.9722222222222222,
+        "severe_under_rate": 5.555555555555555,
+        "severe_over_rate": 27.77777777777778
+      }
+    },
+    "top_family_error_buckets": [
+      {
+        "family": "VR2 Offset",
+        "count": 18
+      },
+      {
+        "family": "LONG_TUBE",
+        "count": 16
+      },
+      {
+        "family": "Hoop Runner",
+        "count": 11
+      },
+      {
+        "family": "Double Docker",
+        "count": 11
+      },
+      {
+        "family": "Base Station",
+        "count": 10
+      },
+      {
+        "family": "ZERO_FLOOR",
+        "count": 6
+      },
+      {
+        "family": "VR1 XL",
+        "count": 4
+      },
+      {
+        "family": "Varsity",
+        "count": 4
+      },
+      {
+        "family": "Circle Series (Omega)",
+        "count": 3
+      },
+      {
+        "family": "2UP",
+        "count": 3
+      },
+      {
+        "family": "Saris",
+        "count": 3
+      },
+      {
+        "family": "MBA",
+        "count": 1
+      },
+      {
+        "family": "Guardian",
+        "count": 1
+      }
+    ],
+    "top_sku_error_buckets": [
+      {
+        "sku": "81000-0114",
+        "count": 45
+      },
+      {
+        "sku": "32000-0380-16SS",
+        "count": 45
+      },
+      {
+        "sku": "31000-0380-0750-SS",
+        "count": 44
+      },
+      {
+        "sku": "81000-0052",
+        "count": 43
+      },
+      {
+        "sku": "81000-0054-HS",
+        "count": 43
+      },
+      {
+        "sku": "81000-0055",
+        "count": 43
+      },
+      {
+        "sku": "34010-0375-375-SS",
+        "count": 42
+      },
+      {
+        "sku": "81000-0006",
+        "count": 42
+      },
+      {
+        "sku": "81000-0005",
+        "count": 41
+      },
+      {
+        "sku": "50101-0256-GAV",
+        "count": 38
+      },
+      {
+        "sku": "3000Q-0250-100-BO",
+        "count": 34
+      },
+      {
+        "sku": "50801-0012-GAV-120",
+        "count": 28
+      },
+      {
+        "sku": "81000-0030",
+        "count": 22
+      },
+      {
+        "sku": "81000-0008",
+        "count": 21
+      },
+      {
+        "sku": "81000-0104",
+        "count": 20
+      },
+      {
+        "sku": "50801-0014-BLK13",
+        "count": 17
+      },
+      {
+        "sku": "LONG-TUBE",
+        "count": 16
+      },
+      {
+        "sku": "34051-0250-0200",
+        "count": 16
+      },
+      {
+        "sku": "91000-0002-HS",
+        "count": 15
+      },
+      {
+        "sku": "26268",
+        "count": 15
+      }
+    ]
+  },
+  "metrics_consistent": {
+    "rows": 307,
+    "overall": {
+      "rows": 307,
+      "exact_pct": 67.42671009771986,
+      "within_1_pct": 96.41693811074919,
+      "within_2_pct": 99.3485342019544,
+      "mae": 0.3713355048859935,
+      "bias": 0.16938110749185667,
+      "severe_under_rate": 0.32573289902280134,
+      "severe_over_rate": 3.257328990228013
+    },
+    "by_type": {
+      "single": {
+        "rows": 174,
+        "exact_pct": 84.48275862068965,
+        "within_1_pct": 98.85057471264368,
+        "within_2_pct": 99.42528735632183,
+        "mae": 0.1781609195402299,
+        "bias": -0.05172413793103448,
+        "severe_under_rate": 0.5747126436781609,
+        "severe_over_rate": 0.5747126436781609
+      },
+      "multi": {
+        "rows": 126,
+        "exact_pct": 42.06349206349206,
+        "within_1_pct": 92.85714285714286,
+        "within_2_pct": 99.20634920634922,
+        "mae": 0.6587301587301587,
+        "bias": 0.48412698412698413,
+        "severe_under_rate": 0,
+        "severe_over_rate": 7.142857142857142
+      },
+      "unknown": {
+        "rows": 7,
+        "exact_pct": 100,
+        "within_1_pct": 100,
+        "within_2_pct": 100,
+        "mae": 0,
+        "bias": 0,
+        "severe_under_rate": 0,
+        "severe_over_rate": 0
+      }
+    },
+    "by_family_count": {
+      "0": {
+        "rows": 7,
+        "exact_pct": 100,
+        "within_1_pct": 100,
+        "within_2_pct": 100,
+        "mae": 0,
+        "bias": 0,
+        "severe_under_rate": 0,
+        "severe_over_rate": 0
+      },
+      "1": {
+        "rows": 174,
+        "exact_pct": 84.48275862068965,
+        "within_1_pct": 98.85057471264368,
+        "within_2_pct": 99.42528735632183,
+        "mae": 0.1781609195402299,
+        "bias": -0.05172413793103448,
+        "severe_under_rate": 0.5747126436781609,
+        "severe_over_rate": 0.5747126436781609
+      },
+      "2": {
+        "rows": 77,
+        "exact_pct": 53.246753246753244,
+        "within_1_pct": 96.1038961038961,
+        "within_2_pct": 98.7012987012987,
+        "mae": 0.5194805194805194,
+        "bias": 0.36363636363636365,
+        "severe_under_rate": 0,
+        "severe_over_rate": 3.896103896103896
+      },
+      "3": {
+        "rows": 27,
+        "exact_pct": 25.925925925925924,
+        "within_1_pct": 96.29629629629629,
+        "within_2_pct": 100,
+        "mae": 0.7777777777777778,
+        "bias": 0.5555555555555556,
+        "severe_under_rate": 0,
+        "severe_over_rate": 3.7037037037037033
+      },
+      "4+": {
+        "rows": 22,
+        "exact_pct": 22.727272727272727,
+        "within_1_pct": 77.27272727272727,
+        "within_2_pct": 100,
+        "mae": 1,
+        "bias": 0.8181818181818182,
+        "severe_under_rate": 0,
+        "severe_over_rate": 22.727272727272727
+      }
+    },
+    "top_family_error_buckets": [
+      {
+        "family": "Hoop Runner",
+        "count": 7
+      },
+      {
+        "family": "VR2 Offset",
+        "count": 6
+      },
+      {
+        "family": "Base Station",
+        "count": 5
+      },
+      {
+        "family": "LONG_TUBE",
+        "count": 5
+      },
+      {
+        "family": "Double Docker",
+        "count": 2
+      },
+      {
+        "family": "Saris",
+        "count": 2
+      },
+      {
+        "family": "Varsity",
+        "count": 2
+      },
+      {
+        "family": "Circle Series (Omega)",
+        "count": 2
+      },
+      {
+        "family": "2UP",
+        "count": 1
+      }
+    ],
+    "top_sku_error_buckets": [
+      {
+        "sku": "31000-0380-0750-SS",
+        "count": 24
+      },
+      {
+        "sku": "32000-0380-16SS",
+        "count": 24
+      },
+      {
+        "sku": "34010-0375-375-SS",
+        "count": 23
+      },
+      {
+        "sku": "81000-0114",
+        "count": 20
+      },
+      {
+        "sku": "3000Q-0250-100-BO",
+        "count": 18
+      },
+      {
+        "sku": "34051-0250-0200",
+        "count": 12
+      },
+      {
+        "sku": "81000-0104",
+        "count": 12
+      },
+      {
+        "sku": "81000-0008",
+        "count": 10
+      },
+      {
+        "sku": "39000-0003",
+        "count": 8
+      },
+      {
+        "sku": "81000-0030",
+        "count": 8
+      },
+      {
+        "sku": "50801-0012-GAV-120",
+        "count": 7
+      },
+      {
+        "sku": "50801-0014-BLK13",
+        "count": 7
+      },
+      {
+        "sku": "90101-0172-BLK13",
+        "count": 6
+      },
+      {
+        "sku": "80301-0166-BLK13",
+        "count": 6
+      },
+      {
+        "sku": "80101-0230-BLK13",
+        "count": 5
+      },
+      {
+        "sku": "LONG-TUBE",
+        "count": 5
+      },
+      {
+        "sku": "26246",
+        "count": 5
+      },
+      {
+        "sku": "81000-0005",
+        "count": 4
+      },
+      {
+        "sku": "81000-0006",
+        "count": 4
+      },
+      {
+        "sku": "81000-0052",
+        "count": 4
+      }
+    ]
+  }
+}
