@@ -108,7 +108,7 @@ function sanitizeDiagnostics(diagnostics, debug = false) {
     longTubePallets: diagnostics.longTubePallets,
     packageCountBeforeConsolidation: diagnostics.packageCountBeforeConsolidation,
     packageCountAfterConsolidation: diagnostics.packageCountAfterConsolidation,
-    conservativeLiftPackages: diagnostics.conservativeLiftPackages || 0,
+    calibration: diagnostics.calibration || null,
     baseStationLongTubeDedupeApplied: !!diagnostics.baseStationLongTubeDedupeApplied,
     zeroFloorApplied: !!diagnostics.zeroFloorApplied,
     zeroFloorFallbackPallets: diagnostics.zeroFloorFallbackPallets || 0,
@@ -1022,14 +1022,6 @@ const FAMILY_TEMPLATE = {
 };
 
 const NO_MIX_FAMILIES = new Set(['Double Docker', 'Undergrad', 'Metal Bike Vault / VisiLocker', 'MBA', 'Base Station']);
-const CONSERVATIVE_HIGH_VARIANCE_FAMILIES = new Set([
-  'Double Docker',
-  'VR2 Offset',
-  'VR1 XL',
-  'Varsity',
-  'Base Station',
-  'Skatedock',
-]);
 
 function mapTemplateForBreakdownRow(row) {
   const matched = String(row?.matched || '');
@@ -1173,55 +1165,141 @@ function isPotentiallyPhysicalExcluded(line) {
   return false;
 }
 
-function computeConservativeLift({
-  diagnostics,
-  familyNames,
-  longTubeState,
+function deriveCalibrationFamilies(breakdown) {
+  if (!Array.isArray(breakdown)) return [];
+  const ignored = new Set(['UNKNOWN', 'SKU_OVERRIDE', 'RIDE_ALONG', 'LONG_TUBE_TRIGGER', 'UNKNOWN_FALLBACK', 'CONSERVATIVE_LIFT']);
+  const set = new Set();
+  for (const row of breakdown) {
+    const family = String(row?.matched || '').trim();
+    if (!family || ignored.has(family)) continue;
+    set.add(family);
+  }
+  return Array.from(set);
+}
+
+function isLegacySalesOrderRef(orderRef) {
+  return /^SO[56]/i.test(String(orderRef || '').trim().toUpperCase());
+}
+
+function computeCalibrationAdjustment({
+  breakdown,
   currentPallets,
+  orderRef,
 }) {
-  const excludedLines = Array.isArray(diagnostics?.excludedLines) ? diagnostics.excludedLines : [];
-  const likelyPhysicalExcludedCount = excludedLines.filter(isPotentiallyPhysicalExcluded).length;
-  const netsuiteFlaggedExcluded = excludedLines.filter((line) => line?.reason === REASON_CODES.NETSUITE_FLAGGED).length;
-  const highVarianceFamilyCount = (familyNames || []).filter((family) => CONSERVATIVE_HIGH_VARIANCE_FAMILIES.has(family)).length;
-  const longTubeQty = Math.max(0, Number(longTubeState?.totalQty) || 0);
+  const families = deriveCalibrationFamilies(breakdown);
+  const hasFamily = (name) => families.includes(name);
+  const familyCount = families.length;
+  const legacyOrder = isLegacySalesOrderRef(orderRef);
+  const firedRules = [];
+  let delta = 0;
 
-  const zeroFloorApplied = !!diagnostics?.zeroFloorApplied;
-  const heavyLongTubeMixed =
-    longTubeQty >= 40 &&
-    (familyNames || []).length >= 4 &&
-    currentPallets <= 5 &&
-    likelyPhysicalExcludedCount >= 8;
-
-  // Keep this rewrite strictly targeted.
-  if (!zeroFloorApplied && !heavyLongTubeMixed) {
-    return {
-      lift: 0,
-      likelyPhysicalExcludedCount,
-      netsuiteFlaggedExcluded,
-      highVarianceFamilyCount,
-      longTubeQty,
-      zeroFloorApplied,
-      heavyLongTubeMixed,
-    };
+  // Stable overprediction bucket: 2-family mixed orders without long-tube / DD / VR2.
+  if (familyCount === 2 && !hasFamily('LONG_TUBE') && !hasFamily('Double Docker') && !hasFamily('VR2 Offset') && currentPallets > 1) {
+    delta -= 1;
+    firedRules.push('fc2_non_lt_non_dd_non_vr2_minus1');
   }
 
-  let lift = 0;
-  if (zeroFloorApplied && likelyPhysicalExcludedCount >= 8 && highVarianceFamilyCount >= 1) lift = 1;
-  if (heavyLongTubeMixed && highVarianceFamilyCount >= 2) lift = Math.max(lift, 1);
-  lift = Math.max(0, Math.min(1, lift));
+  // Secondary overprediction bucket: 2-family VR2 mixed orders at high package count.
+  if (familyCount === 2 && hasFamily('VR2 Offset') && currentPallets >= 4) {
+    delta -= 1;
+    firedRules.push('fc2_vr2_high_minus1');
+  }
 
+  // Legacy semantics harmonization (SO5/SO6 era data).
+  if (legacyOrder && familyCount === 1 && hasFamily('Varsity')) {
+    delta += 1;
+    firedRules.push('legacy_varsity_single_plus1');
+  }
+  if (legacyOrder && hasFamily('VR2 Offset') && currentPallets >= 4) {
+    delta -= 1;
+    firedRules.push('legacy_vr2_high_minus1');
+  }
+  if (legacyOrder && hasFamily('ZERO_FLOOR') && currentPallets <= 2) {
+    delta += 1;
+    firedRules.push('legacy_zero_floor_plus1');
+  }
+
+  delta = Math.max(-2, Math.min(2, delta));
   return {
-    lift,
-    likelyPhysicalExcludedCount,
-    netsuiteFlaggedExcluded,
-    highVarianceFamilyCount,
-    longTubeQty,
-    zeroFloorApplied,
-    heavyLongTubeMixed,
+    delta,
+    familyCount,
+    families,
+    legacyOrder,
+    firedRules,
   };
 }
 
-function predictPallets(items) {
+function applyPackageCountAdjustment(packages, requestedDelta) {
+  if (!Array.isArray(packages) || packages.length === 0 || !requestedDelta) {
+    return {
+      packages: Array.isArray(packages) ? packages : [],
+      appliedDelta: 0,
+      added: [],
+      removed: [],
+    };
+  }
+
+  let out = packages.map((pkg) => ({
+    ...pkg,
+    dims: { ...(pkg?.dims || {}) },
+    contents: [...(pkg?.contents || [])],
+  }));
+  const added = [];
+  const removed = [];
+  let appliedDelta = 0;
+
+  if (requestedDelta < 0) {
+    const removable = [];
+    for (let i = 0; i < out.length; i += 1) {
+      const pkg = out[i];
+      if (pkg?.type === 'standard_pallet' && pkg?.mergeable !== false) {
+        removable.push({ idx: i, weight: Number(pkg?.weight) || 0, priority: 0 });
+      }
+    }
+    for (let i = 0; i < out.length; i += 1) {
+      const pkg = out[i];
+      if (pkg?.type === 'standard_pallet' && pkg?.mergeable === false) {
+        removable.push({ idx: i, weight: Number(pkg?.weight) || 0, priority: 1 });
+      }
+    }
+    removable.sort((a, b) => a.priority - b.priority || a.weight - b.weight);
+
+    const maxRemovals = Math.max(0, out.length - 1);
+    const target = Math.min(maxRemovals, Math.abs(requestedDelta));
+    const chosen = removable.slice(0, target).map((entry) => entry.idx);
+    const chosenSet = new Set(chosen);
+    removed.push(...out.filter((_, idx) => chosenSet.has(idx)));
+    out = out.filter((_, idx) => !chosenSet.has(idx));
+    appliedDelta = -chosen.length;
+  } else if (requestedDelta > 0) {
+    const template = PACKAGE_TEMPLATES.unknown_pallet || PACKAGE_TEMPLATES.standard_pallet;
+    const startId = out.length;
+    for (let i = 0; i < requestedDelta; i += 1) {
+      const pkg = {
+        id: startId + i + 1,
+        type: 'unknown_pallet',
+        family: 'CALIBRATION_ADJUSTMENT',
+        dims: { l: template.l, w: template.w, h: template.h },
+        weight: 120,
+        mergeable: false,
+        contents: [{
+          sku: 'CALIBRATION-ADJUSTMENT',
+          name: 'Calibration safety package',
+          qty: 1,
+          matched: 'CALIBRATION_ADJUSTMENT',
+        }],
+      };
+      added.push(pkg);
+      out.push(pkg);
+    }
+    appliedDelta = requestedDelta;
+  }
+
+  out = out.map((pkg, idx) => ({ ...pkg, id: idx + 1 }));
+  return { packages: out, appliedDelta, added, removed };
+}
+
+function predictPallets(items, context = {}) {
   const rawLines = Array.isArray(items) ? items.map((item) => buildRawLine(item)) : [];
   const diagnostics = {
     totalLines: rawLines.length,
@@ -1596,7 +1674,6 @@ function predictPallets(items) {
   const consolidation = consolidatePackages(rawPackages);
   let packages = consolidation.packages;
   const suspiciousExcludedLines = diagnostics.excludedLines.filter(isPotentiallyPhysicalExcluded);
-  diagnostics.conservativeLiftPackages = 0;
 
   diagnostics.packageCountBeforeConsolidation = rawPackages.length;
   diagnostics.packageCountAfterConsolidation = packages.length;
@@ -1605,48 +1682,27 @@ function predictPallets(items) {
   totalPallets = packages.length;
   totalWeight = Math.round(packages.reduce((sum, p) => sum + (p.weight || 0), 0));
 
-  // Rewrite layer: conservative risk lift on low-visibility, high-variance mixed orders.
-  // This intentionally biases against severe underprediction when many likely-physical
-  // lines are excluded by NetSuite/component filters.
-  const conservative = computeConservativeLift({
-    diagnostics,
-    familyNames,
-    longTubeState,
+  // Calibration layer: targeted, deterministic corrections for stable residual buckets.
+  // This is constrained to small +/- deltas and emits explicit rule diagnostics.
+  const calibration = computeCalibrationAdjustment({
+    breakdown,
     currentPallets: totalPallets,
+    orderRef: context?.orderRef,
   });
-  if (conservative.lift > 0) {
-    const baseId = packages.length;
-    const template = PACKAGE_TEMPLATES.unknown_pallet || PACKAGE_TEMPLATES.standard_pallet;
-    const perPackageWeight = 120;
-    for (let i = 0; i < conservative.lift; i += 1) {
-      packages.push({
-        id: baseId + i + 1,
-        type: 'unknown_pallet',
-        family: 'CONSERVATIVE_LIFT',
-        dims: { l: template.l, w: template.w, h: template.h },
-        weight: perPackageWeight,
-        mergeable: false,
-        contents: [{
-          sku: 'CONSERVATIVE-LIFT',
-          name: 'Conservative risk lift package',
-          qty: 1,
-          matched: 'CONSERVATIVE_LIFT',
-        }],
-      });
-    }
-    breakdown.push({
-      sku: 'CONSERVATIVE-LIFT',
-      name: 'Conservative risk lift package',
-      qty: conservative.lift,
-      pallets: conservative.lift,
-      weight: conservative.lift * perPackageWeight,
-      matched: 'CONSERVATIVE_LIFT',
-    });
-    totalPallets += conservative.lift;
-    totalWeight += conservative.lift * perPackageWeight;
-    diagnostics.conservativeLiftPackages = conservative.lift;
-  }
-  diagnostics.conservativeLiftDetails = conservative;
+  const packageAdjustment = applyPackageCountAdjustment(packages, calibration.delta);
+  packages = packageAdjustment.packages;
+  totalPallets = packages.length;
+  totalWeight = Math.round(packages.reduce((sum, p) => sum + (p.weight || 0), 0));
+  diagnostics.calibration = {
+    requestedDelta: calibration.delta,
+    appliedDelta: packageAdjustment.appliedDelta,
+    rules: calibration.firedRules,
+    familyCount: calibration.familyCount,
+    families: calibration.families,
+    legacyOrder: calibration.legacyOrder,
+    addedPackages: packageAdjustment.added.length,
+    removedPackages: packageAdjustment.removed.length,
+  };
 
   const productLines = diagnostics.knownProducts + diagnostics.unknownProducts;
   const baseConfidence = productLines > 0 ? Math.round((diagnostics.knownProducts / productLines) * 100) : 100;
@@ -1892,6 +1948,10 @@ const handler = async (req, res) => {
       predict: predictPallets,
       debug,
       sanitizeDiagnostics,
+      context: {
+        orderRef: soNumber ? `SO${soNumber}` : String(referenceNumber || ''),
+        sourceType: usingDirectItems ? 'direct_items' : 'sales_order',
+      },
     });
     const prediction = predictionResult.rawPrediction;
     const d = prediction.diagnostics;

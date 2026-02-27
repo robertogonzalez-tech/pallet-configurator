@@ -19,7 +19,7 @@ function uniqueFamiliesFromBreakdown(breakdown) {
   for (const row of breakdown) {
     const family = String(row?.matched || '').trim();
     if (!family) continue;
-    if (['UNKNOWN', 'SKU_OVERRIDE', 'RIDE_ALONG', 'LONG_TUBE_TRIGGER'].includes(family)) continue;
+    if (['UNKNOWN', 'SKU_OVERRIDE', 'RIDE_ALONG', 'LONG_TUBE_TRIGGER', 'UNKNOWN_FALLBACK', 'CONSERVATIVE_LIFT', 'CALIBRATION_ADJUSTMENT'].includes(family)) continue;
     families.add(family);
   }
   return Array.from(families);
