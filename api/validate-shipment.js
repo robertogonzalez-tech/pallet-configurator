@@ -31,6 +31,8 @@ const supabase = process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_K
 // PRODUCT CATALOG — loaded from products.json
 // ============================================================
 let PRODUCT_CATALOG = null;
+let SKU_CLASSIFICATION = null;
+let COMPILED_SKU_RULES = null;
 
 function loadProductCatalog() {
   if (PRODUCT_CATALOG) return PRODUCT_CATALOG;
@@ -72,6 +74,197 @@ function loadProductCatalog() {
     console.error('[CATALOG] Failed to load products.json:', err.message);
     return {};
   }
+}
+
+function loadSkuClassification() {
+  if (SKU_CLASSIFICATION) return SKU_CLASSIFICATION;
+  try {
+    let data;
+    const paths = [
+      path.join(process.cwd(), 'config', 'sku-classification.json'),
+      path.join(__dirname, '..', 'config', 'sku-classification.json'),
+      path.join(__dirname, 'config', 'sku-classification.json'),
+    ];
+    for (const p of paths) {
+      try {
+        const raw = fs.readFileSync(p, 'utf8');
+        data = JSON.parse(raw);
+        console.log(`[SKU-CLASS] Loaded from ${p}`);
+        break;
+      } catch (e) { /* try next path */ }
+    }
+    SKU_CLASSIFICATION = data || {};
+    return SKU_CLASSIFICATION;
+  } catch (err) {
+    console.warn('[SKU-CLASS] Failed to load sku-classification.json:', err.message);
+    SKU_CLASSIFICATION = {};
+    return SKU_CLASSIFICATION;
+  }
+}
+
+function compactPatternValue(v) {
+  return String(v || '')
+    .toUpperCase()
+    .replace(/\s+/g, '')
+    .trim();
+}
+
+function patternToRegex(pattern) {
+  const compact = compactPatternValue(pattern);
+  const escaped = compact.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*');
+  return new RegExp(`^${escaped}$`, 'i');
+}
+
+function flattenPatternList(obj) {
+  const out = [];
+  if (!obj || typeof obj !== 'object') return out;
+  for (const [key, value] of Object.entries(obj)) {
+    if (key.startsWith('_')) continue;
+    if (Array.isArray(value)) out.push(...value);
+  }
+  return out;
+}
+
+const FAMILY_KEY_MAP = {
+  undergrad: 'Undergrad',
+  vr2_offset: 'VR2 Offset',
+  hoop_runner: 'Hoop Runner',
+  dismount: 'Dismount',
+  double_docker: 'Double Docker',
+  skatedock: 'Skatedock',
+  base_station: 'Base Station',
+  visilocker: 'Metal Bike Vault / VisiLocker',
+  mba: 'MBA',
+  sidestage: 'Base Station',
+  stretch_rack: 'Saris',
+  fixation: 'Pump & Repair',
+  custom_branded: 'Guardian',
+};
+
+function loadCompiledSkuRules() {
+  if (COMPILED_SKU_RULES) return COMPILED_SKU_RULES;
+  const cfg = loadSkuClassification() || {};
+  const compiled = {
+    nonShip: [],
+    hardware: [],
+    thirdParty: [],
+    familyRules: [],
+  };
+
+  const addRule = (target, rule) => {
+    if (!rule || !rule.pattern) return;
+    target.push({
+      ...rule,
+      regex: patternToRegex(rule.pattern),
+      patternCompact: compactPatternValue(rule.pattern),
+    });
+  };
+
+  const nonShipPatterns = cfg.non_ship_patterns?.patterns || [];
+  for (const rule of nonShipPatterns) addRule(compiled.nonShip, rule);
+
+  const hardwarePatterns = flattenPatternList(cfg.hardware_patterns);
+  for (const rule of hardwarePatterns) addRule(compiled.hardware, rule);
+
+  const thirdPartyPatterns = cfg.third_party_products?.patterns || [];
+  for (const rule of thirdPartyPatterns) addRule(compiled.thirdParty, rule);
+
+  const families = cfg.families || {};
+  for (const [familyKey, details] of Object.entries(families)) {
+    const mappedFamily = FAMILY_KEY_MAP[familyKey];
+    if (!mappedFamily) continue;
+
+    const addFamilyRules = (list, role) => {
+      if (!Array.isArray(list)) return;
+      for (const rule of list) {
+        addRule(compiled.familyRules, {
+          ...rule,
+          family: mappedFamily,
+          role,
+          familyKey,
+        });
+      }
+    };
+
+    addFamilyRules(details.primary_skus, 'primary');
+    addFamilyRules(details.component_skus, 'component');
+    addFamilyRules(details.accessory_skus, 'accessory');
+    addFamilyRules(details.conditional_packages, 'long_tube_trigger');
+    addFamilyRules(details.fee_skus, 'non_shippable');
+  }
+
+  COMPILED_SKU_RULES = compiled;
+  console.log(`[SKU-CLASS] Compiled ${compiled.familyRules.length} family rules, ${compiled.hardware.length} hardware rules, ${compiled.nonShip.length} non-ship rules`);
+  return COMPILED_SKU_RULES;
+}
+
+function matchRuleList(ruleList, sku, name) {
+  if (!Array.isArray(ruleList) || ruleList.length === 0) return null;
+  const compactSku = compactPatternValue(sku);
+  const compactName = compactPatternValue(name);
+  return ruleList.find((rule) =>
+    rule.regex.test(compactSku) ||
+    rule.regex.test(compactName) ||
+    compactSku.includes(rule.patternCompact) ||
+    compactName.includes(rule.patternCompact)
+  ) || null;
+}
+
+function classifyFromSkuConfig(item) {
+  const rules = loadCompiledSkuRules();
+  const sku = normalizeSku(item?.sku || '');
+  const name = String(item?.name || '').toUpperCase();
+
+  const nonShip = matchRuleList(rules.nonShip, sku, name);
+  if (nonShip) {
+    return { classification: 'non_shippable', source: 'sku_config', reason: nonShip.note || 'non_ship_pattern' };
+  }
+
+  const familyRule = matchRuleList(rules.familyRules, sku, name);
+  if (familyRule) {
+    if (familyRule.role === 'non_shippable') {
+      return { classification: 'non_shippable', source: 'sku_config', reason: familyRule.note || 'family_non_ship' };
+    }
+    if (familyRule.role === 'long_tube_trigger') {
+      return {
+        classification: 'long_tube_trigger',
+        family: familyRule.family,
+        role: familyRule.role,
+        source: 'sku_config',
+      };
+    }
+    if (familyRule.role === 'accessory') {
+      return {
+        classification: 'hardware',
+        family: familyRule.family,
+        role: familyRule.role,
+        source: 'sku_config',
+      };
+    }
+    return {
+      classification: 'product',
+      family: familyRule.family,
+      role: familyRule.role,
+      source: 'sku_config',
+    };
+  }
+
+  const hardware = matchRuleList(rules.hardware, sku, name);
+  if (hardware) {
+    return { classification: 'hardware', source: 'sku_config', reason: hardware.note || 'hardware_pattern' };
+  }
+
+  const thirdParty = matchRuleList(rules.thirdParty, sku, name);
+  if (thirdParty) {
+    return {
+      classification: 'product',
+      family: 'Guardian',
+      role: 'third_party',
+      source: 'sku_config',
+    };
+  }
+
+  return null;
 }
 
 // ============================================================
@@ -256,7 +449,43 @@ function detectOrderParents(items) {
 // ============================================================
 // PRODUCT LOOKUP
 // ============================================================
-function lookupProduct(sku) {
+const FAMILY_DEFAULT_PACKAGED = {
+  'Varsity': { weight: 65, length: 48, width: 40, height: 30 },
+  'VR2 Offset': { weight: 85, length: 48, width: 40, height: 28 },
+  'VR1 XL': { weight: 95, length: 48, width: 40, height: 32 },
+  'Double Docker': { weight: 380, length: 79, width: 43, height: 63 },
+  'Hoop Runner': { weight: 45, length: 48, width: 40, height: 26 },
+  'Undergrad': { weight: 150, length: 96, width: 48, height: 24 },
+  'Skatedock': { weight: 95, length: 73, width: 14, height: 13 },
+  'Dismount': { weight: 55, length: 48, width: 40, height: 24 },
+  'Base Station': { weight: 8, length: 120, width: 11, height: 11 },
+  'Circle Series (Omega)': { weight: 60, length: 48, width: 40, height: 24 },
+  'Metal Bike Vault / VisiLocker': { weight: 850, length: 85, width: 48, height: 39 },
+  'MBA': { weight: 850, length: 85, width: 48, height: 39 },
+  'Pump & Repair': { weight: 40, length: 24, width: 18, height: 12 },
+  'Cane Detection': { weight: 50, length: 24, width: 18, height: 12 },
+  '2UP': { weight: 35, length: 48, width: 40, height: 20 },
+  'Saris': { weight: 95, length: 48, width: 40, height: 28 },
+  'Radius': { weight: 55, length: 48, width: 40, height: 24 },
+  'Guardian': { weight: 120, length: 48, width: 40, height: 24 },
+  'Snowdock': { weight: 95, length: 48, width: 40, height: 24 },
+};
+
+function fallbackProductForFamily(sku, name, family) {
+  const defaults = FAMILY_DEFAULT_PACKAGED[family] || { weight: 50, length: 48, width: 40, height: 24 };
+  return {
+    sku,
+    family,
+    name: name || sku,
+    weight: defaults.weight,
+    length: defaults.length,
+    width: defaults.width,
+    height: defaults.height,
+    source: 'family_fallback',
+  };
+}
+
+function lookupProduct(sku, name, configHint = null) {
   const catalog = loadProductCatalog();
   const skuUpper = (sku || '').toUpperCase().trim();
 
@@ -327,7 +556,12 @@ function lookupProduct(sku) {
       for (const product of Object.values(catalog)) {
         if (product.family === family) return product;
       }
+      return fallbackProductForFamily(skuUpper, name, family);
     }
+  }
+
+  if (configHint?.family) {
+    return fallbackProductForFamily(skuUpper, name, configHint.family);
   }
 
   return null;
@@ -533,6 +767,132 @@ function computePalletsForFamily(family, qty, sku, name, familyState = {}) {
   }
 }
 
+const PACKAGE_TEMPLATES = {
+  standard_pallet: { l: 48, w: 40, h: 30 },
+  large_pallet: { l: 85, w: 48, h: 39 },
+  oversized_pallet: { l: 96, w: 48, h: 28 },
+  long_tube: { l: 120, w: 11, h: 11 },
+  dd_mixed_crate: { l: 79, w: 43, h: 63 },
+  skatedock_box: { l: 73, w: 14, h: 13 },
+  unknown_pallet: { l: 48, w: 40, h: 24 },
+};
+
+const FAMILY_TEMPLATE = {
+  'Varsity': 'standard_pallet',
+  'VR2 Offset': 'standard_pallet',
+  'VR1 XL': 'standard_pallet',
+  'Double Docker': 'dd_mixed_crate',
+  'Hoop Runner': 'standard_pallet',
+  'Undergrad': 'oversized_pallet',
+  'Skatedock': 'skatedock_box',
+  'Dismount': 'standard_pallet',
+  'Base Station': 'long_tube',
+  'Wave Runner': 'standard_pallet',
+  'Circle Series (Omega)': 'standard_pallet',
+  'Metal Bike Vault / VisiLocker': 'large_pallet',
+  'MBA': 'large_pallet',
+  'Pump & Repair': 'unknown_pallet',
+  'Cane Detection': 'unknown_pallet',
+  '2UP': 'standard_pallet',
+  'Strut Install Kit': 'long_tube',
+  'Saris': 'standard_pallet',
+  'Fiberglass Bike Vault': 'large_pallet',
+  'Radius': 'standard_pallet',
+  'Guardian': 'standard_pallet',
+  'Snowdock': 'standard_pallet',
+};
+
+const NO_MIX_FAMILIES = new Set(['Double Docker', 'Undergrad', 'Metal Bike Vault / VisiLocker', 'MBA', 'Base Station']);
+
+function mapTemplateForBreakdownRow(row) {
+  const matched = String(row?.matched || '');
+  if (matched === 'LONG_TUBE') return 'long_tube';
+  if (matched === 'UNKNOWN' || matched === 'SKU_OVERRIDE') return 'unknown_pallet';
+  if (FAMILY_TEMPLATE[matched]) return FAMILY_TEMPLATE[matched];
+  return FAMILY_TEMPLATE[row?.family] || 'standard_pallet';
+}
+
+function buildPackagesFromBreakdown(breakdown) {
+  let packageId = 1;
+  const packages = [];
+
+  for (const row of breakdown) {
+    const pallets = Math.max(0, Number(row?.pallets) || 0);
+    if (pallets <= 0) continue;
+
+    const templateKey = mapTemplateForBreakdownRow(row);
+    const dims = PACKAGE_TEMPLATES[templateKey] || PACKAGE_TEMPLATES.standard_pallet;
+    const totalRowWeight = Math.max(0, Number(row?.weight) || 0);
+    const perPackageWeight = pallets > 0 ? Math.max(1, Math.round(totalRowWeight / pallets)) : 0;
+    const family = String(row?.matched || row?.family || 'Unknown');
+
+    for (let i = 0; i < pallets; i += 1) {
+      packages.push({
+        id: packageId++,
+        type: templateKey,
+        family,
+        dims: { l: dims.l, w: dims.w, h: dims.h },
+        weight: perPackageWeight,
+        mergeable: templateKey === 'standard_pallet' && !NO_MIX_FAMILIES.has(family) && perPackageWeight <= 550,
+        contents: [{
+          sku: row?.sku || 'UNKNOWN',
+          name: row?.name || 'Unknown Item',
+          qty: row?.qty || 0,
+          matched: row?.matched || 'UNKNOWN',
+        }],
+      });
+    }
+  }
+
+  return packages;
+}
+
+function consolidatePackages(packages) {
+  if (!Array.isArray(packages) || packages.length < 2) return { packages, merges: [] };
+
+  const merged = new Set();
+  const merges = [];
+  const out = packages.map((pkg) => ({ ...pkg, contents: [...(pkg.contents || [])] }));
+
+  for (let i = 0; i < out.length; i += 1) {
+    if (merged.has(i)) continue;
+    const a = out[i];
+    if (!a.mergeable || a.type !== 'standard_pallet') continue;
+
+    for (let j = i + 1; j < out.length; j += 1) {
+      if (merged.has(j)) continue;
+      const b = out[j];
+      if (!b.mergeable || b.type !== 'standard_pallet') continue;
+      if (a.family === b.family) continue;
+
+      // Conservative merge gate to avoid under-predicting.
+      const combinedWeight = (a.weight || 0) + (b.weight || 0);
+      if (combinedWeight > 1000) continue;
+
+      a.weight = combinedWeight;
+      a.contents.push(...(b.contents || []));
+      a.consolidatedFrom = [...(a.consolidatedFrom || []), b.id];
+      merged.add(j);
+      merges.push({ host: a.id, merged: b.id });
+      break; // at most one merge per host in v0
+    }
+  }
+
+  return {
+    packages: out.filter((_, idx) => !merged.has(idx)).map((pkg, idx) => ({ ...pkg, id: idx + 1 })),
+    merges,
+  };
+}
+
+function isPotentiallyPhysicalExcluded(line) {
+  const sku = normalizeSku(line?.sku || '');
+  if (!sku) return false;
+  if (sku.startsWith('50801-') || sku.startsWith('SIK')) return true;
+  if (/^\d{5,}-/.test(sku)) return true;
+  if (/^[A-Z]{2,}\d/.test(sku)) return true;
+  return false;
+}
+
 function predictPallets(items) {
   const diagnostics = {
     totalLines: items.length,
@@ -580,7 +940,8 @@ function predictPallets(items) {
     }
 
     const normSku = normalizeSku(item.sku || 'UNKNOWN');
-    const classification = classifyItem(item.sku, item.name, orderHasParents);
+    const configHint = classifyFromSkuConfig(item);
+    const classification = configHint?.classification || classifyItem(item.sku, item.name, orderHasParents);
 
     if (classification === 'non_shippable') {
       diagnostics.filteredNonShippable++;
@@ -590,6 +951,7 @@ function predictPallets(items) {
         qty: item.qty,
         reason: 'non_shippable',
         classification,
+        source: configHint?.source || 'legacy_classifier',
         flags: {
           fulfillable: !!item.fulfillable,
           assemblyComponent: !!item.assemblyComponent,
@@ -607,6 +969,7 @@ function predictPallets(items) {
         qty: item.qty,
         reason: 'packaging',
         classification,
+        source: configHint?.source || 'legacy_classifier',
         flags: {
           fulfillable: !!item.fulfillable,
           assemblyComponent: !!item.assemblyComponent,
@@ -624,6 +987,7 @@ function predictPallets(items) {
         qty: item.qty,
         reason: 'component_of_parent',
         classification,
+        source: configHint?.source || 'legacy_classifier',
         flags: {
           fulfillable: !!item.fulfillable,
           assemblyComponent: !!item.assemblyComponent,
@@ -634,7 +998,7 @@ function predictPallets(items) {
       continue;
     }
 
-    if (isLongTubeTriggerItem(item)) {
+    if (classification === 'long_tube_trigger' || isLongTubeTriggerItem(item)) {
       const lengthIn = parseLengthFromSkuOrName(item);
       diagnostics.longTubeTriggerLines++;
       longTubeState.triggerLines += 1;
@@ -650,6 +1014,7 @@ function predictPallets(items) {
         qty: item.qty,
         mode: 'long_tube_trigger',
         classification,
+        source: configHint?.source || 'legacy_classifier',
         meta: { lengthIn },
         flags: {
           fulfillable: !!item.fulfillable,
@@ -670,7 +1035,7 @@ function predictPallets(items) {
     }
 
     const rideAlong = isRideAlongItem(item) || classification === 'hardware';
-    const product = lookupProduct(item.sku);
+    const product = lookupProduct(item.sku, item.name, configHint);
 
     if (rideAlong) {
       diagnostics.filteredHardware++;
@@ -680,6 +1045,7 @@ function predictPallets(items) {
         qty: item.qty,
         mode: 'ride_along',
         classification,
+        source: configHint?.source || 'legacy_classifier',
         flags: {
           fulfillable: !!item.fulfillable,
           assemblyComponent: !!item.assemblyComponent,
@@ -702,6 +1068,7 @@ function predictPallets(items) {
           qty: item.qty,
           mode: 'sku_override',
           classification: 'product',
+          source: configHint?.source || 'legacy_classifier',
           flags: {
             fulfillable: !!item.fulfillable,
             assemblyComponent: !!item.assemblyComponent,
@@ -719,6 +1086,7 @@ function predictPallets(items) {
           qty: item.qty,
           mode: 'unknown_fallback',
           classification: 'product',
+          source: configHint?.source || 'legacy_classifier',
           flags: {
             fulfillable: !!item.fulfillable,
             assemblyComponent: !!item.assemblyComponent,
@@ -740,6 +1108,7 @@ function predictPallets(items) {
       mode: 'family_recipe',
       family: product.family,
       classification: 'product',
+      source: configHint?.source || product.source || 'catalog',
       flags: {
         fulfillable: !!item.fulfillable,
         assemblyComponent: !!item.assemblyComponent,
@@ -805,15 +1174,51 @@ function predictPallets(items) {
     }
   }
 
+  const rawPackages = buildPackagesFromBreakdown(breakdown);
+  const consolidation = consolidatePackages(rawPackages);
+  const packages = consolidation.packages;
+
+  diagnostics.packageCountBeforeConsolidation = rawPackages.length;
+  diagnostics.packageCountAfterConsolidation = packages.length;
+  diagnostics.consolidations = consolidation.merges;
+
+  totalPallets = packages.length;
+  totalWeight = Math.round(packages.reduce((sum, p) => sum + (p.weight || 0), 0));
+
   const productLines = diagnostics.knownProducts + diagnostics.unknownProducts;
-  const confidenceScore = productLines > 0 ? Math.round((diagnostics.knownProducts / productLines) * 100) : 100;
-  const confidenceLevel = confidenceScore >= 90 ? 'high' : confidenceScore >= 60 ? 'medium' : 'low';
+  const baseConfidence = productLines > 0 ? Math.round((diagnostics.knownProducts / productLines) * 100) : 100;
+  const suspiciousExcludedLines = diagnostics.excludedLines.filter(isPotentiallyPhysicalExcluded);
+  const penalties =
+    (diagnostics.unknownProducts * 15) +
+    (suspiciousExcludedLines.length * 10) +
+    (diagnostics.longTubeTriggerLines > 0 && diagnostics.longTubePallets === 0 ? 15 : 0);
+  const confidenceScore = Math.max(0, Math.min(100, baseConfidence - penalties));
+  const confidenceLevel = confidenceScore >= 90 ? 'high' : confidenceScore >= 70 ? 'medium' : 'low';
+  const needsReview = confidenceLevel === 'low' || suspiciousExcludedLines.length > 0;
 
   return {
     totalPallets,
-    totalWeight: Math.round(totalWeight),
+    totalWeight,
     breakdown,
-    diagnostics: { ...diagnostics, productLines, confidenceScore, confidenceLevel },
+    packages,
+    summary: {
+      totalPackages: totalPallets,
+      totalWeight,
+      confidence: confidenceLevel,
+      needsReview,
+    },
+    diagnostics: {
+      ...diagnostics,
+      productLines,
+      baseConfidence,
+      confidenceScore,
+      confidenceLevel,
+      needsReview,
+      suspiciousExcludedLines: suspiciousExcludedLines.map((line) => ({
+        sku: line.sku,
+        reason: line.reason,
+      })),
+    },
   };
 }
 
@@ -908,10 +1313,25 @@ async function getSalesOrderViaSuiteQL(soNumber) {
   return { success: true, items };
 }
 
+function normalizeInputItems(items) {
+  if (!Array.isArray(items)) return [];
+  return items
+    .map((item) => ({
+      sku: item?.sku || item?.item || 'UNKNOWN',
+      name: item?.name || item?.description || item?.displayName || 'Unknown Item',
+      qty: Math.abs(parseInt(item?.qty ?? item?.quantity ?? 0, 10) || 0),
+      kitComponent: item?.kitComponent === true || item?.kitcomponent === 'T',
+      fulfillable: item?.fulfillable === true || item?.fulfillable === 'T',
+      assemblyComponent: item?.assemblyComponent === true || item?.assemblycomponent === 'T',
+      itemType: item?.itemType || item?.itemtype || '',
+    }))
+    .filter((item) => item.qty > 0);
+}
+
 // ============================================================
 // API HANDLER
 // ============================================================
-module.exports = async (req, res) => {
+const handler = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -923,31 +1343,39 @@ module.exports = async (req, res) => {
     const body = req.body || {};
     const soInput = body.soNumber || body.salesOrderNumber || body.sales_order_id;
     const soNumber = String(soInput || '').replace(/^SO/i, '');
+    const referenceNumber = body.quoteNumber || body.referenceNumber || body.reference || '';
     const skipSave = body.skipSave === true;
     const pallets = Array.isArray(body.pallets) ? body.pallets : [];
     const validatedBy = body.validatedBy || 'batch-reprocess';
     const notes = body.notes;
+    const directItems = normalizeInputItems(body.items || body.lines);
+    const usingDirectItems = directItems.length > 0;
+    const requestLabel = soNumber ? `SO${soNumber}` : String(referenceNumber || 'DIRECT_ITEMS');
 
-    console.log('=== VALIDATE SO' + soNumber + ` (skipSave=${skipSave}) ===`);
+    console.log(`=== VALIDATE ${requestLabel} (skipSave=${skipSave}, directItems=${usingDirectItems}) ===`);
 
-    if (!soNumber) {
-      return res.status(400).json({ success: false, error: 'Missing required field: soNumber or salesOrderNumber' });
+    if (!soNumber && !usingDirectItems) {
+      return res.status(400).json({ success: false, error: 'Missing required field: soNumber/salesOrderNumber OR items[]' });
     }
 
-    if (!skipSave && (!Array.isArray(body.pallets) || !body.validatedBy)) {
+    if (!skipSave && (!soNumber || !Array.isArray(body.pallets) || !body.validatedBy)) {
       return res.status(400).json({ success: false, error: 'Missing required fields: soNumber, pallets, validatedBy' });
     }
 
-    // 1. NetSuite lookup
-    const soData = await getSalesOrderViaSuiteQL(soNumber);
-    if (!soData.success || !soData.items?.length) {
-      return res.status(404).json({ success: false, error: `Sales order SO${soNumber} not found or has no items` });
+    // 1. Input lookup
+    let sourceItems = directItems;
+    if (!usingDirectItems) {
+      const soData = await getSalesOrderViaSuiteQL(soNumber);
+      if (!soData.success || !soData.items?.length) {
+        return res.status(404).json({ success: false, error: `Sales order SO${soNumber} not found or has no items` });
+      }
+      sourceItems = soData.items;
     }
 
     // 2. Predict
-    const prediction = predictPallets(soData.items);
+    const prediction = predictPallets(sourceItems);
     const d = prediction.diagnostics;
-    console.log(`[PREDICT] ${prediction.totalPallets} pallets | confidence=${d.confidenceLevel} (${d.confidenceScore}%) | filtered: ${d.filteredNonShippable}ns ${d.filteredHardware}hw ${d.filteredComponents}comp ${d.filteredPackaging}pkg | unknown: ${d.unknownProducts}`);
+    console.log(`[PREDICT] ${prediction.totalPallets} packages | confidence=${d.confidenceLevel} (${d.confidenceScore}%) | filtered: ${d.filteredNonShippable}ns ${d.filteredHardware}hw ${d.filteredComponents}comp ${d.filteredPackaging}pkg | unknown: ${d.unknownProducts} | review=${d.needsReview}`);
 
     // 3. Actuals
     const actualPallets = pallets.length;
@@ -961,7 +1389,7 @@ module.exports = async (req, res) => {
 
     // 5. Save to Supabase (skip for batch reprocessing)
     let validationId = null;
-    if (!skipSave && supabase) {
+    if (!skipSave && supabase && soNumber) {
       const result = await supabase.from('validations').insert({
         pick_ticket_id: `SO${soNumber}`,
         sales_order_id: `SO${soNumber}`,
@@ -985,7 +1413,7 @@ module.exports = async (req, res) => {
     }
 
     // 6. Notifications (non-blocking)
-    if (!skipSave) {
+    if (!skipSave && soNumber) {
       Promise.all([
         sendValidationEmail({ soNumber: `SO${soNumber}`, validatedBy, notes, predicted: { pallets: prediction.totalPallets, weight: prediction.totalWeight }, actual: { pallets: actualPallets, weight: actualWeight }, variance: { pallets: palletVariance, weight: weightVariance } }).catch(() => {}),
         saveToGoogleSheets({ soNumber: `SO${soNumber}`, validatedBy, notes, predicted: { pallets: prediction.totalPallets, weight: prediction.totalWeight }, actual: { pallets: actualPallets, weight: actualWeight }, variance: { pallets: palletVariance, weight: weightVariance } }).catch(() => {})
@@ -996,21 +1424,28 @@ module.exports = async (req, res) => {
     return res.status(200).json({
       success: true,
       validationId,
-      soNumber: `SO${soNumber}`,
+      soNumber: soNumber ? `SO${soNumber}` : null,
+      referenceNumber: referenceNumber || null,
+      sourceType: usingDirectItems ? 'direct_items' : 'sales_order',
       skipSave,
       predicted: {
         pallets: prediction.totalPallets,
         weight: prediction.totalWeight,
-        breakdown: prediction.breakdown
+        breakdown: prediction.breakdown,
+        packages: prediction.packages,
+        summary: prediction.summary,
       },
       prediction: {
         totalPallets: prediction.totalPallets,
         totalWeight: prediction.totalWeight,
-        breakdown: prediction.breakdown
+        breakdown: prediction.breakdown,
+        packages: prediction.packages,
+        summary: prediction.summary,
       },
       predicted_pallets: prediction.totalPallets,
       predicted_weight: prediction.totalWeight,
       predicted_breakdown: prediction.breakdown,
+      predicted_packages: prediction.packages,
       actual: { pallets: actualPallets, weight: actualWeight, dimensions: pallets },
       variance: {
         pallets: palletVariance,
@@ -1020,11 +1455,18 @@ module.exports = async (req, res) => {
         severity,
       },
       diagnostics: prediction.diagnostics,
-      items: soData.items
+      items: sourceItems
     });
 
   } catch (error) {
     console.error('Validation error:', error);
     return res.status(500).json({ success: false, error: error.message || 'Internal server error' });
   }
+};
+
+module.exports = handler;
+module.exports.__private__ = {
+  predictPallets,
+  getSalesOrderViaSuiteQL,
+  normalizeInputItems,
 };
