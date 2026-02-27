@@ -110,6 +110,9 @@ function sanitizeDiagnostics(diagnostics, debug = false) {
     packageCountAfterConsolidation: diagnostics.packageCountAfterConsolidation,
     conservativeLiftPackages: diagnostics.conservativeLiftPackages || 0,
     baseStationLongTubeDedupeApplied: !!diagnostics.baseStationLongTubeDedupeApplied,
+    zeroFloorApplied: !!diagnostics.zeroFloorApplied,
+    zeroFloorFallbackPallets: diagnostics.zeroFloorFallbackPallets || 0,
+    zeroFloorLikelyPhysicalExcluded: diagnostics.zeroFloorLikelyPhysicalExcluded || 0,
     productLines: diagnostics.productLines,
     baseConfidence: diagnostics.baseConfidence,
     confidenceScore: diagnostics.confidenceScore,
@@ -821,6 +824,22 @@ function isLongTubeTriggerItem(item) {
   );
 }
 
+function isSkatedockNamedItem(sku, name) {
+  const normSku = normalizeSku(sku || '');
+  const upperName = String(name || '').toUpperCase();
+  const hasSkateName =
+    upperName.includes('SKATEDOCK') ||
+    upperName.includes('SNOWDOCK') ||
+    upperName.includes('SM10X') ||
+    upperName.includes('SD6X');
+
+  if (normSku.startsWith('89904-') || normSku.startsWith('89914-')) return true;
+  if (normSku.startsWith('SM10X') || normSku.startsWith('SD6X')) return true;
+  if (hasSkateName && (normSku.startsWith('89901-1210-') || normSku.startsWith('80101-1210-'))) return true;
+
+  return false;
+}
+
 function isFlagBypassItem(item) {
   const normSku = normalizeSku(item?.sku);
   const name = String(item?.name || '').toUpperCase();
@@ -841,11 +860,16 @@ function isFlagBypassItem(item) {
 }
 
 function estimateLongTubePallets(state) {
-  // Conservative rule:
-  // - any 100\"+ rail/tube bundle creates a dedicated long-tube package
-  // - shorter rails can still ride with host pallets
-  if (!state || state.triggerLines === 0) return 0;
-  if (state.maxLength >= 100) return 1;
+  // Conservative scaling rule:
+  // - 100"+ rails always create dedicated long-tube handling units
+  // - very high tube quantities can require one extra long-tube bundle
+  // - 86-99" rails create one tube bundle only at high qty
+  if (!state || state.triggerLines === 0 || state.totalQty <= 0) return 0;
+  if (state.maxLength >= 100) {
+    if (state.totalQty >= 180) return 2;
+    return 1;
+  }
+  if (state.maxLength >= 86 && state.totalQty >= 120) return 1;
   return 0;
 }
 
@@ -1480,20 +1504,36 @@ function predictPallets(items) {
   // Floor guard: if all lines were filtered/suppressed and prediction reached zero,
   // keep at least one handling unit to avoid systematic zero-package underprediction.
   if (totalPallets === 0 && diagnostics.totalLines > 0) {
+    const likelyPhysicalExcludedCount = diagnostics.excludedLines.filter(isPotentiallyPhysicalExcluded).length;
+    const skatedockSignals = rawLines.filter((line) => isSkatedockNamedItem(line.sku, line.name));
+    const inferredSkatedockQty = skatedockSignals.reduce((max, line) => Math.max(max, Number(line.qty) || 0), 0);
+
+    let fallbackPallets = 1;
+    if (inferredSkatedockQty > 0) {
+      fallbackPallets = Math.max(
+        fallbackPallets,
+        computePalletsForFamily('Skatedock', inferredSkatedockQty, 'SM10X', 'Skatedock', {})
+      );
+    }
+
     const fallbackWeight = Math.max(80, Math.min(450, Math.round((diagnostics.filteredHardware + diagnostics.filteredComponents + diagnostics.filteredNonShippable) * 30)));
-    totalPallets = 1;
+    totalPallets = fallbackPallets;
     totalWeight += fallbackWeight;
     diagnostics.zeroFloorApplied = true;
+    diagnostics.zeroFloorFallbackPallets = fallbackPallets;
+    diagnostics.zeroFloorLikelyPhysicalExcluded = likelyPhysicalExcludedCount;
     breakdown.push({
       sku: 'ZERO-FLOOR',
       name: 'Minimum handling-unit floor',
-      qty: 1,
-      pallets: 1,
+      qty: fallbackPallets,
+      pallets: fallbackPallets,
       weight: fallbackWeight,
       matched: 'ZERO_FLOOR',
     });
   } else {
     diagnostics.zeroFloorApplied = false;
+    diagnostics.zeroFloorFallbackPallets = 0;
+    diagnostics.zeroFloorLikelyPhysicalExcluded = 0;
   }
 
   const rawPackages = buildPackagesFromBreakdown(breakdown);
