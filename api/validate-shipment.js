@@ -393,12 +393,95 @@ function estimateDDPallets(qty, bikeCount) {
   return { total, trays: total, legs: 0, manifolds: 0 };
 }
 
-function predictPallets(items) {
-  // With the pick ticket filter (fulfillable=T, assemblyComponent=F),
-  // items are already pre-filtered by NetSuite. We now split by kitComponent:
-  // - kitComponent=false → product-level items (what we predict pallets for)
-  // - kitComponent=true → kit sub-components (ship inside kit parents, no extra pallets)
+function varsityMode(sku, name) {
+  const s = (sku || '').toUpperCase();
+  const n = (name || '').toUpperCase();
+  if (n.includes('HEAD') && n.includes('MBA')) return 'heads';
+  if (s.includes('CUST') || s.includes('USA') || n.includes('CUSTOM') || n.includes('USA')) return 'loose';
+  if (s.includes('GAV') || s.includes('BLK') || s.includes('-T')) return 'boxed';
+  return 'boxed';
+}
 
+function computePalletsForFamily(family, qty, sku, name, familyState = {}) {
+  if (qty <= 0) return 0;
+  switch (family) {
+    case 'Hoop Runner': return qty <= 20 ? 1 : Math.ceil(qty / 20);
+    case 'Dismount': return qty <= 10 ? 1 : Math.ceil(qty / 6);
+    case 'Radius': return qty <= 24 ? 1 : Math.ceil(qty / 25);
+    case 'MBA': return qty <= 3 ? 1 : qty <= 8 ? 2 : Math.ceil(qty / 4);
+    case 'Undergrad': return Math.ceil(qty / 2);
+    case '2UP': return qty <= 36 ? 1 : Math.ceil(qty / 36);
+    case 'Metal Bike Vault / VisiLocker': {
+      if (qty <= 3) return 1;
+      if (qty <= 6) return 2;
+      if (qty <= 9) return 3;
+      if (qty <= 12) return 4;
+      return Math.ceil(qty / 3);
+    }
+    case 'VR1 XL': {
+      if (qty <= 9) return 1;
+      if (qty <= 30) return 2;
+      if (qty <= 80) return 4;
+      return Math.ceil(qty / 56);
+    }
+    case 'VR2 Offset': return Math.ceil(qty / 10);
+    case 'Skatedock': {
+      if (qty <= 2) return qty;
+      if (qty <= 10) return 1;
+      return Math.ceil(qty / 8);
+    }
+    case 'Base Station': return 1; // dedicated long-tube pallet in nearly all real shipments
+    case 'Varsity': {
+      const mode = varsityMode(sku, name);
+      if (mode === 'heads') return Math.ceil(qty / 50);
+      if (mode === 'loose') return Math.ceil(qty / 17);
+      return Math.ceil(qty / 42);
+    }
+    case 'Double Docker': {
+      // Use component-aware state when available
+      const units = Math.max(
+        Math.round(qty),
+        Math.round((familyState.legs || 0)),
+        Math.round((familyState.manifolds || 0)),
+        Math.round((familyState.trays || 0) / 2)
+      );
+      if (units <= 0) return 0;
+      if (units <= 2) return 1;
+      if (units <= 4) return 2;
+
+      const s = (sku || '').toUpperCase();
+      const isGalv = s.includes('GAV') || s.includes('GALV');
+
+      if (units <= 10) {
+        if (isGalv) {
+          const tray = Math.ceil((units * 2) / 35);
+          const legs = Math.ceil(units / 50);
+          return tray + legs; // manifolds ride with legs for medium orders
+        }
+        const upper = Math.ceil(units / 28);
+        const lower = Math.ceil(units / 50);
+        const legs = Math.ceil(units / 50);
+        return upper + lower + legs;
+      }
+
+      if (isGalv) {
+        const tray = Math.ceil((units * 2) / 35);
+        const legs = Math.ceil(units / 50);
+        const manifolds = Math.ceil(units / 30);
+        return tray + legs + manifolds;
+      }
+      const upper = Math.ceil(units / 28);
+      const lower = Math.ceil(units / 50);
+      const legs = Math.ceil(units / 50);
+      const manifolds = Math.ceil(units / 30);
+      return upper + lower + legs + manifolds;
+    }
+    default:
+      return Math.ceil(qty / (UNITS_PER_PALLET[family] || 10));
+  }
+}
+
+function predictPallets(items) {
   const diagnostics = {
     totalLines: items.length,
     filteredNonShippable: 0,
@@ -410,162 +493,94 @@ function predictPallets(items) {
     unknownSkus: [],
   };
 
-  // STEP 1: Classify and aggregate product-level items
-  const aggregated = {};
+  const families = {};
+  const breakdown = [];
+
   for (const item of items) {
     if (!item.qty || item.qty === 0) {
       diagnostics.filteredNonShippable++;
       continue;
     }
 
-    // Kit components (manifolds, slides, legs, individual hardware) ship
-    // inside their kit parents — don't count separately for pallets
     if (item.kitComponent) {
       diagnostics.filteredComponents++;
       continue;
     }
 
-    // Lightweight classification for remaining edge cases
-    // (SuiteQL filter already removed ~80% of noise)
-    const classification = classifyItem(item.sku, item.name, new Set());
-    if (classification === 'non_shippable') { diagnostics.filteredNonShippable++; continue; }
-    if (classification === 'hardware') { diagnostics.filteredHardware++; continue; }
-    if (classification === 'packaging') { diagnostics.filteredPackaging++; continue; }
-    if (classification === 'component_of_parent') { diagnostics.filteredComponents++; continue; }
-
-    const product = lookupProduct(item.sku);
     const normSku = normalizeSku(item.sku || 'UNKNOWN');
+    const classification = classifyItem(item.sku, item.name, new Set());
 
-    // Consolidate ALL base-station strut SKUs into one pallet pool (50/pallet)
-    const aggregationKey = product?.family === 'Base Station' ? 'BASE_STATION_CONSOLIDATED' : normSku;
+    if (classification === 'non_shippable') { diagnostics.filteredNonShippable++; continue; }
+    if (classification === 'packaging') { diagnostics.filteredPackaging++; continue; }
 
-    if (!aggregated[aggregationKey]) {
-      aggregated[aggregationKey] = {
-        sku: normSku,
-        name: product?.family === 'Base Station' ? 'Base Station (Consolidated Struts)' : item.name,
-        qty: 0,
-        product,
-        rideAlong: false,
-      };
-    }
+    const rideAlong = isRideAlongItem(item) || classification === 'hardware';
+    const product = lookupProduct(item.sku);
 
-    aggregated[aggregationKey].qty += item.qty;
-    aggregated[aggregationKey].rideAlong = aggregated[aggregationKey].rideAlong || isRideAlongItem(item);
-  }
-
-  // STEP 2: Calculate pallets per aggregated product
-  let totalPallets = 0;
-  let totalWeight = 0;
-  const breakdown = [];
-
-  for (const item of Object.values(aggregated)) {
-    const skuUpper = normalizeSku(item.sku);
-
-    // Ride-along items should appear in breakdown with pallets=0 (for validator visibility)
-    if (item.rideAlong) {
+    if (rideAlong) {
       diagnostics.filteredHardware++;
-      breakdown.push({
-        sku: item.sku,
-        name: item.name,
-        qty: item.qty,
-        pallets: 0,
-        weight: 0,
-        matched: 'RIDE_ALONG',
-      });
+      breakdown.push({ sku: normSku, name: item.name, qty: item.qty, pallets: 0, weight: 0, matched: 'RIDE_ALONG' });
       continue;
     }
 
-    const product = item.product || lookupProduct(item.sku);
-    let pallets, weight, matched;
-
-    if (product) {
-      diagnostics.knownProducts++;
-      matched = product.family;
-      const upp = SKU_UNITS_PER_PALLET[skuUpper] || UNITS_PER_PALLET[product.family] || 10;
-      const wpu = product.weight || 50;
-
-      if (product.family === 'Double Docker') {
-        // Detect bike count from SKU pattern:
-        // Group parents: DD-SS-04-GAV (contains '04'), DD-SS-06-GAV (contains '06')
-        // Kit parents: 80101-0257-GAV-KIT (0257=4-bike), 80101-0258-GAV-KIT (0258=6-bike)
-        const skuLower = (item.sku || '').toLowerCase();
-        let bikeCount = 4; // default
-        if (skuLower.includes('06') || skuLower.includes('0258')) {
-          bikeCount = 6;
-        }
-        const dd = estimateDDPallets(item.qty, bikeCount);
-        pallets = dd.total;
-        weight = item.qty * wpu;
-
-        // Push component-level breakdown for DD
-        totalPallets += pallets;
-        totalWeight += weight;
-        const trayWeight = Math.round(weight * 0.5);
-        const legWeight = Math.round(weight * 0.3);
-        const manifoldWeight = Math.round(weight * 0.2);
-        breakdown.push({
-          sku: item.sku, name: `${item.name} — Trays`,
-          qty: item.qty * 2, pallets: dd.trays,
-          weight: trayWeight, matched: 'Double Docker',
-        });
-        breakdown.push({
-          sku: item.sku, name: `${item.name} — Legs`,
-          qty: item.qty, pallets: dd.legs,
-          weight: legWeight, matched: 'Double Docker',
-        });
-        breakdown.push({
-          sku: item.sku, name: `${item.name} — Manifolds`,
-          qty: item.qty, pallets: dd.manifolds,
-          weight: manifoldWeight, matched: 'Double Docker',
-        });
-        continue; // skip the generic push below
-      } else {
-        // Locker crate approximations from warehouse guidance:
-        // VISI2/MBV2 are 3-box systems, VISI1/MBV1 are 2-box systems.
-        // Chad guidance: ~15 mixed boxes per large crate (tetris packed).
-        const skuLower = (item.sku || '').toLowerCase();
-        if (skuLower.includes('89901-0418') || skuLower.includes('89901-0408')) {
-          pallets = Math.ceil((item.qty * 3) / 15); // ~5 units per crate
-        } else if (skuLower.includes('89901-0417') || skuLower.includes('89901-0407')) {
-          pallets = Math.ceil((item.qty * 2) / 15); // ~7.5 units per crate
-        } else {
-          pallets = Math.ceil(item.qty / upp);
-        }
-        weight = item.qty * wpu;
-      }
-    } else {
-      // Unknown SKU fallback with explicit warehouse overrides first
-      const overrideUpp = SKU_UNITS_PER_PALLET[skuUpper];
+    if (!product) {
+      const overrideUpp = SKU_UNITS_PER_PALLET[normSku];
       if (overrideUpp) {
+        const pallets = Math.ceil(item.qty / overrideUpp);
         diagnostics.knownProducts++;
-        matched = 'SKU_OVERRIDE';
-        pallets = Math.ceil(item.qty / overrideUpp);
-        weight = item.qty * 50;
+        breakdown.push({ sku: normSku, name: item.name, qty: item.qty, pallets, weight: Math.round(item.qty * 50), matched: 'SKU_OVERRIDE' });
       } else {
         diagnostics.unknownProducts++;
         diagnostics.unknownSkus.push(item.sku);
-        matched = null;
-        pallets = Math.ceil(item.qty / 10);
-        weight = item.qty * 25;
+        const pallets = Math.ceil(item.qty / 10);
+        breakdown.push({ sku: normSku, name: item.name, qty: item.qty, pallets, weight: Math.round(item.qty * 25), matched: 'UNKNOWN' });
       }
+      continue;
     }
 
+    diagnostics.knownProducts++;
+    const family = product.family;
+    if (!families[family]) {
+      families[family] = { qty: 0, skuSample: normSku, nameSample: item.name, weightPerUnit: product.weight || 50, trays: 0, legs: 0, manifolds: 0 };
+    }
+    families[family].qty += item.qty;
+
+    const s = normSku.toUpperCase();
+    const n = (item.name || '').toUpperCase();
+    if (family === 'Double Docker') {
+      if (n.includes('TRAY') || s.includes('1210') || s.includes('SLIDE')) families[family].trays += item.qty;
+      if (n.includes('LEG')) families[family].legs += item.qty;
+      if (n.includes('MANIFOLD') || s.includes('2014')) families[family].manifolds += item.qty;
+    }
+  }
+
+  let totalPallets = 0;
+  let totalWeight = 0;
+
+  for (const [family, data] of Object.entries(families)) {
+    const pallets = computePalletsForFamily(family, data.qty, data.skuSample, data.nameSample, data);
+    const weight = Math.round(data.qty * data.weightPerUnit);
     totalPallets += pallets;
     totalWeight += weight;
     breakdown.push({
-      sku: item.sku,
-      name: item.name,
-      qty: item.qty,
+      sku: data.skuSample,
+      name: `${family} (recipe)` ,
+      qty: data.qty,
       pallets,
-      weight: Math.round(weight),
-      matched: matched || 'UNKNOWN',
+      weight,
+      matched: family,
     });
   }
 
+  // Include unknown/override/ride-along lines already appended above
+  for (const row of breakdown) {
+    if (row.matched === 'UNKNOWN' || row.matched === 'SKU_OVERRIDE') {
+      totalPallets += row.pallets;
+      totalWeight += row.weight;
+    }
+  }
+
   const productLines = diagnostics.knownProducts + diagnostics.unknownProducts;
-  const confidenceScore = productLines > 0
-    ? Math.round((diagnostics.knownProducts / productLines) * 100)
-    : 100; // No products = nothing to be wrong about
+  const confidenceScore = productLines > 0 ? Math.round((diagnostics.knownProducts / productLines) * 100) : 100;
   const confidenceLevel = confidenceScore >= 90 ? 'high' : confidenceScore >= 60 ? 'medium' : 'low';
 
   return {

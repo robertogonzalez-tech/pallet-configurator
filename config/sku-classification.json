@@ -1,0 +1,355 @@
+{
+  "_version": "1.0",
+  "_description": "SKU classification for Bauerworld package prediction engine. Each rule maps a SKU pattern to a product family and role.",
+  "_roles": {
+    "primary": "The main product - determines package count and template",
+    "hardware": "Anchor kits, bolts, fasteners - ride along on primary product's pallet",
+    "accessory": "Pumps, workstands, tools - may ship separately or ride along depending on size",
+    "non_ship": "Discounts, fees, tax items, services - never ship physically"
+  },
+
+  "families": {
+    "undergrad": {
+      "description": "Undergrad bike racks (inverted-U style). Components: post + loop pairs. Sold as assemblies.",
+      "counting_method": "Count primary SKUs. Each 80101-* or 80301-* pair = 1 rack unit.",
+      "primary_skus": [
+        {"pattern": "80101-*", "note": "Undergrad posts (all color variants)"},
+        {"pattern": "80301-*", "note": "Undergrad loops (all color variants)", "exclude": ["80301-0301*", "80301-4*"]},
+        {"pattern": "80101-*-KIT", "note": "Undergrad kit variants"}
+      ],
+      "known_variants": [
+        "GAV (galvanized)", "BLK13 (black powder coat)", "BLK23 (black texture)",
+        "GRY23 (gray texture)", "SS (stainless steel)", "CUST* (custom color)",
+        "ZRP (zinc rich primer)", "RAW", "LEAN-* (lean rail variant)",
+        "-T (with top rail)", "-DEL (deluxe)", "-USA (USA made)",
+        "-FIRE (fire rated)", "-M (modified)"
+      ]
+    },
+
+    "vr2_offset": {
+      "description": "VR2 Offset bike racks. Main product + optional rail tubes.",
+      "counting_method": "Count 90101-* SKUs for rack qty. Check for rail SKUs separately.",
+      "primary_skus": [
+        {"pattern": "90101-*", "note": "VR2 rack assemblies (all variants)"}
+      ],
+      "conditional_packages": [
+        {"pattern": "50801-0012-*", "note": "Rail tubes - may ship as separate long tube package"},
+        {"pattern": "50301-0062-*", "note": "Rail end caps - ship with rails"}
+      ]
+    },
+
+    "hoop_runner": {
+      "description": "Hoop Runner HR201 bike racks.",
+      "counting_method": "Count primary SKUs.",
+      "primary_skus": [
+        {"pattern": "89901-0163-*", "note": "HR201 with chain and crossbar"},
+        {"pattern": "89901-0162-*", "note": "HR201 variant"}
+      ]
+    },
+
+    "dismount": {
+      "description": "Dismount VR2 / DV215 bike racks. Embedded mount style.",
+      "counting_method": "Count primary assembled product SKUs.",
+      "primary_skus": [
+        {"pattern": "89901-2287-*", "note": "DV215 assembled racks (all colors)"},
+        {"pattern": "89901-2087-*", "note": "DV287 variant"},
+        {"pattern": "DV215-*", "note": "DV215 custom variants"},
+        {"pattern": "89901-0172-*", "note": "VR2 assembled (some overlap with vr2_offset)"},
+        {"pattern": "89901-1172-*", "note": "VR2 embedded assembled"},
+        {"pattern": "89901-0287-*", "note": "Dismount variant"}
+      ]
+    },
+
+    "double_docker": {
+      "description": "Double Docker DD units. Complex multi-component product.",
+      "counting_method": "Count DD assembly SKUs. Components ship as separate crates at higher quantities.",
+      "primary_skus": [
+        {"pattern": "DD-*", "note": "Double Docker assemblies"},
+        {"pattern": "DD14-*", "note": "DD 14-bike variant"},
+        {"pattern": "DD16-*", "note": "DD 16-bike variant"}
+      ],
+      "component_skus": [
+        {"pattern": "89901-1210-*", "note": "DD slides"},
+        {"pattern": "89901-2014-*", "note": "DD manifold"},
+        {"pattern": "89901-2024-*", "note": "DD component"},
+        {"pattern": "89901-1308-*", "note": "DD component"},
+        {"pattern": "89901-2004-*", "note": "DD component"},
+        {"pattern": "89901-2037-*", "note": "DD component"},
+        {"pattern": "61211-*", "note": "DD structural component"}
+      ]
+    },
+
+    "skatedock": {
+      "description": "Skatedock skateboard parking. Individual boxes at low qty, palletized at qty 3+.",
+      "counting_method": "Count 89904-* (main unit) or 89914-* (components).",
+      "primary_skus": [
+        {"pattern": "89904-*", "note": "Skatedock main unit"},
+        {"pattern": "89914-*", "note": "Skatedock components/kits"},
+        {"pattern": "89901-1210-*-USA", "note": "Skatedock USA variant"}
+      ],
+      "fee_skus": [
+        {"pattern": "Royalty Fee - Skatedock", "note": "Non-shipping fee line"}
+      ]
+    },
+
+    "base_station": {
+      "description": "Base Station bike parking rails. Various lengths.",
+      "counting_method": "Count rail SKUs (50801-*). End caps (50301-*) are per-rail accessories.",
+      "primary_skus": [
+        {"pattern": "50801-*", "note": "Base Station rails (all lengths and finishes)"},
+        {"pattern": "BS-RAIL-*", "note": "Base Station rail variants"},
+        {"pattern": "BS-RACK-*", "note": "Base Station rack components"},
+        {"pattern": "BS-CAP-*", "note": "Base Station caps"}
+      ],
+      "accessory_skus": [
+        {"pattern": "50301-*", "note": "Rail end caps"},
+        {"pattern": "50101-*", "note": "Base Station posts/components"}
+      ]
+    },
+
+    "visilocker": {
+      "description": "VisiLocker / Metal Bike Vault secure bike storage.",
+      "counting_method": "Count LOCKER-* SKUs.",
+      "primary_skus": [
+        {"pattern": "LOCKER-*", "note": "Assembled locker units (all models/colors)"},
+        {"pattern": "89901-4*", "note": "VisiLocker kit components"},
+        {"pattern": "90101-4*", "note": "VisiLocker box components (BOXA, BOXB, BOXC)"},
+        {"pattern": "50101-4*", "note": "VisiLocker post components"}
+      ]
+    },
+
+    "mba": {
+      "description": "MBA (Multi-Bike Adapter) large bike racks.",
+      "counting_method": "Count 89901-0335-* or MBA-specific SKUs.",
+      "primary_skus": [
+        {"pattern": "89901-0335-*", "note": "MBA assembled units"},
+        {"pattern": "90101-0335-*", "note": "MBA components"},
+        {"pattern": "85001-*", "note": "MBA/large format products"}
+      ]
+    },
+
+    "sidestage": {
+      "description": "SideStage bike shelters.",
+      "counting_method": "Count SS*/SSA* SKUs.",
+      "primary_skus": [
+        {"pattern": "SS120-*", "note": "SideStage 120\" model"},
+        {"pattern": "SS95-*", "note": "SideStage 95\" model"},
+        {"pattern": "SS86-*", "note": "SideStage 86\" model"},
+        {"pattern": "SS66-*", "note": "SideStage 66\" model"},
+        {"pattern": "SS57-*", "note": "SideStage 57\" model"},
+        {"pattern": "SS38-*", "note": "SideStage 38\" model"},
+        {"pattern": "SSA*", "note": "SideStage addon models"},
+        {"pattern": "CS*", "note": "CenterStage shelter models"},
+        {"pattern": "CSA*", "note": "CenterStage addon models"}
+      ]
+    },
+
+    "stretch_rack": {
+      "description": "Stretch Rack expandable bike racks.",
+      "counting_method": "Count 81xx SKUs.",
+      "primary_skus": [
+        {"pattern": "8010 *", "note": "Stretch Rack 10-bike"},
+        {"pattern": "8016 *", "note": "Stretch Rack 16-bike"},
+        {"pattern": "8018 *", "note": "Stretch Rack 18-bike"},
+        {"pattern": "8110 *", "note": "Stretch Rack 110 model"},
+        {"pattern": "8116 *", "note": "Stretch Rack 116 model"},
+        {"pattern": "8118 *", "note": "Stretch Rack 118 model"},
+        {"pattern": "8180 *", "note": "Stretch Rack 180 model"}
+      ]
+    },
+
+    "fixation": {
+      "description": "Fixation pump stations and public work stands.",
+      "counting_method": "Count 26xxx SKUs. These are typically accessory items that ride along.",
+      "primary_skus": [
+        {"pattern": "26240*", "note": "HSO Pump"},
+        {"pattern": "26246*", "note": "HSO Pump Floor Mount"},
+        {"pattern": "26248*", "note": "HSI Pump Short Hose Floor Mount"},
+        {"pattern": "26252*", "note": "HSI Pump Repair Stand Mount"},
+        {"pattern": "26263*", "note": "Electric Public Bike Pump"},
+        {"pattern": "26268*", "note": "Public Work Stand Install Kit"},
+        {"pattern": "26302*", "note": "Public Workstand (all variants: C, S, G, BLK, RED, ORG)"},
+        {"pattern": "26347*", "note": "Deluxe Public Workstand"},
+        {"pattern": "26296*", "note": "Fixation accessory"},
+        {"pattern": "26299*", "note": "Fixation accessory"},
+        {"pattern": "26859*", "note": "Fixation product"},
+        {"pattern": "FX3-*", "note": "Fixation product"}
+      ],
+      "default_role": "accessory"
+    },
+
+    "custom_branded": {
+      "description": "Custom branded products (college logos, etc).",
+      "counting_method": "Count 40802-* SKUs.",
+      "primary_skus": [
+        {"pattern": "40802-*", "note": "Custom branded products (various institutions)"},
+        {"pattern": "WWM-CUSTOM", "note": "Custom wall mount products"}
+      ]
+    }
+  },
+
+  "hardware_patterns": {
+    "_description": "SKUs that are always hardware/ride-along items. Never generate their own packages.",
+    "anchor_kits": [
+      {"pattern": "81000-0114*", "note": "WAK4 - Wall Anchor Kit 4"},
+      {"pattern": "81000-0112*", "note": "WAK2"},
+      {"pattern": "81000-0113*", "note": "WAK3"},
+      {"pattern": "81000-0116*", "note": "WAK6"},
+      {"pattern": "81000-0118*", "note": "WAK8"},
+      {"pattern": "81000-0104*", "note": "SAK4 - Surface Anchor Kit"},
+      {"pattern": "81000-0164*", "note": "LAK4 - Lag Anchor Kit"},
+      {"pattern": "81000-0150*", "note": "PAAK215"},
+      {"pattern": "81000-0142*", "note": "PAAK2"},
+      {"pattern": "81000-0174*", "note": "MAK4"},
+      {"pattern": "81000-0204*", "note": "DV204"},
+      {"pattern": "81000-0304*", "note": "HS4 - High Security"},
+      {"pattern": "81000-0045*", "note": "TBK - Through Bolt Kit"},
+      {"pattern": "81000-0041*", "note": "Unistrut Mount Kit"},
+      {"pattern": "81000-0030*", "note": "Channel Nut Kit"},
+      {"pattern": "81000-0400*", "note": "Trident mount kit"},
+      {"pattern": "81000-0407*", "note": "Anchor kit variant"},
+      {"pattern": "81000-0408*", "note": "Anchor kit variant"},
+      {"pattern": "WAK215", "note": "Wall Anchor Kit for VR2"},
+      {"pattern": "WAK5-*", "note": "Wall Anchor Kit 5"},
+      {"pattern": "ZBolt-*", "note": "Z-Bolt anchoring"}
+    ],
+    "fasteners": [
+      {"pattern": "31000-*", "note": "Expansion bolts"},
+      {"pattern": "31005-*", "note": "Expansion bolts variant"},
+      {"pattern": "32000-*", "note": "Anchor bolts"},
+      {"pattern": "32001-*", "note": "Anchor bolts variant"},
+      {"pattern": "34000-*", "note": "Wedge anchors (zinc)"},
+      {"pattern": "34002-*", "note": "Wedge anchors variant"},
+      {"pattern": "34010-*", "note": "Wedge anchors (SS)"},
+      {"pattern": "34051-*", "note": "Concrete anchors"},
+      {"pattern": "39000-*", "note": "Anchor accessories"},
+      {"pattern": "39010-*", "note": "Anchor accessories"},
+      {"pattern": "39100-*", "note": "DD-specific hardware"},
+      {"pattern": "3000Q-*", "note": "Hardware/fastener"},
+      {"pattern": "3000P-*", "note": "Hardware/fastener"},
+      {"pattern": "30006-*", "note": "Hardware"},
+      {"pattern": "30012-*", "note": "Hardware"},
+      {"pattern": "30017-*", "note": "Hardware"}
+    ],
+    "mounting_hardware": [
+      {"pattern": "40103-*", "note": "Mounting hardware"},
+      {"pattern": "40108-*", "note": "Mounting hardware"},
+      {"pattern": "40110-*", "note": "Mounting hardware"},
+      {"pattern": "40111-*", "note": "Mounting hardware (A/B variants)"},
+      {"pattern": "40304-*", "note": "Mounting hardware"},
+      {"pattern": "40501-*", "note": "Mounting hardware"},
+      {"pattern": "40602-*", "note": "Mounting hardware"}
+    ],
+    "misc_hardware": [
+      {"pattern": "81000-0005", "note": "Generic hardware"},
+      {"pattern": "81000-0006*", "note": "Hardware (HS variant)"},
+      {"pattern": "81000-0007", "note": "Hardware"},
+      {"pattern": "81000-0008*", "note": "Hardware (BLK variant)"},
+      {"pattern": "81000-0015*", "note": "Hardware (ZINC variant)"},
+      {"pattern": "81000-0016", "note": "Hardware"},
+      {"pattern": "81000-0018", "note": "Hardware"},
+      {"pattern": "81000-0042", "note": "Hardware"},
+      {"pattern": "81000-0043", "note": "Hardware"},
+      {"pattern": "81000-0052", "note": "DD hardware"},
+      {"pattern": "81000-0054*", "note": "DD hardware (HS variant)"},
+      {"pattern": "81000-0055", "note": "DD hardware"},
+      {"pattern": "81000-0172", "note": "Hardware"},
+      {"pattern": "81000-4006", "note": "Hardware"},
+      {"pattern": "81002-*", "note": "Hardware"},
+      {"pattern": "81004-*", "note": "Hardware"},
+      {"pattern": "91000-*", "note": "Tools/service items"},
+      {"pattern": "92000-*", "note": "Service items"},
+      {"pattern": "Locker Stacking Hardware Kit", "note": "Stacking kit for lockers"},
+      {"pattern": "Number Plate", "note": "Number plate accessory"},
+      {"pattern": "Master Lock", "note": "Lock accessory"},
+      {"pattern": "Packing Materials", "note": "Shipping materials"},
+      {"pattern": "Fast Cure*", "note": "Adhesive/sealant"},
+      {"pattern": "PN#*", "note": "Custom parts"}
+    ],
+    "padding_and_accessories": [
+      {"pattern": "301-PAD-*", "note": "Padding"},
+      {"pattern": "301P-PAD-*", "note": "Padding"},
+      {"pattern": "301-U-PAD-*", "note": "Padding"},
+      {"pattern": "301P-U-PAD-*", "note": "Padding"},
+      {"pattern": "301W-PAD-*", "note": "Padding"},
+      {"pattern": "302-PAD-*", "note": "Padding"},
+      {"pattern": "301-THDL-*", "note": "Handle"},
+      {"pattern": "302-THDL-*", "note": "Handle"},
+      {"pattern": "302-U-THDL-*", "note": "Handle"},
+      {"pattern": "FBV-U-PAD-*", "note": "Bike vault padding"},
+      {"pattern": "89905-*", "note": "Accessory/component"}
+    ]
+  },
+
+  "non_ship_patterns": {
+    "_description": "SKUs that never ship physically. Always excluded from prediction.",
+    "patterns": [
+      {"pattern": "Discount", "note": "Line-level discount"},
+      {"pattern": "Sales Order Discounts*", "note": "SO discount"},
+      {"pattern": "Shipping Item", "note": "Shipping charge line"},
+      {"pattern": "Shipping", "note": "Shipping charge"},
+      {"pattern": "Credit Card Fee", "note": "Payment fee"},
+      {"pattern": "Installation Overhead", "note": "Service charge"},
+      {"pattern": "Price Escalation", "note": "Price adjustment"},
+      {"pattern": "Royalty Fee*", "note": "Licensing fee"},
+      {"pattern": "SIDESTAGE PRICE ADJUSTMENT", "note": "Price adjustment"},
+      {"pattern": "SIDESTAGE ADDON PRICE ADJUSTMENT", "note": "Price adjustment"},
+      {"pattern": "CENTERSTAGE PRICE ADJUSTMENT", "note": "Price adjustment"},
+      {"pattern": "CENTERSTAGE ADDON PRICE ADJUSTMENT", "note": "Price adjustment"},
+      {"pattern": "Structural Calculations", "note": "Engineering service"},
+      {"pattern": "Custom Color", "note": "Upcharge"},
+      {"pattern": "ADD COST", "note": "Cost adjustment"},
+      {"pattern": "CHANGE ORDER AMOUNT", "note": "Change order"},
+      {"pattern": "MISC-NON-INV-SALE", "note": "Non-inventory sale"},
+      {"pattern": "End of Group", "note": "NetSuite grouping marker"},
+      {"pattern": "Event Rack Rental", "note": "Rental, not sale"},
+      {"pattern": "Fixit", "note": "Service item"},
+      {"pattern": "-Not Taxable-", "note": "Tax line"},
+      {"pattern": "*_EMBE_*", "note": "Tax jurisdiction"},
+      {"pattern": "*_SAN JOSE_*", "note": "Tax jurisdiction"}
+    ]
+  },
+
+  "third_party_products": {
+    "_description": "Third-party products that Bauerworld resells. May have different shipping characteristics.",
+    "patterns": [
+      {"pattern": "WR*", "note": "Third-party racks (WR402, WR502, etc.)"},
+      {"pattern": "WCR*", "note": "Third-party commercial racks"},
+      {"pattern": "Landscape Forms*", "note": "Landscape Forms products"},
+      {"pattern": "RUBBERMAID*", "note": "Rubbermaid products"},
+      {"pattern": "972240*", "note": "Capitol Bike Rack (third party)"},
+      {"pattern": "2403*", "note": "City Rack (third party)"},
+      {"pattern": "7400*", "note": "Country Casual Teak"},
+      {"pattern": "3737*", "note": "Country Casual Teak"},
+      {"pattern": "Wave Teak*", "note": "Teak bench"},
+      {"pattern": "187 Gal*", "note": "Compost bin"},
+      {"pattern": "Landscape Forms BOLA", "note": "Bollard"},
+      {"pattern": "398-*", "note": "Third-party parts"},
+      {"pattern": "12700", "note": "Third-party product"},
+      {"pattern": "17502*", "note": "Third-party product"},
+      {"pattern": "S0915", "note": "Third-party product"},
+      {"pattern": "300014", "note": "Third-party product"}
+    ]
+  },
+
+  "assembly_component_skus": {
+    "_description": "SKUs that appear as assembly components (assemblyComponent = T). These are sub-parts of assembled products and should be excluded from the pick ticket.",
+    "note": "These are already filtered by the assemblyComponent = F condition in the NetSuite query. Listed here for documentation only.",
+    "patterns": [
+      {"pattern": "60913-*", "note": "Sub-assembly component"},
+      {"pattern": "80301-*-RAW", "note": "Raw material component"},
+      {"pattern": "80301-0287-RAW", "note": "Raw component"},
+      {"pattern": "71003-*", "note": "Service/non-shipping component"},
+      {"pattern": "14*", "note": "Various internal components (14xxx range)"}
+    ]
+  },
+
+  "classification_priority": [
+    "1. Check non_ship_patterns first — exclude immediately",
+    "2. Check assembly_component flag from NetSuite — exclude if assemblyComponent = T",
+    "3. Check families in order: double_docker, visilocker, skatedock, base_station, vr2_offset, dismount, hoop_runner, undergrad, mba, sidestage, stretch_rack, fixation, custom_branded",
+    "4. Check hardware_patterns — classify as ride-along",
+    "5. Check third_party_products — use fallback weight-based prediction",
+    "6. Anything remaining: log as UNKNOWN, use fallback"
+  ]
+}
