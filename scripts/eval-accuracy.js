@@ -222,6 +222,27 @@ async function fetchValidatedRows() {
   return all;
 }
 
+async function fetchRowsFromView(viewName) {
+  const selectClause = 'id,sales_order_id,pick_ticket_id,status,shipment_completeness,actual_unit_basis,predicted_pallets,actual_pallets,predicted_breakdown,validated_at,created_at';
+  const pageSize = 1000;
+  let from = 0;
+  const all = [];
+
+  while (true) {
+    const { data, error } = await supabase
+      .from(viewName)
+      .select(selectClause)
+      .order('validated_at', { ascending: true })
+      .range(from, from + pageSize - 1);
+    if (error) return { rows: null, error };
+    if (!data || data.length === 0) break;
+    all.push(...data);
+    if (data.length < pageSize) break;
+    from += pageSize;
+  }
+  return { rows: all, error: null };
+}
+
 function toMarkdown(report) {
   const fmt = (n) => (typeof n === 'number' ? n.toFixed(2) : String(n));
   const md = [];
@@ -238,6 +259,9 @@ function toMarkdown(report) {
   md.push(`- clean rows (complete + package_count + deduped): ${report.dataset.clean_rows}`);
   if (typeof report.dataset.consistent_rows === 'number') {
     md.push(`- consistent clean rows (clean - legacy ambiguity - sentinel fallback): ${report.dataset.consistent_rows}`);
+  }
+  if (report.dataset.consistent_source) {
+    md.push(`- consistent slice source: \`${report.dataset.consistent_source}\``);
   }
   md.push(`- shipment completeness counts: \`${JSON.stringify(report.dataset.shipment_completeness_counts)}\``);
   md.push(`- actual unit basis counts: \`${JSON.stringify(report.dataset.actual_unit_basis_counts)}\``);
@@ -303,7 +327,14 @@ function toMarkdown(report) {
   const packageCountRows = completeRows.filter((row) => String(row.actual_unit_basis || '').toLowerCase() === 'package_count');
   const fallbackToComplete = packageCountRows.length === 0 && completeRows.length > 0;
   const cleanRows = dedupeCleanRows(fallbackToComplete ? completeRows : packageCountRows);
-  const consistentRows = cleanRows.filter((row) => !isLegacySo(row) && !hasSentinelFallback(row.predicted_breakdown));
+  const derivedConsistentRows = cleanRows.filter((row) => !isLegacySo(row) && !hasSentinelFallback(row.predicted_breakdown));
+  const consistentView = await fetchRowsFromView('validations_eval_consistent');
+  const consistentRows = Array.isArray(consistentView.rows) && consistentView.rows.length > 0
+    ? consistentView.rows
+    : derivedConsistentRows;
+  const consistentSource = Array.isArray(consistentView.rows) && consistentView.rows.length > 0
+    ? 'validations_eval_consistent(view)'
+    : 'derived_fallback(clean - legacy SO5/6 - sentinel)';
 
   const report = {
     generated_at: new Date().toISOString(),
@@ -313,6 +344,8 @@ function toMarkdown(report) {
       package_count_rows: packageCountRows.length,
       clean_rows: cleanRows.length,
       consistent_rows: consistentRows.length,
+      consistent_source: consistentSource,
+      consistent_view_error: consistentView.error ? String(consistentView.error.message || consistentView.error) : null,
       shipment_completeness_counts: completenessCounts,
       actual_unit_basis_counts: unitBasisCounts,
       basis_filter_fallback: fallbackToComplete,
