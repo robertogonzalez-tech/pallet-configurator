@@ -15,6 +15,7 @@ dist/
 
 # Logs
 *.log
+reprocess-log-*.json
 
 validation-results/
 .drive-watcher-state.json

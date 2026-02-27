@@ -7,7 +7,11 @@
     "build": "vite build",
     "preview": "vite preview",
     "reprocess": "node batch-reprocess-validations.js",
-    "error-slice": "node scripts/error-slice-report.js"
+    "reprocess:guarded": "node scripts/guarded-reprocess.js",
+    "error-slice": "node scripts/error-slice-report.js",
+    "eval:accuracy": "node scripts/eval-accuracy.js",
+    "report:blindness": "node scripts/blindness-report.js",
+    "test:classifier": "node scripts/test-classifier-contract.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.72.1",

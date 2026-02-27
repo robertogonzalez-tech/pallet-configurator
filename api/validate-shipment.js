@@ -8,6 +8,7 @@ try {
 } catch (e) {
   console.warn('[NOTIFICATIONS] Optional notifications module unavailable:', e.message);
 }
+const { predictPackages: predictPackagesCore } = require('./lib/predictPackages');
 const fs = require('fs');
 const path = require('path');
 
@@ -26,6 +27,91 @@ const config = {
 const supabase = process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
   ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
   : null;
+
+const REASON_CODES = {
+  NON_PHYSICAL: 'NON_PHYSICAL',
+  HARDWARE_RIDE_ALONG: 'HARDWARE_RIDE_ALONG',
+  COMPONENT_SUPPRESSED: 'COMPONENT_SUPPRESSED',
+  LONG_TUBE_TRIGGER: 'LONG_TUBE_TRIGGER',
+  NETSUITE_FLAGGED: 'NETSUITE_FLAGGED',
+  UNKNOWN: 'UNKNOWN',
+  OTHER: 'OTHER',
+  PRODUCT_FAMILY: 'PRODUCT_FAMILY',
+};
+
+function boolish(value) {
+  return value === true || value === 'T' || value === 'true' || value === 1;
+}
+
+function buildLineFlags(item) {
+  return {
+    fulfillable: boolish(item?.fulfillable),
+    assemblyComponent: boolish(item?.assemblyComponent),
+    kitComponent: boolish(item?.kitComponent),
+    itemType: item?.itemType || '',
+  };
+}
+
+function buildRawLine(item) {
+  return {
+    sku: normalizeSku(item?.sku || 'UNKNOWN'),
+    name: item?.name || 'Unknown Item',
+    qty: Math.max(0, Number(item?.qty) || 0),
+    flags: buildLineFlags(item),
+  };
+}
+
+function initFilterStats() {
+  return {
+    [REASON_CODES.NON_PHYSICAL]: 0,
+    [REASON_CODES.HARDWARE_RIDE_ALONG]: 0,
+    [REASON_CODES.COMPONENT_SUPPRESSED]: 0,
+    [REASON_CODES.LONG_TUBE_TRIGGER]: 0,
+    [REASON_CODES.NETSUITE_FLAGGED]: 0,
+    [REASON_CODES.UNKNOWN]: 0,
+    [REASON_CODES.OTHER]: 0,
+    [REASON_CODES.PRODUCT_FAMILY]: 0,
+  };
+}
+
+function bumpFilterStat(filterStats, reasonCode) {
+  if (!reasonCode) return;
+  if (typeof filterStats[reasonCode] !== 'number') filterStats[reasonCode] = 0;
+  filterStats[reasonCode] += 1;
+}
+
+function sanitizeDiagnostics(diagnostics, debug = false) {
+  if (debug) return diagnostics;
+  const includedLines = Array.isArray(diagnostics?.includedLines) ? diagnostics.includedLines : [];
+  const excludedLines = Array.isArray(diagnostics?.excludedLines) ? diagnostics.excludedLines : [];
+  return {
+    totalLines: diagnostics.totalLines,
+    rawLinesCount: diagnostics.rawLinesCount,
+    filteredNonShippable: diagnostics.filteredNonShippable,
+    filteredHardware: diagnostics.filteredHardware,
+    filteredPackaging: diagnostics.filteredPackaging,
+    filteredComponents: diagnostics.filteredComponents,
+    knownProducts: diagnostics.knownProducts,
+    unknownProducts: diagnostics.unknownProducts,
+    unknownSkus: diagnostics.unknownSkus || [],
+    unknown_skus: diagnostics.unknownSkus || [],
+    longTubeTriggerLines: diagnostics.longTubeTriggerLines,
+    longTubePallets: diagnostics.longTubePallets,
+    packageCountBeforeConsolidation: diagnostics.packageCountBeforeConsolidation,
+    packageCountAfterConsolidation: diagnostics.packageCountAfterConsolidation,
+    productLines: diagnostics.productLines,
+    baseConfidence: diagnostics.baseConfidence,
+    confidenceScore: diagnostics.confidenceScore,
+    confidenceLevel: diagnostics.confidenceLevel,
+    confidence: diagnostics.confidenceLevel,
+    needsReview: diagnostics.needsReview,
+    filter_stats: diagnostics.filter_stats || diagnostics.filterStats || {},
+    included_count: includedLines.length,
+    excluded_count: excludedLines.length,
+    suspiciousExcludedLines: diagnostics.suspiciousExcludedLines || [],
+    debug: false,
+  };
+}
 
 // ============================================================
 // PRODUCT CATALOG — loaded from products.json
@@ -917,9 +1003,12 @@ function isPotentiallyPhysicalExcluded(line) {
 }
 
 function predictPallets(items) {
+  const rawLines = Array.isArray(items) ? items.map((item) => buildRawLine(item)) : [];
   const diagnostics = {
-    totalLines: items.length,
-    rawLinesCount: items.length,
+    totalLines: rawLines.length,
+    rawLinesCount: rawLines.length,
+    rawLines: rawLines,
+    raw_lines: rawLines,
     filteredNonShippable: 0,
     filteredHardware: 0,
     filteredPackaging: 0,
@@ -931,6 +1020,8 @@ function predictPallets(items) {
     longTubePallets: 0,
     includedLines: [],
     excludedLines: [],
+    filterStats: initFilterStats(),
+    filter_stats: null,
   };
 
   const families = {};
@@ -948,17 +1039,15 @@ function predictPallets(items) {
   for (const item of items) {
     if (!item.qty || item.qty === 0) {
       diagnostics.filteredNonShippable++;
+      const reason = REASON_CODES.NETSUITE_FLAGGED;
+      bumpFilterStat(diagnostics.filterStats, reason);
       diagnostics.excludedLines.push({
         sku: normalizeSku(item.sku || 'UNKNOWN'),
         name: item.name || 'Unknown Item',
         qty: item.qty || 0,
-        reason: 'qty_zero',
-        flags: {
-          fulfillable: !!item.fulfillable,
-          assemblyComponent: !!item.assemblyComponent,
-          kitComponent: !!item.kitComponent,
-          itemType: item.itemType || '',
-        },
+        reason,
+        details: 'qty_zero',
+        flags: buildLineFlags(item),
       });
       continue;
     }
@@ -968,67 +1057,62 @@ function predictPallets(items) {
     const baseClassification = configHint?.classification || classifyItem(item.sku, item.name, orderHasParents);
     const flagBypass = isFlagBypassItem(item);
     let classification = baseClassification;
+    let netSuiteFlagged = false;
 
     // Keep full-line visibility, but avoid component explosion:
     // most assembly components / non-fulfillable lines are not standalone shipments.
     if (!flagBypass && item.assemblyComponent) {
       classification = 'component_of_parent';
+      netSuiteFlagged = true;
     }
     if (!flagBypass && item.fulfillable === false && classification === 'product') {
       classification = 'non_shippable';
+      netSuiteFlagged = true;
     }
 
     if (classification === 'non_shippable') {
       diagnostics.filteredNonShippable++;
+      const reason = netSuiteFlagged ? REASON_CODES.NETSUITE_FLAGGED : REASON_CODES.NON_PHYSICAL;
+      bumpFilterStat(diagnostics.filterStats, reason);
       diagnostics.excludedLines.push({
         sku: normSku,
         name: item.name || 'Unknown Item',
         qty: item.qty,
-        reason: 'non_shippable',
+        reason,
         classification,
         source: configHint?.source || 'legacy_classifier',
-        flags: {
-          fulfillable: !!item.fulfillable,
-          assemblyComponent: !!item.assemblyComponent,
-          kitComponent: !!item.kitComponent,
-          itemType: item.itemType || '',
-        },
+        flags: buildLineFlags(item),
       });
       continue;
     }
     if (classification === 'packaging') {
       diagnostics.filteredPackaging++;
+      const reason = REASON_CODES.OTHER;
+      bumpFilterStat(diagnostics.filterStats, reason);
       diagnostics.excludedLines.push({
         sku: normSku,
         name: item.name || 'Unknown Item',
         qty: item.qty,
-        reason: 'packaging',
+        reason,
+        details: 'packaging',
         classification,
         source: configHint?.source || 'legacy_classifier',
-        flags: {
-          fulfillable: !!item.fulfillable,
-          assemblyComponent: !!item.assemblyComponent,
-          kitComponent: !!item.kitComponent,
-          itemType: item.itemType || '',
-        },
+        flags: buildLineFlags(item),
       });
       continue;
     }
     if (classification === 'component_of_parent') {
       diagnostics.filteredComponents++;
+      const reason = netSuiteFlagged ? REASON_CODES.NETSUITE_FLAGGED : REASON_CODES.COMPONENT_SUPPRESSED;
+      bumpFilterStat(diagnostics.filterStats, reason);
       diagnostics.excludedLines.push({
         sku: normSku,
         name: item.name || 'Unknown Item',
         qty: item.qty,
-        reason: 'component_of_parent',
+        reason,
         classification,
         source: configHint?.source || 'legacy_classifier',
-        flags: {
-          fulfillable: !!item.fulfillable,
-          assemblyComponent: !!item.assemblyComponent,
-          kitComponent: !!item.kitComponent,
-          itemType: item.itemType || '',
-        },
+        flags: buildLineFlags(item),
       });
       continue;
     }
@@ -1043,20 +1127,17 @@ function predictPallets(items) {
       const perPieceWeight = lengthIn >= 114 ? 8 : lengthIn >= 100 ? 7 : lengthIn >= 86 ? 6 : 5;
       longTubeState.estimatedWeight += (Math.max(0, item.qty || 0) * perPieceWeight);
 
+      bumpFilterStat(diagnostics.filterStats, REASON_CODES.LONG_TUBE_TRIGGER);
       diagnostics.includedLines.push({
         sku: normSku,
         name: item.name || 'Unknown Item',
         qty: item.qty,
         mode: 'long_tube_trigger',
+        reason: REASON_CODES.LONG_TUBE_TRIGGER,
         classification,
         source: configHint?.source || 'legacy_classifier',
         meta: { lengthIn },
-        flags: {
-          fulfillable: !!item.fulfillable,
-          assemblyComponent: !!item.assemblyComponent,
-          kitComponent: !!item.kitComponent,
-          itemType: item.itemType || '',
-        },
+        flags: buildLineFlags(item),
       });
       breakdown.push({
         sku: normSku,
@@ -1074,19 +1155,16 @@ function predictPallets(items) {
 
     if (rideAlong) {
       diagnostics.filteredHardware++;
+      bumpFilterStat(diagnostics.filterStats, REASON_CODES.HARDWARE_RIDE_ALONG);
       diagnostics.includedLines.push({
         sku: normSku,
         name: item.name || 'Unknown Item',
         qty: item.qty,
         mode: 'ride_along',
+        reason: REASON_CODES.HARDWARE_RIDE_ALONG,
         classification,
         source: configHint?.source || 'legacy_classifier',
-        flags: {
-          fulfillable: !!item.fulfillable,
-          assemblyComponent: !!item.assemblyComponent,
-          kitComponent: !!item.kitComponent,
-          itemType: item.itemType || '',
-        },
+        flags: buildLineFlags(item),
       });
       breakdown.push({ sku: normSku, name: item.name, qty: item.qty, pallets: 0, weight: 0, matched: 'RIDE_ALONG' });
       continue;
@@ -1097,38 +1175,32 @@ function predictPallets(items) {
       if (overrideUpp) {
         const pallets = Math.ceil(item.qty / overrideUpp);
         diagnostics.knownProducts++;
+        bumpFilterStat(diagnostics.filterStats, REASON_CODES.PRODUCT_FAMILY);
         diagnostics.includedLines.push({
           sku: normSku,
           name: item.name || 'Unknown Item',
           qty: item.qty,
           mode: 'sku_override',
+          reason: REASON_CODES.PRODUCT_FAMILY,
           classification: 'product',
           source: configHint?.source || 'legacy_classifier',
-          flags: {
-            fulfillable: !!item.fulfillable,
-            assemblyComponent: !!item.assemblyComponent,
-            kitComponent: !!item.kitComponent,
-            itemType: item.itemType || '',
-          },
+          flags: buildLineFlags(item),
         });
         breakdown.push({ sku: normSku, name: item.name, qty: item.qty, pallets, weight: Math.round(item.qty * 50), matched: 'SKU_OVERRIDE' });
       } else {
         diagnostics.unknownProducts++;
         diagnostics.unknownSkus.push(item.sku);
         unknownQtyTotal += Math.max(0, item.qty || 0);
+        bumpFilterStat(diagnostics.filterStats, REASON_CODES.UNKNOWN);
         diagnostics.includedLines.push({
           sku: normSku,
           name: item.name || 'Unknown Item',
           qty: item.qty,
           mode: 'unknown_fallback',
+          reason: REASON_CODES.UNKNOWN,
           classification: 'product',
           source: configHint?.source || 'legacy_classifier',
-          flags: {
-            fulfillable: !!item.fulfillable,
-            assemblyComponent: !!item.assemblyComponent,
-            kitComponent: !!item.kitComponent,
-            itemType: item.itemType || '',
-          },
+          flags: buildLineFlags(item),
         });
         // Unknown defaults to review-required and zero counted pallets to avoid
         // systematic overprediction from component/variant lines.
@@ -1138,20 +1210,17 @@ function predictPallets(items) {
     }
 
     diagnostics.knownProducts++;
+    bumpFilterStat(diagnostics.filterStats, REASON_CODES.PRODUCT_FAMILY);
     diagnostics.includedLines.push({
       sku: normSku,
       name: item.name || 'Unknown Item',
       qty: item.qty,
       mode: 'family_recipe',
+      reason: REASON_CODES.PRODUCT_FAMILY,
       family: product.family,
       classification: 'product',
       source: configHint?.source || product.source || 'catalog',
-      flags: {
-        fulfillable: !!item.fulfillable,
-        assemblyComponent: !!item.assemblyComponent,
-        kitComponent: !!item.kitComponent,
-        itemType: item.itemType || '',
-      },
+      flags: buildLineFlags(item),
     });
     const family = product.family;
     if (!families[family]) {
@@ -1249,6 +1318,11 @@ function predictPallets(items) {
   const confidenceScore = Math.max(0, Math.min(100, baseConfidence - penalties));
   const confidenceLevel = confidenceScore >= 90 ? 'high' : confidenceScore >= 70 ? 'medium' : 'low';
   const needsReview = confidenceLevel === 'low' || suspiciousExcludedLines.length > 0;
+
+  diagnostics.filter_stats = diagnostics.filterStats;
+  diagnostics.included_lines = diagnostics.includedLines;
+  diagnostics.excluded_lines = diagnostics.excludedLines;
+  diagnostics.unknown_skus = diagnostics.unknownSkus;
 
   return {
     totalPallets,
@@ -1368,15 +1442,21 @@ async function getSalesOrderViaSuiteQL(soNumber) {
 }
 
 function normalizeInputItems(items) {
+  const parseTriBool = (value) => {
+    if (value === true || value === 'T' || value === 'true' || value === 1 || value === '1') return true;
+    if (value === false || value === 'F' || value === 'false' || value === 0 || value === '0') return false;
+    return null;
+  };
+
   if (!Array.isArray(items)) return [];
   return items
     .map((item) => ({
       sku: item?.sku || item?.item || 'UNKNOWN',
       name: item?.name || item?.description || item?.displayName || 'Unknown Item',
       qty: Math.abs(parseInt(item?.qty ?? item?.quantity ?? 0, 10) || 0),
-      kitComponent: item?.kitComponent === true || item?.kitcomponent === 'T',
-      fulfillable: item?.fulfillable === true || item?.fulfillable === 'T',
-      assemblyComponent: item?.assemblyComponent === true || item?.assemblycomponent === 'T',
+      kitComponent: parseTriBool(item?.kitComponent ?? item?.kitcomponent),
+      fulfillable: parseTriBool(item?.fulfillable),
+      assemblyComponent: parseTriBool(item?.assemblyComponent ?? item?.assemblycomponent),
       itemType: item?.itemType || item?.itemtype || '',
     }))
     .filter((item) => item.qty > 0);
@@ -1395,6 +1475,7 @@ const handler = async (req, res) => {
 
   try {
     const body = req.body || {};
+    const debug = body.debug === true || body.debug === 'true' || req.query?.debug === 'true';
     const soInput = body.soNumber || body.salesOrderNumber || body.sales_order_id;
     const soNumber = String(soInput || '').replace(/^SO/i, '');
     const referenceNumber = body.quoteNumber || body.referenceNumber || body.reference || '';
@@ -1427,7 +1508,12 @@ const handler = async (req, res) => {
     }
 
     // 2. Predict
-    const prediction = predictPallets(sourceItems);
+    const predictionResult = predictPackagesCore(sourceItems, {
+      predict: predictPallets,
+      debug,
+      sanitizeDiagnostics,
+    });
+    const prediction = predictionResult.rawPrediction;
     const d = prediction.diagnostics;
     console.log(`[PREDICT] ${prediction.totalPallets} packages | confidence=${d.confidenceLevel} (${d.confidenceScore}%) | filtered: ${d.filteredNonShippable}ns ${d.filteredHardware}hw ${d.filteredComponents}comp ${d.filteredPackaging}pkg | unknown: ${d.unknownProducts} | review=${d.needsReview}`);
 
@@ -1489,17 +1575,11 @@ const handler = async (req, res) => {
         packages: prediction.packages,
         summary: prediction.summary,
       },
-      prediction: {
-        totalPallets: prediction.totalPallets,
-        totalWeight: prediction.totalWeight,
-        breakdown: prediction.breakdown,
-        packages: prediction.packages,
-        summary: prediction.summary,
-      },
-      predicted_pallets: prediction.totalPallets,
-      predicted_weight: prediction.totalWeight,
-      predicted_breakdown: prediction.breakdown,
-      predicted_packages: prediction.packages,
+      prediction: predictionResult.prediction,
+      predicted_pallets: predictionResult.predicted_pallets,
+      predicted_weight: predictionResult.predicted_weight,
+      predicted_breakdown: predictionResult.predicted_breakdown,
+      predicted_packages: predictionResult.predicted_packages,
       actual: { pallets: actualPallets, weight: actualWeight, dimensions: pallets },
       variance: {
         pallets: palletVariance,
@@ -1508,7 +1588,7 @@ const handler = async (req, res) => {
         withinOnePallet: absDelta <= 1,
         severity,
       },
-      diagnostics: prediction.diagnostics,
+      diagnostics: predictionResult.diagnostics,
       items: sourceItems
     });
 
@@ -1523,4 +1603,7 @@ module.exports.__private__ = {
   predictPallets,
   getSalesOrderViaSuiteQL,
   normalizeInputItems,
+  classifyItem,
+  classifyFromSkuConfig,
+  sanitizeDiagnostics,
 };

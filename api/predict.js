@@ -1,11 +1,13 @@
 const crypto = require('crypto');
 const OAuth = require('oauth-1.0a');
 const validateShipment = require('./validate-shipment');
+const { predictPackages: predictPackagesCore } = require('./lib/predictPackages');
 
 const {
   predictPallets,
   getSalesOrderViaSuiteQL,
   normalizeInputItems,
+  sanitizeDiagnostics,
 } = validateShipment.__private__ || {};
 
 const config = {
@@ -124,24 +126,24 @@ module.exports = async (req, res) => {
       }
     }
 
-    const prediction = predictPallets(items);
+    const debug = payload.debug === true || payload.debug === 'true';
+    const { prediction, predicted_pallets, predicted_weight, predicted_breakdown, predicted_packages, diagnostics } =
+      predictPackagesCore(items, {
+        predict: predictPallets,
+        debug,
+        sanitizeDiagnostics,
+      });
     return res.status(200).json({
       success: true,
       soNumber: soNumber ? `SO${soNumber}` : null,
       referenceNumber,
       sourceType,
-      prediction: {
-        totalPallets: prediction.totalPallets,
-        totalWeight: prediction.totalWeight,
-        breakdown: prediction.breakdown,
-        packages: prediction.packages,
-        summary: prediction.summary,
-      },
-      predicted_pallets: prediction.totalPallets,
-      predicted_weight: prediction.totalWeight,
-      predicted_breakdown: prediction.breakdown,
-      predicted_packages: prediction.packages,
-      diagnostics: prediction.diagnostics,
+      prediction,
+      predicted_pallets,
+      predicted_weight,
+      predicted_breakdown,
+      predicted_packages,
+      diagnostics,
       items,
     });
   } catch (error) {

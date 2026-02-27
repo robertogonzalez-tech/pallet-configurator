@@ -1,0 +1,492 @@
+{
+  "generated_at": "2026-02-27T03:30:51.372Z",
+  "dataset": {
+    "validated_rows": 491,
+    "clean_rows": 477,
+    "shipment_completeness_counts": {
+      "complete": 491
+    }
+  },
+  "metrics_all": {
+    "rows": 491,
+    "overall": {
+      "rows": 491,
+      "exact_pct": 54.17515274949084,
+      "within_1_pct": 81.87372708757637,
+      "within_2_pct": 92.4643584521385,
+      "mae": 0.8594704684317719,
+      "bias": 0.43584521384928715,
+      "severe_under_rate": 4.887983706720977,
+      "severe_over_rate": 13.238289205702646
+    },
+    "by_type": {
+      "single": {
+        "rows": 230,
+        "exact_pct": 69.56521739130434,
+        "within_1_pct": 88.26086956521739,
+        "within_2_pct": 93.91304347826087,
+        "mae": 0.6869565217391305,
+        "bias": 0.26956521739130435,
+        "severe_under_rate": 5.217391304347826,
+        "severe_over_rate": 6.521739130434782
+      },
+      "multi": {
+        "rows": 184,
+        "exact_pct": 30.978260869565215,
+        "within_1_pct": 70.65217391304348,
+        "within_2_pct": 89.13043478260869,
+        "mae": 1.2173913043478262,
+        "bias": 1.0108695652173914,
+        "severe_under_rate": 2.717391304347826,
+        "severe_over_rate": 26.6304347826087
+      },
+      "unknown": {
+        "rows": 77,
+        "exact_pct": 63.63636363636363,
+        "within_1_pct": 89.6103896103896,
+        "within_2_pct": 96.1038961038961,
+        "mae": 0.5194805194805194,
+        "bias": -0.44155844155844154,
+        "severe_under_rate": 9.090909090909092,
+        "severe_over_rate": 1.2987012987012987
+      }
+    },
+    "by_family_count": {
+      "0": {
+        "rows": 77,
+        "exact_pct": 63.63636363636363,
+        "within_1_pct": 89.6103896103896,
+        "within_2_pct": 96.1038961038961,
+        "mae": 0.5194805194805194,
+        "bias": -0.44155844155844154,
+        "severe_under_rate": 9.090909090909092,
+        "severe_over_rate": 1.2987012987012987
+      },
+      "1": {
+        "rows": 230,
+        "exact_pct": 69.56521739130434,
+        "within_1_pct": 88.26086956521739,
+        "within_2_pct": 93.91304347826087,
+        "mae": 0.6869565217391305,
+        "bias": 0.26956521739130435,
+        "severe_under_rate": 5.217391304347826,
+        "severe_over_rate": 6.521739130434782
+      },
+      "2": {
+        "rows": 111,
+        "exact_pct": 36.03603603603604,
+        "within_1_pct": 74.77477477477478,
+        "within_2_pct": 89.1891891891892,
+        "mae": 1.0810810810810811,
+        "bias": 0.8648648648648649,
+        "severe_under_rate": 2.7027027027027026,
+        "severe_over_rate": 22.52252252252252
+      },
+      "3": {
+        "rows": 38,
+        "exact_pct": 26.31578947368421,
+        "within_1_pct": 78.94736842105263,
+        "within_2_pct": 97.36842105263158,
+        "mae": 1.0263157894736843,
+        "bias": 1.0263157894736843,
+        "severe_under_rate": 0,
+        "severe_over_rate": 21.052631578947366
+      },
+      "4+": {
+        "rows": 35,
+        "exact_pct": 20,
+        "within_1_pct": 48.57142857142857,
+        "within_2_pct": 80,
+        "mae": 1.8571428571428572,
+        "bias": 1.457142857142857,
+        "severe_under_rate": 5.714285714285714,
+        "severe_over_rate": 45.714285714285715
+      }
+    },
+    "top_family_error_buckets": [
+      {
+        "family": "Double Docker",
+        "count": 47
+      },
+      {
+        "family": "VR2 Offset",
+        "count": 27
+      },
+      {
+        "family": "Hoop Runner",
+        "count": 25
+      },
+      {
+        "family": "LONG_TUBE",
+        "count": 24
+      },
+      {
+        "family": "Base Station",
+        "count": 18
+      },
+      {
+        "family": "Skatedock",
+        "count": 11
+      },
+      {
+        "family": "Varsity",
+        "count": 9
+      },
+      {
+        "family": "VR1 XL",
+        "count": 8
+      },
+      {
+        "family": "Circle Series (Omega)",
+        "count": 4
+      },
+      {
+        "family": "2UP",
+        "count": 3
+      },
+      {
+        "family": "Saris",
+        "count": 3
+      },
+      {
+        "family": "Dismount",
+        "count": 2
+      },
+      {
+        "family": "Radius",
+        "count": 2
+      },
+      {
+        "family": "Guardian",
+        "count": 1
+      },
+      {
+        "family": "Undergrad",
+        "count": 1
+      }
+    ],
+    "top_sku_error_buckets": [
+      {
+        "sku": "81000-0052",
+        "count": 168
+      },
+      {
+        "sku": "81000-0054-HS",
+        "count": 168
+      },
+      {
+        "sku": "81000-0055",
+        "count": 168
+      },
+      {
+        "sku": "81000-0006",
+        "count": 167
+      },
+      {
+        "sku": "81000-0005",
+        "count": 166
+      },
+      {
+        "sku": "50101-0256-GAV",
+        "count": 162
+      },
+      {
+        "sku": "80101-0050-GAV",
+        "count": 162
+      },
+      {
+        "sku": "80301-0250-GAV",
+        "count": 162
+      },
+      {
+        "sku": "80301-0252-GAV",
+        "count": 162
+      },
+      {
+        "sku": "80301-0253-GAV",
+        "count": 162
+      },
+      {
+        "sku": "32000-0380-16SS",
+        "count": 151
+      },
+      {
+        "sku": "31000-0380-0750-SS",
+        "count": 147
+      },
+      {
+        "sku": "34010-0375-375-SS",
+        "count": 141
+      },
+      {
+        "sku": "81000-0114",
+        "count": 101
+      },
+      {
+        "sku": "80301-0257-GAV",
+        "count": 100
+      },
+      {
+        "sku": "3000Q-0250-100-BO",
+        "count": 78
+      },
+      {
+        "sku": "80301-0258-GAV",
+        "count": 61
+      },
+      {
+        "sku": "91000-0002-HS",
+        "count": 53
+      },
+      {
+        "sku": "81000-0008",
+        "count": 50
+      },
+      {
+        "sku": "34051-0250-0200",
+        "count": 44
+      }
+    ]
+  },
+  "metrics_clean": {
+    "rows": 477,
+    "overall": {
+      "rows": 477,
+      "exact_pct": 55.13626834381551,
+      "within_1_pct": 83.01886792452831,
+      "within_2_pct": 93.29140461215934,
+      "mae": 0.7882599580712788,
+      "bias": 0.38155136268343814,
+      "severe_under_rate": 4.40251572327044,
+      "severe_over_rate": 12.578616352201259
+    },
+    "by_type": {
+      "single": {
+        "rows": 222,
+        "exact_pct": 71.17117117117117,
+        "within_1_pct": 89.63963963963964,
+        "within_2_pct": 94.5945945945946,
+        "mae": 0.5630630630630631,
+        "bias": 0.14864864864864866,
+        "severe_under_rate": 4.954954954954955,
+        "severe_over_rate": 5.405405405405405
+      },
+      "multi": {
+        "rows": 180,
+        "exact_pct": 31.666666666666664,
+        "within_1_pct": 71.66666666666667,
+        "within_2_pct": 90,
+        "mae": 1.1888888888888889,
+        "bias": 1,
+        "severe_under_rate": 2.2222222222222223,
+        "severe_over_rate": 26.111111111111114
+      },
+      "unknown": {
+        "rows": 75,
+        "exact_pct": 64,
+        "within_1_pct": 90.66666666666666,
+        "within_2_pct": 97.33333333333334,
+        "mae": 0.49333333333333335,
+        "bias": -0.41333333333333333,
+        "severe_under_rate": 8,
+        "severe_over_rate": 1.3333333333333335
+      }
+    },
+    "by_family_count": {
+      "0": {
+        "rows": 75,
+        "exact_pct": 64,
+        "within_1_pct": 90.66666666666666,
+        "within_2_pct": 97.33333333333334,
+        "mae": 0.49333333333333335,
+        "bias": -0.41333333333333333,
+        "severe_under_rate": 8,
+        "severe_over_rate": 1.3333333333333335
+      },
+      "1": {
+        "rows": 222,
+        "exact_pct": 71.17117117117117,
+        "within_1_pct": 89.63963963963964,
+        "within_2_pct": 94.5945945945946,
+        "mae": 0.5630630630630631,
+        "bias": 0.14864864864864866,
+        "severe_under_rate": 4.954954954954955,
+        "severe_over_rate": 5.405405405405405
+      },
+      "2": {
+        "rows": 107,
+        "exact_pct": 37.38317757009346,
+        "within_1_pct": 76.63551401869158,
+        "within_2_pct": 90.65420560747664,
+        "mae": 1.02803738317757,
+        "bias": 0.8411214953271028,
+        "severe_under_rate": 1.8691588785046727,
+        "severe_over_rate": 21.49532710280374
+      },
+      "3": {
+        "rows": 38,
+        "exact_pct": 26.31578947368421,
+        "within_1_pct": 78.94736842105263,
+        "within_2_pct": 97.36842105263158,
+        "mae": 1.0263157894736843,
+        "bias": 1.0263157894736843,
+        "severe_under_rate": 0,
+        "severe_over_rate": 21.052631578947366
+      },
+      "4+": {
+        "rows": 35,
+        "exact_pct": 20,
+        "within_1_pct": 48.57142857142857,
+        "within_2_pct": 80,
+        "mae": 1.8571428571428572,
+        "bias": 1.457142857142857,
+        "severe_under_rate": 5.714285714285714,
+        "severe_over_rate": 45.714285714285715
+      }
+    },
+    "top_family_error_buckets": [
+      {
+        "family": "Double Docker",
+        "count": 44
+      },
+      {
+        "family": "VR2 Offset",
+        "count": 26
+      },
+      {
+        "family": "Hoop Runner",
+        "count": 25
+      },
+      {
+        "family": "LONG_TUBE",
+        "count": 23
+      },
+      {
+        "family": "Base Station",
+        "count": 18
+      },
+      {
+        "family": "Skatedock",
+        "count": 10
+      },
+      {
+        "family": "Varsity",
+        "count": 8
+      },
+      {
+        "family": "VR1 XL",
+        "count": 7
+      },
+      {
+        "family": "Circle Series (Omega)",
+        "count": 3
+      },
+      {
+        "family": "2UP",
+        "count": 3
+      },
+      {
+        "family": "Saris",
+        "count": 3
+      },
+      {
+        "family": "Dismount",
+        "count": 2
+      },
+      {
+        "family": "Guardian",
+        "count": 1
+      },
+      {
+        "family": "Radius",
+        "count": 1
+      },
+      {
+        "family": "Undergrad",
+        "count": 1
+      }
+    ],
+    "top_sku_error_buckets": [
+      {
+        "sku": "32000-0380-16SS",
+        "count": 131
+      },
+      {
+        "sku": "31000-0380-0750-SS",
+        "count": 129
+      },
+      {
+        "sku": "34010-0375-375-SS",
+        "count": 124
+      },
+      {
+        "sku": "81000-0052",
+        "count": 116
+      },
+      {
+        "sku": "81000-0054-HS",
+        "count": 116
+      },
+      {
+        "sku": "81000-0055",
+        "count": 116
+      },
+      {
+        "sku": "81000-0006",
+        "count": 115
+      },
+      {
+        "sku": "81000-0005",
+        "count": 114
+      },
+      {
+        "sku": "50101-0256-GAV",
+        "count": 110
+      },
+      {
+        "sku": "80101-0050-GAV",
+        "count": 110
+      },
+      {
+        "sku": "80301-0250-GAV",
+        "count": 110
+      },
+      {
+        "sku": "80301-0252-GAV",
+        "count": 110
+      },
+      {
+        "sku": "80301-0253-GAV",
+        "count": 110
+      },
+      {
+        "sku": "81000-0114",
+        "count": 94
+      },
+      {
+        "sku": "3000Q-0250-100-BO",
+        "count": 78
+      },
+      {
+        "sku": "80301-0257-GAV",
+        "count": 72
+      },
+      {
+        "sku": "81000-0008",
+        "count": 50
+      },
+      {
+        "sku": "91000-0002-HS",
+        "count": 49
+      },
+      {
+        "sku": "50801-0012-GAV-120",
+        "count": 39
+      },
+      {
+        "sku": "80101-0257-GAV-KIT",
+        "count": 38
+      }
+    ]
+  }
+}

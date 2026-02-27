@@ -1,0 +1,553 @@
+{
+  "generated_at": "2026-02-27T03:44:07.172Z",
+  "api_base": "https://pallet-configurator.vercel.app",
+  "rows_analyzed": 20,
+  "total_likely_physical_excluded": 45,
+  "top_excluded_likely_physical_skus": [
+    {
+      "sku": "80301-0202-RAW",
+      "count": 8
+    },
+    {
+      "sku": "80101-0172-BLK13",
+      "count": 5
+    },
+    {
+      "sku": "80301-0166-RAW",
+      "count": 5
+    },
+    {
+      "sku": "80301-0088-RAW",
+      "count": 3
+    },
+    {
+      "sku": "80301-0287-RAW",
+      "count": 3
+    },
+    {
+      "sku": "80301-0151-SS",
+      "count": 3
+    },
+    {
+      "sku": "80101-1172-BLK13",
+      "count": 2
+    },
+    {
+      "sku": "90101-1172-BLK13",
+      "count": 2
+    },
+    {
+      "sku": "80301-0163-RAW",
+      "count": 2
+    },
+    {
+      "sku": "80101-0335-GRY14",
+      "count": 1
+    },
+    {
+      "sku": "90101-0172-BLK13",
+      "count": 1
+    },
+    {
+      "sku": "34051-0250-0200",
+      "count": 1
+    },
+    {
+      "sku": "40304-0305-Z04",
+      "count": 1
+    },
+    {
+      "sku": "80101-1172-BLK23-T",
+      "count": 1
+    },
+    {
+      "sku": "90101-0151-SS",
+      "count": 1
+    },
+    {
+      "sku": "80301-0281-BLK06",
+      "count": 1
+    },
+    {
+      "sku": "61211-0004",
+      "count": 1
+    },
+    {
+      "sku": "61211-0005",
+      "count": 1
+    },
+    {
+      "sku": "80101-0088-GAV",
+      "count": 1
+    },
+    {
+      "sku": "80101-0287-GAV",
+      "count": 1
+    },
+    {
+      "sku": "80301-0093-C-RAW",
+      "count": 1
+    }
+  ],
+  "rows": [
+    {
+      "sales_order_id": "SO6870",
+      "predicted": 21,
+      "actual": 3,
+      "delta": 18,
+      "raw_lines_count": 0,
+      "included_count": 281,
+      "excluded_count": 3,
+      "likely_physical_excluded_count": 2,
+      "likely_physical_excluded": [
+        {
+          "sku": "80301-0088-RAW",
+          "qty": 63,
+          "reason": "component_of_parent"
+        },
+        {
+          "sku": "80301-0287-RAW",
+          "qty": 63,
+          "reason": "component_of_parent"
+        }
+      ]
+    },
+    {
+      "sales_order_id": "SO6870",
+      "predicted": 21,
+      "actual": 5,
+      "delta": 16,
+      "raw_lines_count": 0,
+      "included_count": 281,
+      "excluded_count": 3,
+      "likely_physical_excluded_count": 2,
+      "likely_physical_excluded": [
+        {
+          "sku": "80301-0088-RAW",
+          "qty": 63,
+          "reason": "component_of_parent"
+        },
+        {
+          "sku": "80301-0287-RAW",
+          "qty": 63,
+          "reason": "component_of_parent"
+        }
+      ]
+    },
+    {
+      "sales_order_id": "SO6310",
+      "predicted": 12,
+      "actual": 1,
+      "delta": 11,
+      "raw_lines_count": 0,
+      "included_count": 84,
+      "excluded_count": 2,
+      "likely_physical_excluded_count": 2,
+      "likely_physical_excluded": [
+        {
+          "sku": "80101-0172-BLK13",
+          "qty": 94,
+          "reason": "component_of_parent"
+        },
+        {
+          "sku": "80101-0335-GRY14",
+          "qty": 6,
+          "reason": "component_of_parent"
+        }
+      ]
+    },
+    {
+      "sales_order_id": "SO6870",
+      "predicted": 21,
+      "actual": 12,
+      "delta": 9,
+      "raw_lines_count": 0,
+      "included_count": 281,
+      "excluded_count": 3,
+      "likely_physical_excluded_count": 2,
+      "likely_physical_excluded": [
+        {
+          "sku": "80301-0088-RAW",
+          "qty": 63,
+          "reason": "component_of_parent"
+        },
+        {
+          "sku": "80301-0287-RAW",
+          "qty": 63,
+          "reason": "component_of_parent"
+        }
+      ]
+    },
+    {
+      "sales_order_id": "SO6764",
+      "predicted": 10,
+      "actual": 2,
+      "delta": 8,
+      "raw_lines_count": 0,
+      "included_count": 56,
+      "excluded_count": 0,
+      "likely_physical_excluded_count": 0,
+      "likely_physical_excluded": []
+    },
+    {
+      "sales_order_id": "SO6465",
+      "predicted": 13,
+      "actual": 5,
+      "delta": 8,
+      "raw_lines_count": 0,
+      "included_count": 30,
+      "excluded_count": 2,
+      "likely_physical_excluded_count": 1,
+      "likely_physical_excluded": [
+        {
+          "sku": "80101-0172-BLK13",
+          "qty": 2,
+          "reason": "component_of_parent"
+        }
+      ]
+    },
+    {
+      "sales_order_id": "SO6993",
+      "predicted": 12,
+      "actual": 6,
+      "delta": 6,
+      "raw_lines_count": 0,
+      "included_count": 16,
+      "excluded_count": 1,
+      "likely_physical_excluded_count": 0,
+      "likely_physical_excluded": []
+    },
+    {
+      "sales_order_id": "SO7262",
+      "predicted": 13,
+      "actual": 7,
+      "delta": 6,
+      "raw_lines_count": 0,
+      "included_count": 75,
+      "excluded_count": 9,
+      "likely_physical_excluded_count": 9,
+      "likely_physical_excluded": [
+        {
+          "sku": "80101-0172-BLK13",
+          "qty": 1,
+          "reason": "component_of_parent"
+        },
+        {
+          "sku": "80101-0172-BLK13",
+          "qty": 4,
+          "reason": "component_of_parent"
+        },
+        {
+          "sku": "80101-1172-BLK13",
+          "qty": 0,
+          "reason": "qty_zero"
+        },
+        {
+          "sku": "80101-1172-BLK13",
+          "qty": 0,
+          "reason": "qty_zero"
+        },
+        {
+          "sku": "80301-0166-RAW",
+          "qty": 2,
+          "reason": "component_of_parent"
+        },
+        {
+          "sku": "80301-0166-RAW",
+          "qty": 2,
+          "reason": "component_of_parent"
+        },
+        {
+          "sku": "90101-0172-BLK13",
+          "qty": 0,
+          "reason": "qty_zero"
+        },
+        {
+          "sku": "90101-1172-BLK13",
+          "qty": 0,
+          "reason": "qty_zero"
+        },
+        {
+          "sku": "90101-1172-BLK13",
+          "qty": 0,
+          "reason": "qty_zero"
+        }
+      ]
+    },
+    {
+      "sales_order_id": "SO7703",
+      "predicted": 12,
+      "actual": 7,
+      "delta": 5,
+      "raw_lines_count": 0,
+      "included_count": 62,
+      "excluded_count": 2,
+      "likely_physical_excluded_count": 1,
+      "likely_physical_excluded": [
+        {
+          "sku": "80101-0172-BLK13",
+          "qty": 25,
+          "reason": "component_of_parent"
+        }
+      ]
+    },
+    {
+      "sales_order_id": "SO5602",
+      "predicted": 2,
+      "actual": 6,
+      "delta": -4,
+      "raw_lines_count": 0,
+      "included_count": 2,
+      "excluded_count": 3,
+      "likely_physical_excluded_count": 3,
+      "likely_physical_excluded": [
+        {
+          "sku": "34051-0250-0200",
+          "qty": 48,
+          "reason": "component_of_parent"
+        },
+        {
+          "sku": "40304-0305-Z04",
+          "qty": 12,
+          "reason": "component_of_parent"
+        },
+        {
+          "sku": "80101-1172-BLK23-T",
+          "qty": 12,
+          "reason": "component_of_parent"
+        }
+      ]
+    },
+    {
+      "sales_order_id": "SO7681",
+      "predicted": 9,
+      "actual": 5,
+      "delta": 4,
+      "raw_lines_count": 0,
+      "included_count": 87,
+      "excluded_count": 3,
+      "likely_physical_excluded_count": 3,
+      "likely_physical_excluded": [
+        {
+          "sku": "80301-0163-RAW",
+          "qty": 6,
+          "reason": "component_of_parent"
+        },
+        {
+          "sku": "80301-0166-RAW",
+          "qty": 1,
+          "reason": "component_of_parent"
+        },
+        {
+          "sku": "80301-0166-RAW",
+          "qty": 1,
+          "reason": "component_of_parent"
+        }
+      ]
+    },
+    {
+      "sales_order_id": "SO7365",
+      "predicted": 9,
+      "actual": 5,
+      "delta": 4,
+      "raw_lines_count": 0,
+      "included_count": 40,
+      "excluded_count": 5,
+      "likely_physical_excluded_count": 5,
+      "likely_physical_excluded": [
+        {
+          "sku": "80301-0151-SS",
+          "qty": 1,
+          "reason": "component_of_parent"
+        },
+        {
+          "sku": "80301-0151-SS",
+          "qty": 10,
+          "reason": "component_of_parent"
+        },
+        {
+          "sku": "80301-0151-SS",
+          "qty": 10,
+          "reason": "component_of_parent"
+        },
+        {
+          "sku": "80301-0163-RAW",
+          "qty": 12,
+          "reason": "component_of_parent"
+        },
+        {
+          "sku": "90101-0151-SS",
+          "qty": 0,
+          "reason": "qty_zero"
+        }
+      ]
+    },
+    {
+      "sales_order_id": "SO7798",
+      "predicted": 1,
+      "actual": 5,
+      "delta": -4,
+      "raw_lines_count": 0,
+      "included_count": 11,
+      "excluded_count": 1,
+      "likely_physical_excluded_count": 0,
+      "likely_physical_excluded": []
+    },
+    {
+      "sales_order_id": "SO6608",
+      "predicted": 4,
+      "actual": 8,
+      "delta": -4,
+      "raw_lines_count": 0,
+      "included_count": 79,
+      "excluded_count": 7,
+      "likely_physical_excluded_count": 2,
+      "likely_physical_excluded": [
+        {
+          "sku": "80301-0166-RAW",
+          "qty": 11,
+          "reason": "component_of_parent"
+        },
+        {
+          "sku": "80301-0281-BLK06",
+          "qty": 50,
+          "reason": "component_of_parent"
+        }
+      ]
+    },
+    {
+      "sales_order_id": "SO7058",
+      "predicted": 8,
+      "actual": 4,
+      "delta": 4,
+      "raw_lines_count": 0,
+      "included_count": 30,
+      "excluded_count": 5,
+      "likely_physical_excluded_count": 0,
+      "likely_physical_excluded": []
+    },
+    {
+      "sales_order_id": "SO7099",
+      "predicted": 11,
+      "actual": 7,
+      "delta": 4,
+      "raw_lines_count": 0,
+      "included_count": 214,
+      "excluded_count": 5,
+      "likely_physical_excluded_count": 4,
+      "likely_physical_excluded": [
+        {
+          "sku": "80301-0202-RAW",
+          "qty": 4,
+          "reason": "component_of_parent"
+        },
+        {
+          "sku": "80301-0202-RAW",
+          "qty": 5,
+          "reason": "component_of_parent"
+        },
+        {
+          "sku": "80301-0202-RAW",
+          "qty": 1,
+          "reason": "component_of_parent"
+        },
+        {
+          "sku": "80301-0202-RAW",
+          "qty": 19,
+          "reason": "component_of_parent"
+        }
+      ]
+    },
+    {
+      "sales_order_id": "SO7099",
+      "predicted": 11,
+      "actual": 7,
+      "delta": 4,
+      "raw_lines_count": 0,
+      "included_count": 214,
+      "excluded_count": 5,
+      "likely_physical_excluded_count": 4,
+      "likely_physical_excluded": [
+        {
+          "sku": "80301-0202-RAW",
+          "qty": 4,
+          "reason": "component_of_parent"
+        },
+        {
+          "sku": "80301-0202-RAW",
+          "qty": 5,
+          "reason": "component_of_parent"
+        },
+        {
+          "sku": "80301-0202-RAW",
+          "qty": 1,
+          "reason": "component_of_parent"
+        },
+        {
+          "sku": "80301-0202-RAW",
+          "qty": 19,
+          "reason": "component_of_parent"
+        }
+      ]
+    },
+    {
+      "sales_order_id": "SO7198",
+      "predicted": 5,
+      "actual": 1,
+      "delta": 4,
+      "raw_lines_count": 0,
+      "included_count": 2,
+      "excluded_count": 5,
+      "likely_physical_excluded_count": 5,
+      "likely_physical_excluded": [
+        {
+          "sku": "61211-0004",
+          "qty": 125,
+          "reason": "component_of_parent"
+        },
+        {
+          "sku": "61211-0005",
+          "qty": 62,
+          "reason": "component_of_parent"
+        },
+        {
+          "sku": "80101-0088-GAV",
+          "qty": 125,
+          "reason": "component_of_parent"
+        },
+        {
+          "sku": "80101-0287-GAV",
+          "qty": 125,
+          "reason": "component_of_parent"
+        },
+        {
+          "sku": "80301-0093-C-RAW",
+          "qty": 125,
+          "reason": "component_of_parent"
+        }
+      ]
+    },
+    {
+      "sales_order_id": "SO6684",
+      "predicted": 8,
+      "actual": 4,
+      "delta": 4,
+      "raw_lines_count": 0,
+      "included_count": 41,
+      "excluded_count": 0,
+      "likely_physical_excluded_count": 0,
+      "likely_physical_excluded": []
+    },
+    {
+      "sales_order_id": "SO6761",
+      "predicted": 11,
+      "actual": 7,
+      "delta": 4,
+      "raw_lines_count": 0,
+      "included_count": 29,
+      "excluded_count": 0,
+      "likely_physical_excluded_count": 0,
+      "likely_physical_excluded": []
+    }
+  ]
+}

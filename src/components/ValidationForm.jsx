@@ -395,7 +395,7 @@ export default function ValidationForm() {
               {/* Unknown SKUs callout */}
               {success.diagnostics?.unknownSkus?.length > 0 && (
                 <div className="unknown-callout">
-                  <strong>{success.diagnostics.unknownSkus.length} unknown SKU{success.diagnostics.unknownSkus.length !== 1 ? 's' : ''}</strong> &mdash; these default to 1 pallet per 10 units. Flag them above if the count is wrong.
+                  <strong>{success.diagnostics.unknownSkus.length} unknown SKU{success.diagnostics.unknownSkus.length !== 1 ? 's' : ''}</strong> &mdash; prediction confidence is reduced and may require manual review.
                 </div>
               )}
             </div>
