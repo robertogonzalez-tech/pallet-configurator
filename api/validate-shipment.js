@@ -1122,6 +1122,93 @@ function consolidatePackages(packages) {
   };
 }
 
+function modeledFamilyCountFromBreakdown(breakdown) {
+  const skip = new Set(['RIDE_ALONG', 'UNKNOWN', 'SKU_OVERRIDE', 'UNKNOWN_FALLBACK', 'ZERO_FLOOR']);
+  const families = new Set();
+  for (const row of (Array.isArray(breakdown) ? breakdown : [])) {
+    const pallets = Number(row?.pallets) || 0;
+    if (pallets <= 0) continue;
+    const matched = String(row?.matched || row?.family || '').trim();
+    if (!matched || skip.has(matched)) continue;
+    families.add(matched);
+  }
+  return families.size;
+}
+
+function applyHighFamilyConsolidation(packages) {
+  if (!Array.isArray(packages) || packages.length < 2) {
+    return { packages, applied: false, merge: null };
+  }
+
+  const MAX_COMBINED_WEIGHT = 2200;
+  const keepFamilies = new Set(['UNKNOWN', 'UNKNOWN_FALLBACK', 'SKU_OVERRIDE']);
+
+  const packageFamilies = (pkg) => {
+    const out = new Set();
+    for (const content of (pkg?.contents || [])) {
+      const matched = String(content?.matched || '').trim();
+      if (!matched || keepFamilies.has(matched)) continue;
+      out.add(matched);
+    }
+    if (out.size === 0 && pkg?.family) out.add(String(pkg.family));
+    return out;
+  };
+
+  const candidates = packages
+    .map((pkg, idx) => ({ ...pkg, _idx: idx, _families: packageFamilies(pkg) }))
+    .filter((pkg) => pkg.type === 'standard_pallet' && pkg.mergeable);
+
+  if (candidates.length < 2) return { packages, applied: false, merge: null };
+
+  let best = null;
+  for (let i = 0; i < candidates.length; i += 1) {
+    for (let j = 0; j < candidates.length; j += 1) {
+      if (i === j) continue;
+      const host = candidates[i];
+      const merged = candidates[j];
+      const combinedWeight = (host.weight || 0) + (merged.weight || 0);
+      if (combinedWeight > MAX_COMBINED_WEIGHT) continue;
+
+      let overlaps = false;
+      for (const fam of merged._families) {
+        if (host._families.has(fam)) {
+          overlaps = true;
+          break;
+        }
+      }
+      if (overlaps) continue;
+
+      if (!best || (merged.weight || 0) < (best.merged.weight || 0)) {
+        best = { host, merged, combinedWeight };
+      }
+    }
+  }
+
+  if (!best) return { packages, applied: false, merge: null };
+
+  const next = packages.map((pkg) => ({ ...pkg, contents: [...(pkg.contents || [])] }));
+  const host = next[best.host._idx];
+  const merged = next[best.merged._idx];
+
+  host.weight = (host.weight || 0) + (merged.weight || 0);
+  host.contents.push(...(merged.contents || []));
+  host.consolidatedFrom = [...(host.consolidatedFrom || []), merged.id];
+
+  const compacted = next
+    .filter((_, idx) => idx !== best.merged._idx)
+    .map((pkg, idx) => ({ ...pkg, id: idx + 1 }));
+
+  return {
+    packages: compacted,
+    applied: true,
+    merge: {
+      host: best.host.id,
+      merged: best.merged.id,
+      combinedWeight: best.combinedWeight,
+    },
+  };
+}
+
 function isPotentiallyPhysicalExcluded(line) {
   const sku = normalizeSku(line?.sku || '');
   if (!sku) return false;
@@ -1479,6 +1566,15 @@ function predictPallets(items) {
   const rawPackages = buildPackagesFromBreakdown(breakdown);
   const consolidation = consolidatePackages(rawPackages);
   let packages = consolidation.packages;
+  const modeledFamilyCount = modeledFamilyCountFromBreakdown(breakdown);
+  if (modeledFamilyCount >= 4) {
+    const extraConsolidation = applyHighFamilyConsolidation(packages);
+    if (extraConsolidation.applied) {
+      packages = extraConsolidation.packages;
+      consolidation.merges.push(extraConsolidation.merge);
+      diagnostics.highFamilyConsolidation = extraConsolidation.merge;
+    }
+  }
   const suspiciousExcludedLines = diagnostics.excludedLines.filter(isPotentiallyPhysicalExcluded);
   diagnostics.conservativeLiftPackages = 0;
 
