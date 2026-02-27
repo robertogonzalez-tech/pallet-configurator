@@ -943,6 +943,7 @@ function predictPallets(items) {
     estimatedWeight: 0,
     sources: new Set(),
   };
+  let unknownQtyTotal = 0;
 
   for (const item of items) {
     if (!item.qty || item.qty === 0) {
@@ -1114,6 +1115,7 @@ function predictPallets(items) {
       } else {
         diagnostics.unknownProducts++;
         diagnostics.unknownSkus.push(item.sku);
+        unknownQtyTotal += Math.max(0, item.qty || 0);
         diagnostics.includedLines.push({
           sku: normSku,
           name: item.name || 'Unknown Item',
@@ -1207,6 +1209,23 @@ function predictPallets(items) {
       totalPallets += row.pallets;
       totalWeight += row.weight;
     }
+  }
+
+  // Controlled floor for unknown-heavy orders: avoid zero-package predictions
+  // while still preventing large component-driven overcounts.
+  if (totalPallets === 0 && diagnostics.unknownProducts > 0) {
+    const fallbackPallets = Math.max(1, Math.min(4, Math.ceil(unknownQtyTotal / 100)));
+    const fallbackWeight = Math.max(75, Math.min(1200, Math.round(unknownQtyTotal * 10)));
+    totalPallets += fallbackPallets;
+    totalWeight += fallbackWeight;
+    breakdown.push({
+      sku: 'UNKNOWN-FALLBACK',
+      name: 'Unknown item fallback bundle',
+      qty: unknownQtyTotal,
+      pallets: fallbackPallets,
+      weight: fallbackWeight,
+      matched: 'UNKNOWN_FALLBACK',
+    });
   }
 
   const rawPackages = buildPackagesFromBreakdown(breakdown);
