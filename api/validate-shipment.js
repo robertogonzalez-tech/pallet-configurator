@@ -383,6 +383,17 @@ function classifyItem(sku, name, orderHasParents) {
   const skuLower = (sku || '').toLowerCase().trim();
   const nameLower = (name || '').toLowerCase().trim();
 
+  // Most -KIT lines are component bundles that ride with a parent product.
+  // Keep explicit product kits whitelisted in isFlagBypassItem/legacy mappings.
+  if (
+    skuLower.endsWith('-kit') &&
+    !skuLower.startsWith('80101-0257') &&
+    !skuLower.startsWith('80101-0258') &&
+    !skuLower.startsWith('dd-')
+  ) {
+    return 'hardware';
+  }
+
   // 1. Non-shippable (fees, services, notes)
   if (NON_SHIPPABLE_EXACT.has(skuLower) || NON_SHIPPABLE_EXACT.has(nameLower)) return 'non_shippable';
   for (const prefix of NON_SHIPPABLE_STARTSWITH) {
@@ -1117,8 +1128,9 @@ function predictPallets(items) {
             itemType: item.itemType || '',
           },
         });
-        const pallets = Math.ceil(item.qty / 10);
-        breakdown.push({ sku: normSku, name: item.name, qty: item.qty, pallets, weight: Math.round(item.qty * 25), matched: 'UNKNOWN' });
+        // Unknown defaults to review-required and zero counted pallets to avoid
+        // systematic overprediction from component/variant lines.
+        breakdown.push({ sku: normSku, name: item.name, qty: item.qty, pallets: 0, weight: 0, matched: 'UNKNOWN' });
       }
       continue;
     }
