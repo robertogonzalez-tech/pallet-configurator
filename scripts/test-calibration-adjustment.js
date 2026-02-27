@@ -214,4 +214,22 @@ run(
   'exact_legacy_vr2_12_blk13_minus1'
 );
 
+run(
+  'exact_fc4plus_base_vr2_longtube_20_minus1',
+  {
+    breakdown: [
+      row('RIDE_ALONG', 1896),
+      row('LONG_TUBE_TRIGGER', 35),
+      row('Base Station', 3),
+      row('Hoop Runner', 40),
+      row('VR2 Offset', 48),
+      row('LONG_TUBE', 17),
+    ],
+    currentPallets: 7,
+    orderRef: 'SO7482',
+  },
+  -1,
+  'exact_fc4plus_base_vr2_longtube_20_minus1'
+);
+
 console.log('All calibration tests passed.');

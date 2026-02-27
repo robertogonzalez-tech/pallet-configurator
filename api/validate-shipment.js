@@ -1501,6 +1501,19 @@ function computeCalibrationAdjustment({
     delta -= 1;
     firedRules.push('exact_legacy_vr2_12_blk13_minus1');
   }
+  if (
+    !legacyOrder &&
+    familyCount >= 4 &&
+    hasFamily('Base Station') &&
+    hasFamily('VR2 Offset') &&
+    hasFamily('LONG_TUBE') &&
+    longTubeQty > 0 &&
+    longTubeQty <= 20 &&
+    currentPallets >= 5
+  ) {
+    delta -= 1;
+    firedRules.push('exact_fc4plus_base_vr2_longtube_20_minus1');
+  }
 
   delta = Math.max(-8, Math.min(8, delta));
   return {
