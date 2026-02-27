@@ -240,6 +240,19 @@ function classifyItem(sku, name, orderHasParents) {
   return 'product';
 }
 
+function detectOrderParents(items) {
+  const parents = new Set();
+  for (const item of items) {
+    const skuLower = String(item?.sku || '').toLowerCase().trim();
+    for (const parentPrefix of Object.keys(COMPONENT_SUPPRESSION)) {
+      if (skuLower.startsWith(parentPrefix)) {
+        parents.add(parentPrefix);
+      }
+    }
+  }
+  return parents;
+}
+
 // ============================================================
 // PRODUCT LOOKUP
 // ============================================================
@@ -377,6 +390,45 @@ function isRideAlongItem(item) {
   return false;
 }
 
+function parseLengthFromSkuOrName(item) {
+  const normSku = normalizeSku(item?.sku);
+  const name = String(item?.name || '').toUpperCase();
+
+  // 50801-0012-GAV-120 -> 120
+  const railSuffix = normSku.match(/-(\d{2,3})$/);
+  if (railSuffix) return parseInt(railSuffix[1], 10);
+
+  // SIK120-3R-METAL -> 120
+  const sikLen = normSku.match(/^SIK(\d{2,3})/);
+  if (sikLen) return parseInt(sikLen[1], 10);
+
+  // Name fallback: "... 120\" ..."
+  const nameLen = name.match(/\b(\d{2,3})\s*"/);
+  if (nameLen) return parseInt(nameLen[1], 10);
+
+  return 0;
+}
+
+function isLongTubeTriggerItem(item) {
+  const normSku = normalizeSku(item?.sku);
+  const name = String(item?.name || '').toUpperCase();
+  return (
+    normSku.startsWith('50801-') ||
+    normSku.startsWith('SIK') ||
+    name.includes('UNISTRUT') ||
+    (name.includes('STRUT') && name.includes('KIT'))
+  );
+}
+
+function estimateLongTubePallets(state) {
+  // Conservative rule:
+  // - any 100\"+ rail/tube bundle creates a dedicated long-tube package
+  // - shorter rails can still ride with host pallets
+  if (!state || state.triggerLines === 0) return 0;
+  if (state.maxLength >= 100) return 1;
+  return 0;
+}
+
 function estimateDDPallets(qty, bikeCount) {
   if (bikeCount === 4) {
     const trays = Math.ceil((qty * 2) / 21);
@@ -484,6 +536,7 @@ function computePalletsForFamily(family, qty, sku, name, familyState = {}) {
 function predictPallets(items) {
   const diagnostics = {
     totalLines: items.length,
+    rawLinesCount: items.length,
     filteredNonShippable: 0,
     filteredHardware: 0,
     filteredPackaging: 0,
@@ -491,33 +544,149 @@ function predictPallets(items) {
     knownProducts: 0,
     unknownProducts: 0,
     unknownSkus: [],
+    longTubeTriggerLines: 0,
+    longTubePallets: 0,
+    includedLines: [],
+    excludedLines: [],
   };
 
   const families = {};
   const breakdown = [];
+  const orderHasParents = detectOrderParents(items);
+  const longTubeState = {
+    triggerLines: 0,
+    totalQty: 0,
+    maxLength: 0,
+    estimatedWeight: 0,
+    sources: new Set(),
+  };
 
   for (const item of items) {
     if (!item.qty || item.qty === 0) {
       diagnostics.filteredNonShippable++;
-      continue;
-    }
-
-    if (item.kitComponent) {
-      diagnostics.filteredComponents++;
+      diagnostics.excludedLines.push({
+        sku: normalizeSku(item.sku || 'UNKNOWN'),
+        name: item.name || 'Unknown Item',
+        qty: item.qty || 0,
+        reason: 'qty_zero',
+        flags: {
+          fulfillable: !!item.fulfillable,
+          assemblyComponent: !!item.assemblyComponent,
+          kitComponent: !!item.kitComponent,
+          itemType: item.itemType || '',
+        },
+      });
       continue;
     }
 
     const normSku = normalizeSku(item.sku || 'UNKNOWN');
-    const classification = classifyItem(item.sku, item.name, new Set());
+    const classification = classifyItem(item.sku, item.name, orderHasParents);
 
-    if (classification === 'non_shippable') { diagnostics.filteredNonShippable++; continue; }
-    if (classification === 'packaging') { diagnostics.filteredPackaging++; continue; }
+    if (classification === 'non_shippable') {
+      diagnostics.filteredNonShippable++;
+      diagnostics.excludedLines.push({
+        sku: normSku,
+        name: item.name || 'Unknown Item',
+        qty: item.qty,
+        reason: 'non_shippable',
+        classification,
+        flags: {
+          fulfillable: !!item.fulfillable,
+          assemblyComponent: !!item.assemblyComponent,
+          kitComponent: !!item.kitComponent,
+          itemType: item.itemType || '',
+        },
+      });
+      continue;
+    }
+    if (classification === 'packaging') {
+      diagnostics.filteredPackaging++;
+      diagnostics.excludedLines.push({
+        sku: normSku,
+        name: item.name || 'Unknown Item',
+        qty: item.qty,
+        reason: 'packaging',
+        classification,
+        flags: {
+          fulfillable: !!item.fulfillable,
+          assemblyComponent: !!item.assemblyComponent,
+          kitComponent: !!item.kitComponent,
+          itemType: item.itemType || '',
+        },
+      });
+      continue;
+    }
+    if (classification === 'component_of_parent') {
+      diagnostics.filteredComponents++;
+      diagnostics.excludedLines.push({
+        sku: normSku,
+        name: item.name || 'Unknown Item',
+        qty: item.qty,
+        reason: 'component_of_parent',
+        classification,
+        flags: {
+          fulfillable: !!item.fulfillable,
+          assemblyComponent: !!item.assemblyComponent,
+          kitComponent: !!item.kitComponent,
+          itemType: item.itemType || '',
+        },
+      });
+      continue;
+    }
+
+    if (isLongTubeTriggerItem(item)) {
+      const lengthIn = parseLengthFromSkuOrName(item);
+      diagnostics.longTubeTriggerLines++;
+      longTubeState.triggerLines += 1;
+      longTubeState.totalQty += Math.max(0, item.qty || 0);
+      longTubeState.maxLength = Math.max(longTubeState.maxLength, lengthIn);
+      longTubeState.sources.add(normSku);
+      const perPieceWeight = lengthIn >= 114 ? 8 : lengthIn >= 100 ? 7 : lengthIn >= 86 ? 6 : 5;
+      longTubeState.estimatedWeight += (Math.max(0, item.qty || 0) * perPieceWeight);
+
+      diagnostics.includedLines.push({
+        sku: normSku,
+        name: item.name || 'Unknown Item',
+        qty: item.qty,
+        mode: 'long_tube_trigger',
+        classification,
+        meta: { lengthIn },
+        flags: {
+          fulfillable: !!item.fulfillable,
+          assemblyComponent: !!item.assemblyComponent,
+          kitComponent: !!item.kitComponent,
+          itemType: item.itemType || '',
+        },
+      });
+      breakdown.push({
+        sku: normSku,
+        name: item.name,
+        qty: item.qty,
+        pallets: 0,
+        weight: 0,
+        matched: 'LONG_TUBE_TRIGGER',
+      });
+      continue;
+    }
 
     const rideAlong = isRideAlongItem(item) || classification === 'hardware';
     const product = lookupProduct(item.sku);
 
     if (rideAlong) {
       diagnostics.filteredHardware++;
+      diagnostics.includedLines.push({
+        sku: normSku,
+        name: item.name || 'Unknown Item',
+        qty: item.qty,
+        mode: 'ride_along',
+        classification,
+        flags: {
+          fulfillable: !!item.fulfillable,
+          assemblyComponent: !!item.assemblyComponent,
+          kitComponent: !!item.kitComponent,
+          itemType: item.itemType || '',
+        },
+      });
       breakdown.push({ sku: normSku, name: item.name, qty: item.qty, pallets: 0, weight: 0, matched: 'RIDE_ALONG' });
       continue;
     }
@@ -527,10 +696,36 @@ function predictPallets(items) {
       if (overrideUpp) {
         const pallets = Math.ceil(item.qty / overrideUpp);
         diagnostics.knownProducts++;
+        diagnostics.includedLines.push({
+          sku: normSku,
+          name: item.name || 'Unknown Item',
+          qty: item.qty,
+          mode: 'sku_override',
+          classification: 'product',
+          flags: {
+            fulfillable: !!item.fulfillable,
+            assemblyComponent: !!item.assemblyComponent,
+            kitComponent: !!item.kitComponent,
+            itemType: item.itemType || '',
+          },
+        });
         breakdown.push({ sku: normSku, name: item.name, qty: item.qty, pallets, weight: Math.round(item.qty * 50), matched: 'SKU_OVERRIDE' });
       } else {
         diagnostics.unknownProducts++;
         diagnostics.unknownSkus.push(item.sku);
+        diagnostics.includedLines.push({
+          sku: normSku,
+          name: item.name || 'Unknown Item',
+          qty: item.qty,
+          mode: 'unknown_fallback',
+          classification: 'product',
+          flags: {
+            fulfillable: !!item.fulfillable,
+            assemblyComponent: !!item.assemblyComponent,
+            kitComponent: !!item.kitComponent,
+            itemType: item.itemType || '',
+          },
+        });
         const pallets = Math.ceil(item.qty / 10);
         breakdown.push({ sku: normSku, name: item.name, qty: item.qty, pallets, weight: Math.round(item.qty * 25), matched: 'UNKNOWN' });
       }
@@ -538,6 +733,20 @@ function predictPallets(items) {
     }
 
     diagnostics.knownProducts++;
+    diagnostics.includedLines.push({
+      sku: normSku,
+      name: item.name || 'Unknown Item',
+      qty: item.qty,
+      mode: 'family_recipe',
+      family: product.family,
+      classification: 'product',
+      flags: {
+        fulfillable: !!item.fulfillable,
+        assemblyComponent: !!item.assemblyComponent,
+        kitComponent: !!item.kitComponent,
+        itemType: item.itemType || '',
+      },
+    });
     const family = product.family;
     if (!families[family]) {
       families[family] = { qty: 0, skuSample: normSku, nameSample: item.name, weightPerUnit: product.weight || 50, trays: 0, legs: 0, manifolds: 0 };
@@ -568,6 +777,23 @@ function predictPallets(items) {
       pallets,
       weight,
       matched: family,
+    });
+  }
+
+  const longTubePallets = estimateLongTubePallets(longTubeState);
+  if (longTubePallets > 0) {
+    const longTubeWeight = Math.max(40, Math.min(500, Math.round(longTubeState.estimatedWeight)));
+    diagnostics.longTubePallets = longTubePallets;
+    totalPallets += longTubePallets;
+    totalWeight += longTubeWeight;
+    breakdown.push({
+      sku: 'LONG-TUBE',
+      name: `Long tube bundle (${longTubeState.maxLength || 'unknown'}")`,
+      qty: longTubeState.totalQty,
+      pallets: longTubePallets,
+      weight: longTubeWeight,
+      matched: 'LONG_TUBE',
+      sources: Array.from(longTubeState.sources),
     });
   }
 
@@ -632,21 +858,20 @@ async function getSalesOrderViaSuiteQL(soNumber) {
 
   const soId = soData.items[0].id;
 
-  // Pick ticket filter: only items that appear on physical pick tickets
-  // fulfillable=T excludes Group headers, services, shipping
-  // assemblyComponent=F excludes BOM components (raw materials, coating services)
-  // itemType filter excludes non-physical line types
+  // Gate 1 input completeness:
+  // Pull all non-main physical item lines, then let classification decide what
+  // contributes to pallets. This keeps shippable rails/kits visible even when
+  // NetSuite flags them as assembly components or non-fulfillable.
   const itemsQuery = `
     SELECT i.itemid AS sku, i.displayname AS name, tl.quantity,
-           tl.kitComponent, tl.itemType
+           tl.kitComponent, tl.itemType, tl.fulfillable, tl.assemblyComponent
     FROM transactionline tl
     LEFT JOIN item i ON i.id = tl.item
     WHERE tl.transaction = ${soId}
       AND tl.mainLine = 'F'
       AND tl.item IS NOT NULL
-      AND tl.fulfillable = 'T'
-      AND tl.assemblyComponent = 'F'
       AND tl.itemType NOT IN ('Service', 'ShipItem', 'TaxGroup')
+      AND COALESCE(tl.quantity, 0) <> 0
   `;
 
   const itemsUrl = `https://${config.accountId}.suitetalk.api.netsuite.com/services/rest/query/v1/suiteql?limit=1000&offset=0`;
@@ -675,6 +900,8 @@ async function getSalesOrderViaSuiteQL(soNumber) {
     name: row.name || row.displayname || 'Unknown Item',
     qty: Math.abs(parseInt(row.quantity, 10) || 0),
     kitComponent: row.kitcomponent === 'T',
+    fulfillable: row.fulfillable === 'T',
+    assemblyComponent: row.assemblycomponent === 'T',
     itemType: row.itemtype || '',
   }));
 

@@ -580,7 +580,7 @@ function App() {
           if (item === 'Product Summary' || item.includes('Product Summary')) continue
           
           // Skip common non-product items (services, fees, etc.)
-          const skipPatterns = ['freight', 'shipping', 'labor', 'install', 'service', 'fee', 'tax', 'discount']
+          const skipPatterns = ['freight', 'shipping', 'labor', 'installation', 'service', 'fee', 'tax', 'discount']
           if (skipPatterns.some(p => item.toLowerCase().includes(p))) continue
           
           // Skip kit SKUs that ship with main products (DD kits, anchor kits, etc.)
@@ -595,7 +595,6 @@ function App() {
             /^3000[PQ]-/i,          // Screws (3000P-, 3000Q-)
             /^31000-/i,             // Washers (31000-)
             /^39000-/i,             // Nuts (39000-)
-            /^50801-/i,             // Unistrut (50801-)
             /^81000-/i,             // Anchor/hardware kits (81000-)
           ]
           if (kitSkuPatterns.some(pattern => pattern.test(item))) {
