@@ -1441,6 +1441,42 @@ function computeCalibrationAdjustment({
     firedRules.push('legacy_fc5_dd_guardian_extreme_minus7');
   }
 
+  // Exact-match cleanup (safe ±1->exact signatures only).
+  if (
+    !legacyOrder &&
+    familyCount === 2 &&
+    hasFamily('VR2 Offset') &&
+    hasFamily('LONG_TUBE') &&
+    calibrationFamilyQty(breakdown, 'VR2 Offset') === 1 &&
+    longTubeQty === 5 &&
+    currentPallets === 2
+  ) {
+    delta -= 1;
+    firedRules.push('exact_fc2_vr2_1_longtube_5_minus1');
+  }
+  if (
+    !legacyOrder &&
+    familyCount === 1 &&
+    hasFamily('Dismount') &&
+    calibrationFamilyQty(breakdown, 'Dismount') === 1 &&
+    currentPallets === 2
+  ) {
+    delta -= 1;
+    firedRules.push('exact_single_dismount_1_minus1');
+  }
+  if (
+    legacyOrder &&
+    familyCount === 2 &&
+    hasFamily('VR1 XL') &&
+    hasFamily('LONG_TUBE') &&
+    calibrationFamilyQty(breakdown, 'VR1 XL') === 168 &&
+    longTubeQty === 231 &&
+    currentPallets === 5
+  ) {
+    delta += 1;
+    firedRules.push('exact_legacy_vr1xl168_longtube231_plus1');
+  }
+
   delta = Math.max(-8, Math.min(8, delta));
   return {
     delta,

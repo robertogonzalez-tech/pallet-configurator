@@ -153,4 +153,37 @@ run(
   'fc2_hoop_saris_high_minus1'
 );
 
+run(
+  'exact_fc2_vr2_1_longtube_5_minus1',
+  {
+    breakdown: [row('VR2 Offset', 1), row('LONG_TUBE', 5)],
+    currentPallets: 2,
+    orderRef: 'SO7287',
+  },
+  -1,
+  'exact_fc2_vr2_1_longtube_5_minus1'
+);
+
+run(
+  'exact_single_dismount_1_minus1',
+  {
+    breakdown: [row('Dismount', 1)],
+    currentPallets: 2,
+    orderRef: 'SO7572',
+  },
+  -1,
+  'exact_single_dismount_1_minus1'
+);
+
+run(
+  'exact_legacy_vr1xl168_longtube231_plus1',
+  {
+    breakdown: [row('VR1 XL', 168), row('LONG_TUBE', 231)],
+    currentPallets: 5,
+    orderRef: 'SO6571',
+  },
+  1,
+  'exact_legacy_vr1xl168_longtube231_plus1'
+);
+
 console.log('All calibration tests passed.');
