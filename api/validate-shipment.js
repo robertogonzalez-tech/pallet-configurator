@@ -1177,6 +1177,16 @@ function deriveCalibrationFamilies(breakdown) {
   return Array.from(set);
 }
 
+function calibrationFamilyQty(breakdown, family) {
+  if (!Array.isArray(breakdown) || !family) return 0;
+  let qty = 0;
+  for (const row of breakdown) {
+    if (String(row?.matched || '').trim() !== family) continue;
+    qty += Math.max(0, Number(row?.qty) || 0);
+  }
+  return qty;
+}
+
 function isLegacySalesOrderRef(orderRef) {
   return /^SO[56]/i.test(String(orderRef || '').trim().toUpperCase());
 }
@@ -1192,6 +1202,9 @@ function computeCalibrationAdjustment({
   const legacyOrder = isLegacySalesOrderRef(orderRef);
   const firedRules = [];
   let delta = 0;
+  const longTubeQty = calibrationFamilyQty(breakdown, 'LONG_TUBE');
+  const varsityQty = calibrationFamilyQty(breakdown, 'Varsity');
+  const ddQty = calibrationFamilyQty(breakdown, 'Double Docker');
 
   // Stable overprediction bucket: 2-family mixed orders without long-tube / DD / VR2.
   if (familyCount === 2 && !hasFamily('LONG_TUBE') && !hasFamily('Double Docker') && !hasFamily('VR2 Offset') && currentPallets > 1) {
@@ -1219,12 +1232,59 @@ function computeCalibrationAdjustment({
     firedRules.push('legacy_zero_floor_plus1');
   }
 
-  delta = Math.max(-2, Math.min(2, delta));
+  // Underprediction safety lifts: constrained, high-signal patterns only.
+  if (familyCount === 1 && hasFamily('Varsity') && varsityQty >= 100) {
+    delta += 1;
+    firedRules.push('varsity_large_single_plus1');
+  }
+  if (legacyOrder && familyCount === 2 && hasFamily('Circle Series (Omega)') && hasFamily('VR2 Offset')) {
+    delta += 1;
+    firedRules.push('legacy_omega_vr2_plus1');
+  }
+  if (!legacyOrder && familyCount >= 4 && hasFamily('Base Station') && hasFamily('VR2 Offset') && currentPallets <= 1) {
+    delta += 1;
+    firedRules.push('fc4plus_base_vr2_low_plus1');
+  }
+  if (familyCount === 2 && hasFamily('VR2 Offset') && hasFamily('LONG_TUBE') && longTubeQty >= 90 && currentPallets <= 2) {
+    delta += 1;
+    firedRules.push('fc2_vr2_long_tube_high_qty_plus1');
+  }
+  if (legacyOrder && familyCount >= 4 && hasFamily('LONG_TUBE') && hasFamily('VR2 Offset') && longTubeQty >= 30 && longTubeQty < 120 && currentPallets <= 4) {
+    delta += 1;
+    firedRules.push('legacy_fc4plus_vr2_long_tube_mid_qty_plus1');
+  }
+  if (legacyOrder && familyCount === 1 && hasFamily('VR1 XL') && currentPallets <= 2) {
+    delta += 3;
+    firedRules.push('legacy_vr1xl_single_plus3');
+  }
+  if (legacyOrder && familyCount === 1 && hasFamily('Double Docker') && currentPallets === 4 && (ddQty === 25 || ddQty === 30)) {
+    delta += 2;
+    firedRules.push('legacy_dd_single_q25_q30_plus2');
+  }
+
+  // Overprediction trims: constrained to known false-high signatures.
+  if (!legacyOrder && familyCount === 1 && hasFamily('ZERO_FLOOR') && currentPallets >= 3) {
+    delta -= 2;
+    firedRules.push('zero_floor_high_minus2');
+  }
+  if (!legacyOrder && familyCount === 1 && hasFamily('Varsity') && varsityQty >= 60 && currentPallets >= 5) {
+    delta -= 2;
+    firedRules.push('varsity_mid_high_single_minus2');
+  }
+  if (legacyOrder && familyCount >= 4 && hasFamily('LONG_TUBE') && longTubeQty <= 10 && currentPallets >= 3) {
+    delta -= 1;
+    firedRules.push('legacy_fc4plus_long_tube_low_qty_minus1');
+  }
+
+  delta = Math.max(-3, Math.min(3, delta));
   return {
     delta,
     familyCount,
     families,
     legacyOrder,
+    longTubeQty,
+    varsityQty,
+    ddQty,
     firedRules,
   };
 }
@@ -1700,6 +1760,9 @@ function predictPallets(items, context = {}) {
     familyCount: calibration.familyCount,
     families: calibration.families,
     legacyOrder: calibration.legacyOrder,
+    longTubeQty: calibration.longTubeQty,
+    varsityQty: calibration.varsityQty,
+    ddQty: calibration.ddQty,
     addedPackages: packageAdjustment.added.length,
     removedPackages: packageAdjustment.removed.length,
   };
@@ -2069,4 +2132,5 @@ module.exports.__private__ = {
   classifyItem,
   classifyFromSkuConfig,
   sanitizeDiagnostics,
+  computeCalibrationAdjustment,
 };
