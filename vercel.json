@@ -4,16 +4,10 @@
   ],
   "functions": {
     "api/validate-shipment.js": {
-      "includeFiles": [
-        "public/products.json",
-        "config/sku-classification.json"
-      ]
+      "includeFiles": "{public/products.json,config/sku-classification.json}"
     },
     "api/predict.js": {
-      "includeFiles": [
-        "public/products.json",
-        "config/sku-classification.json"
-      ]
+      "includeFiles": "{public/products.json,config/sku-classification.json}"
     }
   }
 }
