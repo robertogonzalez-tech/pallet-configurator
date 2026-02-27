@@ -228,7 +228,6 @@ function classifyFromSkuConfig(item) {
     if (familyRule.role === 'long_tube_trigger') {
       return {
         classification: 'long_tube_trigger',
-        family: familyRule.family,
         role: familyRule.role,
         source: 'sku_config',
       };
@@ -236,14 +235,19 @@ function classifyFromSkuConfig(item) {
     if (familyRule.role === 'accessory') {
       return {
         classification: 'hardware',
-        family: familyRule.family,
+        role: familyRule.role,
+        source: 'sku_config',
+      };
+    }
+    if (familyRule.role === 'component') {
+      return {
+        classification: 'component_of_parent',
         role: familyRule.role,
         source: 'sku_config',
       };
     }
     return {
       classification: 'product',
-      family: familyRule.family,
       role: familyRule.role,
       source: 'sku_config',
     };
@@ -256,12 +260,7 @@ function classifyFromSkuConfig(item) {
 
   const thirdParty = matchRuleList(rules.thirdParty, sku, name);
   if (thirdParty) {
-    return {
-      classification: 'product',
-      family: 'Guardian',
-      role: 'third_party',
-      source: 'sku_config',
-    };
+    return { classification: 'product', role: 'third_party', source: 'sku_config' };
   }
 
   return null;
