@@ -232,4 +232,68 @@ run(
   'exact_fc4plus_base_vr2_longtube_20_minus1'
 );
 
+run(
+  'exact_dd_varsity_small_no_longtube_minus1_not_overbroad',
+  {
+    breakdown: [
+      row('RIDE_ALONG', 1127),
+      row('VR2 Offset', 24),
+      row('Varsity', 30),
+      row('Double Docker', 8),
+    ],
+    currentPallets: 5,
+    orderRef: 'SO7464',
+  },
+  0,
+  null
+);
+
+run(
+  'exact_dd_varsity_small_no_longtube_minus1',
+  {
+    breakdown: [
+      row('RIDE_ALONG', 111),
+      row('SKU_OVERRIDE', 2),
+      row('Varsity', 2),
+      row('Double Docker', 10),
+    ],
+    currentPallets: 5,
+    orderRef: 'SO7464',
+  },
+  -1,
+  'exact_dd_varsity_small_no_longtube_minus1'
+);
+
+run(
+  'exact_fc2_hoop_vr2_10_11_minus1',
+  {
+    breakdown: [
+      row('RIDE_ALONG', 118),
+      row('Hoop Runner', 1),
+      row('VR2 Offset', 10),
+    ],
+    currentPallets: 2,
+    orderRef: 'SO6518',
+  },
+  -1,
+  'exact_fc2_hoop_vr2_10_11_minus1'
+);
+
+run(
+  'exact_fc3_vr2_varsity_longtube15_20_minus1',
+  {
+    breakdown: [
+      row('RIDE_ALONG', 245),
+      row('LONG_TUBE_TRIGGER', 7),
+      row('VR2 Offset', 10),
+      row('Varsity', 1),
+      row('LONG_TUBE', 18),
+    ],
+    currentPallets: 3,
+    orderRef: 'SO7751',
+  },
+  -1,
+  'exact_fc3_vr2_varsity_longtube15_20_minus1'
+);
+
 console.log('All calibration tests passed.');

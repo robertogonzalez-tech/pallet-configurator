@@ -1514,6 +1514,45 @@ function computeCalibrationAdjustment({
     delta -= 1;
     firedRules.push('exact_fc4plus_base_vr2_longtube_20_minus1');
   }
+  if (
+    hasFamily('Double Docker') &&
+    hasFamily('Varsity') &&
+    !hasFamily('LONG_TUBE') &&
+    varsityQty > 0 &&
+    varsityQty <= 2 &&
+    ddQty > 0 &&
+    ddQty <= 12 &&
+    currentPallets >= 2
+  ) {
+    delta -= 1;
+    firedRules.push('exact_dd_varsity_small_no_longtube_minus1');
+  }
+  if (
+    familyCount === 2 &&
+    hasFamily('Hoop Runner') &&
+    hasFamily('VR2 Offset') &&
+    !hasFamily('LONG_TUBE') &&
+    calibrationFamilyQty(breakdown, 'VR2 Offset') >= 10 &&
+    calibrationFamilyQty(breakdown, 'VR2 Offset') <= 11 &&
+    currentPallets === 2
+  ) {
+    delta -= 1;
+    firedRules.push('exact_fc2_hoop_vr2_10_11_minus1');
+  }
+  if (
+    familyCount === 3 &&
+    hasFamily('VR2 Offset') &&
+    hasFamily('Varsity') &&
+    hasFamily('LONG_TUBE') &&
+    calibrationFamilyQty(breakdown, 'VR2 Offset') === 10 &&
+    calibrationFamilyQty(breakdown, 'Varsity') === 1 &&
+    longTubeQty >= 15 &&
+    longTubeQty <= 20 &&
+    currentPallets === 3
+  ) {
+    delta -= 1;
+    firedRules.push('exact_fc3_vr2_varsity_longtube15_20_minus1');
+  }
 
   delta = Math.max(-8, Math.min(8, delta));
   return {
