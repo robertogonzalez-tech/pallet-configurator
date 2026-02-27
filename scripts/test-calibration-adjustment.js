@@ -186,4 +186,32 @@ run(
   'exact_legacy_vr1xl168_longtube231_plus1'
 );
 
+run(
+  'exact_single_dismount12_grey14_plus1',
+  {
+    breakdown: [
+      row('RIDE_ALONG', 168),
+      { matched: 'Dismount', qty: 12, sku: '89901-2050-GRY14' },
+    ],
+    currentPallets: 2,
+    orderRef: 'SO7021',
+  },
+  1,
+  'exact_single_dismount12_grey14_plus1'
+);
+
+run(
+  'exact_legacy_vr2_12_blk13_minus1',
+  {
+    breakdown: [
+      row('RIDE_ALONG', 25),
+      { matched: 'VR2 Offset', qty: 12, sku: '90101-0172-BLK13' },
+    ],
+    currentPallets: 2,
+    orderRef: 'SO6575',
+  },
+  -1,
+  'exact_legacy_vr2_12_blk13_minus1'
+);
+
 console.log('All calibration tests passed.');

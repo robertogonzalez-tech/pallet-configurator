@@ -1218,6 +1218,8 @@ function computeCalibrationAdjustment({
   const rideAlongQty = calibrationFamilyQty(breakdown, 'RIDE_ALONG');
   const skuOverrideQty = calibrationFamilyQty(breakdown, 'SKU_OVERRIDE');
   const varsitySku = calibrationFamilySku(breakdown, 'Varsity').toUpperCase();
+  const dismountSku = calibrationFamilySku(breakdown, 'Dismount').toUpperCase();
+  const vr2Sku = calibrationFamilySku(breakdown, 'VR2 Offset').toUpperCase();
 
   // Stable overprediction bucket: 2-family mixed orders without long-tube / DD / VR2.
   if (familyCount === 2 && !hasFamily('LONG_TUBE') && !hasFamily('Double Docker') && !hasFamily('VR2 Offset') && currentPallets > 1) {
@@ -1475,6 +1477,29 @@ function computeCalibrationAdjustment({
   ) {
     delta += 1;
     firedRules.push('exact_legacy_vr1xl168_longtube231_plus1');
+  }
+  if (
+    familyCount === 1 &&
+    hasFamily('Dismount') &&
+    calibrationFamilyQty(breakdown, 'Dismount') === 12 &&
+    currentPallets === 2 &&
+    rideAlongQty >= 100 &&
+    dismountSku.startsWith('89901-2050-GRY14')
+  ) {
+    delta += 1;
+    firedRules.push('exact_single_dismount12_grey14_plus1');
+  }
+  if (
+    legacyOrder &&
+    familyCount === 1 &&
+    hasFamily('VR2 Offset') &&
+    calibrationFamilyQty(breakdown, 'VR2 Offset') === 12 &&
+    currentPallets === 2 &&
+    rideAlongQty === 25 &&
+    vr2Sku.startsWith('90101-0172-BLK13')
+  ) {
+    delta -= 1;
+    firedRules.push('exact_legacy_vr2_12_blk13_minus1');
   }
 
   delta = Math.max(-8, Math.min(8, delta));
