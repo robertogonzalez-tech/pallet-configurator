@@ -109,6 +109,7 @@ function sanitizeDiagnostics(diagnostics, debug = false) {
     packageCountBeforeConsolidation: diagnostics.packageCountBeforeConsolidation,
     packageCountAfterConsolidation: diagnostics.packageCountAfterConsolidation,
     conservativeLiftPackages: diagnostics.conservativeLiftPackages || 0,
+    baseStationLongTubeDedupeApplied: !!diagnostics.baseStationLongTubeDedupeApplied,
     productLines: diagnostics.productLines,
     baseConfidence: diagnostics.baseConfidence,
     confidenceScore: diagnostics.confidenceScore,
@@ -1404,13 +1405,23 @@ function predictPallets(items) {
 
   let totalPallets = 0;
   let totalWeight = 0;
+  const familyNames = Object.keys(families);
+  const applyBaseStationLongTubeDedupe =
+    longTubeState.triggerLines > 0 &&
+    !!families['Base Station'] &&
+    !!families['VR2 Offset'] &&
+    familyNames.length >= 2;
+  diagnostics.baseStationLongTubeDedupeApplied = applyBaseStationLongTubeDedupe;
 
   for (const [family, data] of Object.entries(families)) {
     let effectiveQty = data.qty;
     if (family === 'Metal Bike Vault / VisiLocker') {
       effectiveQty = Math.max(1, data.maxLineQty || data.qty || 0);
     }
-    const pallets = computePalletsForFamily(family, effectiveQty, data.skuSample, data.nameSample, data);
+    let pallets = computePalletsForFamily(family, effectiveQty, data.skuSample, data.nameSample, data);
+    if (applyBaseStationLongTubeDedupe && family === 'Base Station') {
+      pallets = 0;
+    }
     const weight = Math.round(effectiveQty * data.weightPerUnit);
     totalPallets += pallets;
     totalWeight += weight;
