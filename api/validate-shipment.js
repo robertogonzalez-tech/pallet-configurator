@@ -419,10 +419,7 @@ function isPrimarySkuOverrideCandidate(item, configHint, legacyClassification) {
   if (
     sku.startsWith('89904-') ||
     sku.startsWith('89914-') ||
-    sku.startsWith('89901-0408') ||
-    sku.startsWith('89901-0418') ||
-    sku.startsWith('90101-0408') ||
-    sku.startsWith('90101-0418')
+    sku.startsWith('89901-1210')
   ) {
     return true;
   }
@@ -539,6 +536,7 @@ const ALWAYS_SUPPRESS_PREFIXES = [
   '80301-0281',                 // 2UP raw
   '80301-0202',                 // Radius raw
   '80301-0163',                 // Hoop Runner raw
+  '90101-0418', '90101-0407',   // VISI2/MBA box sub-components
 ];
 
 // Packaging prefixes
@@ -554,8 +552,6 @@ function classifyItem(sku, name, orderHasParents) {
     skuLower.endsWith('-kit') &&
     !skuLower.startsWith('80101-0257') &&
     !skuLower.startsWith('80101-0258') &&
-    !skuLower.startsWith('89901-0408') &&
-    !skuLower.startsWith('89901-0418') &&
     !skuLower.startsWith('89904-') &&
     !skuLower.startsWith('89914-') &&
     !skuLower.startsWith('dd-')
@@ -707,8 +703,6 @@ function lookupProduct(sku, name, configHint = null) {
     // Lockers / Vaults
     'visi2': 'Metal Bike Vault / VisiLocker', 'mbv2': 'Metal Bike Vault / VisiLocker',
     '89901-0418': 'Metal Bike Vault / VisiLocker',
-    '89901-0408': 'Metal Bike Vault / VisiLocker',
-    '90101-0408': 'Metal Bike Vault / VisiLocker',
     'mbv1': 'MBA', '89901-0407': 'MBA',
     // Undergrad
     '80101-0370': 'Undergrad', '80101-0363': 'Undergrad', '80101-0364': 'Undergrad',
@@ -845,17 +839,11 @@ function isFlagBypassItem(item) {
   if (normSku.startsWith('DD-')) return true;
   // Locker/assembled parents occasionally marked non-fulfillable in NetSuite
   if (name.includes('LOCKER') && name.includes('KIT')) return true;
-  // Locker/MBV parent kits and boxed package lines must remain visible.
-  if (
-    normSku.startsWith('89901-0408') ||
-    normSku.startsWith('89901-0418') ||
-    normSku.startsWith('90101-0408') ||
-    normSku.startsWith('90101-0418')
-  ) return true;
   // Skatedock parent/box lines can be marked as non-fulfillable or grouped.
   if (
     normSku.startsWith('89904-') ||
     normSku.startsWith('89914-') ||
+    normSku.startsWith('89901-1210') ||
     normSku.startsWith('SM10X') ||
     normSku.startsWith('SD6X')
   ) return true;
@@ -1421,7 +1409,7 @@ function predictPallets(items) {
 
     // Families represented by multiple component/box lines should use a
     // de-duplicated unit proxy (max line quantity) instead of additive sum.
-    if (family === 'Skatedock' || family === 'Metal Bike Vault / VisiLocker' || family === 'MBA') {
+    if (family === 'Skatedock') {
       effectiveQty = Math.max(1, data.maxLineQty || data.qty || 0);
     }
 
