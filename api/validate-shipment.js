@@ -350,23 +350,6 @@ function classifyFromSkuConfig(item) {
     };
   }
 
-  // Skatedock finished units can be flagged in NetSuite as assembly/non-fulfillable
-  // even though they ship as primary packages.
-  if (
-    sku.startsWith('SM10X') ||
-    sku.startsWith('SD6X') ||
-    sku.startsWith('89904-') ||
-    ((sku.startsWith('89901-1210') || sku.startsWith('80101-1210')) && name.includes('SKATEDOCK'))
-  ) {
-    return {
-      classification: 'product',
-      role: 'primary',
-      family: 'Skatedock',
-      familyKey: 'skatedock',
-      source: 'sku_config',
-    };
-  }
-
   const nonShip = matchRuleList(rules.nonShip, sku, name);
   if (nonShip) {
     return { classification: 'non_shippable', source: 'sku_config', reason: nonShip.note || 'non_ship_pattern' };
@@ -715,7 +698,6 @@ function lookupProduct(sku, name, configHint = null) {
     '26246': 'Pump & Repair',
     '89904': 'Skatedock',
     '89901-1210': 'Skatedock',
-    'fs-mba': 'MBA',
     '90101-1172': 'VR1 XL', '89901-1172': 'VR1 XL', '80101-1172': 'VR1 XL',
     '80101-0230': 'Base Station',
     '80101-0232': 'Base Station',
@@ -845,11 +827,6 @@ function isFlagBypassItem(item) {
     normSku.startsWith('90101-0408') ||
     normSku.startsWith('90101-0418')
   ) return true;
-  // Skatedock finished-goods are sometimes flagged by NetSuite metadata.
-  if (normSku.startsWith('SM10X') || normSku.startsWith('SD6X') || normSku.startsWith('89904-')) return true;
-  if ((normSku.startsWith('89901-1210') || normSku.startsWith('80101-1210')) && name.includes('SKATEDOCK')) return true;
-  // Legacy MBA identifiers can also be flagged but represent shipped units.
-  if (normSku.startsWith('FS-MBA')) return true;
   return false;
 }
 
@@ -1041,7 +1018,7 @@ function buildPackagesFromBreakdown(breakdown) {
         family,
         dims: { l: dims.l, w: dims.w, h: dims.h },
         weight: perPackageWeight,
-        mergeable: templateKey === 'standard_pallet' && !NO_MIX_FAMILIES.has(family) && perPackageWeight <= 700,
+        mergeable: templateKey === 'standard_pallet' && !NO_MIX_FAMILIES.has(family) && perPackageWeight <= 550,
         contents: [{
           sku: row?.sku || 'UNKNOWN',
           name: row?.name || 'Unknown Item',
@@ -1058,8 +1035,8 @@ function buildPackagesFromBreakdown(breakdown) {
 function consolidatePackages(packages) {
   if (!Array.isArray(packages) || packages.length < 2) return { packages, merges: [] };
 
-  const MAX_CONSOLIDATED_WEIGHT = 1900;
-  const MAX_MERGES_PER_HOST = 3;
+  const MAX_CONSOLIDATED_WEIGHT = 1500;
+  const MAX_MERGES_PER_HOST = 2;
   const merged = new Set();
   const merges = [];
   const out = packages.map((pkg) => ({
@@ -1418,19 +1395,13 @@ function predictPallets(items) {
 
   let totalPallets = 0;
   let totalWeight = 0;
-  const longTubePallets = estimateLongTubePallets(longTubeState);
 
   for (const [family, data] of Object.entries(families)) {
     let effectiveQty = data.qty;
     if (family === 'Metal Bike Vault / VisiLocker') {
       effectiveQty = Math.max(1, data.maxLineQty || data.qty || 0);
     }
-    let pallets = computePalletsForFamily(family, effectiveQty, data.skuSample, data.nameSample, data);
-    // Prevent double counting when long-tube trigger lines are present:
-    // in those cases Base Station contributes through LONG_TUBE package output.
-    if (family === 'Base Station' && longTubePallets > 0) {
-      pallets = 0;
-    }
+    const pallets = computePalletsForFamily(family, effectiveQty, data.skuSample, data.nameSample, data);
     const weight = Math.round(effectiveQty * data.weightPerUnit);
     totalPallets += pallets;
     totalWeight += weight;
@@ -1444,6 +1415,7 @@ function predictPallets(items) {
     });
   }
 
+  const longTubePallets = estimateLongTubePallets(longTubeState);
   if (longTubePallets > 0) {
     const longTubeWeight = Math.max(40, Math.min(500, Math.round(longTubeState.estimatedWeight)));
     diagnostics.longTubePallets = longTubePallets;
