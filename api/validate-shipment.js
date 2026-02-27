@@ -1399,32 +1399,7 @@ function predictPallets(items) {
   const consolidation = consolidatePackages(rawPackages);
   let packages = consolidation.packages;
   const suspiciousExcludedLines = diagnostics.excludedLines.filter(isPotentiallyPhysicalExcluded);
-
-  // Conservative safety lift: when low package counts coincide with excluded
-  // lines that may physically ship, bias slightly high to avoid costly underquotes.
-  if (suspiciousExcludedLines.length > 0 && packages.length <= 2) {
-    const liftCount = Math.min(2, Math.max(1, Math.ceil(suspiciousExcludedLines.length / 4)));
-    const startId = packages.length + 1;
-    for (let i = 0; i < liftCount; i += 1) {
-      packages.push({
-        id: startId + i,
-        type: 'unknown_pallet',
-        family: 'Risk Buffer',
-        dims: { ...PACKAGE_TEMPLATES.unknown_pallet },
-        weight: 120,
-        mergeable: false,
-        contents: [{
-          sku: 'RISK-BUFFER',
-          name: 'Conservative shipping buffer',
-          qty: 1,
-          matched: 'RISK_BUFFER',
-        }],
-      });
-    }
-    diagnostics.conservativeLiftPackages = liftCount;
-  } else {
-    diagnostics.conservativeLiftPackages = 0;
-  }
+  diagnostics.conservativeLiftPackages = 0;
 
   diagnostics.packageCountBeforeConsolidation = rawPackages.length;
   diagnostics.packageCountAfterConsolidation = packages.length;
