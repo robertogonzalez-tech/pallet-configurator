@@ -1472,20 +1472,15 @@ function predictPallets(items) {
   // Floor guard: if all lines were filtered/suppressed and prediction reached zero,
   // keep at least one handling unit to avoid systematic zero-package underprediction.
   if (totalPallets === 0 && diagnostics.totalLines > 0) {
-    const likelyPhysicalExcludedCount = diagnostics.excludedLines.filter(isPotentiallyPhysicalExcluded).length;
-    const floorFromComponents = Math.ceil((diagnostics.filteredComponents || 0) / 2);
-    const floorFromLikelyPhysicalExcludes = Math.ceil(likelyPhysicalExcludedCount / 4);
-    const floorPallets = Math.max(1, Math.min(5, Math.max(floorFromComponents, floorFromLikelyPhysicalExcludes)));
     const fallbackWeight = Math.max(80, Math.min(450, Math.round((diagnostics.filteredHardware + diagnostics.filteredComponents + diagnostics.filteredNonShippable) * 30)));
-    totalPallets = floorPallets;
+    totalPallets = 1;
     totalWeight += fallbackWeight;
     diagnostics.zeroFloorApplied = true;
-    diagnostics.zeroFloorPallets = floorPallets;
     breakdown.push({
       sku: 'ZERO-FLOOR',
       name: 'Minimum handling-unit floor',
-      qty: floorPallets,
-      pallets: floorPallets,
+      qty: 1,
+      pallets: 1,
       weight: fallbackWeight,
       matched: 'ZERO_FLOOR',
     });
