@@ -1,0 +1,28 @@
+[dotenv@17.3.1] injecting env (5) from .env.local -- tip: ⚡️ secrets for agents: https://dotenvx.com/as2
+
+=== ERROR SLICE REPORT ===
+Rows: 491
+
+By order type:
+- single: 299 rows | exact 76.6% | within ±1 97.7%
+- multi: 180 rows | exact 53.9% | within ±1 96.7%
+- unknown: 12 rows | exact 91.7% | within ±1 100.0%
+
+Delta distribution (predicted - actual):
+- 0: 337
+- <=-2: 3
+- -1: 78
+- +1: 63
+- >=+2: 10
+
+Top miss families (outside ±1):
+- Double Docker: 4
+- VR2 Offset: 4
+- LONG_TUBE: 3
+- Varsity: 3
+- Hoop Runner: 3
+- Base Station: 2
+- Circle Series (Omega): 2
+- Guardian: 1
+- Metal Bike Vault / VisiLocker: 1
+- Saris: 1
