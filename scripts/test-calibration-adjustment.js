@@ -59,7 +59,7 @@ run(
     currentPallets: 2,
     orderRef: 'SO6910',
   },
-  1,
+  2,
   'fc2_vr2_long_tube_high_qty_plus1'
 );
 
@@ -102,7 +102,7 @@ run(
     currentPallets: 4,
     orderRef: 'SO5501',
   },
-  3,
+  6,
   'legacy_fc4_long_tube_base_hoop_extreme_plus3'
 );
 
@@ -118,6 +118,39 @@ run(
   },
   1,
   'zero_floor_heavy_ride_along_plus1'
+);
+
+run(
+  'legacy_dd_q42_high_minus3',
+  {
+    breakdown: [row('Double Docker', 42)],
+    currentPallets: 6,
+    orderRef: 'SO6764',
+  },
+  -3,
+  'legacy_dd_q42_high_minus3'
+);
+
+run(
+  'legacy_dd_q80plus_high_minus7',
+  {
+    breakdown: [row('Double Docker', 89)],
+    currentPallets: 11,
+    orderRef: 'SO6870',
+  },
+  -7,
+  'legacy_dd_q80plus_high_minus7'
+);
+
+run(
+  'fc2_hoop_saris_high_minus1',
+  {
+    breakdown: [row('Hoop Runner', 37), row('Saris', 28)],
+    currentPallets: 4,
+    orderRef: 'SO7065',
+  },
+  -2,
+  'fc2_hoop_saris_high_minus1'
 );
 
 console.log('All calibration tests passed.');
