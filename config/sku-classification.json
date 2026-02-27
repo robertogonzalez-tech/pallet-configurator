@@ -13,8 +13,8 @@
       "description": "Undergrad bike racks (inverted-U style). Components: post + loop pairs. Sold as assemblies.",
       "counting_method": "Count primary SKUs. Each 80101-* or 80301-* pair = 1 rack unit.",
       "primary_skus": [
-        {"pattern": "80101-03*", "note": "Undergrad posts (03xx family variants)"},
-        {"pattern": "80301-03*", "note": "Undergrad loops (03xx family variants)", "exclude": ["80301-0301*", "80301-4*"]},
+        {"pattern": "80101-*", "note": "Undergrad posts (all color variants)"},
+        {"pattern": "80301-*", "note": "Undergrad loops (all color variants)", "exclude": ["80301-0301*", "80301-4*"]},
         {"pattern": "80101-*-KIT", "note": "Undergrad kit variants"}
       ],
       "known_variants": [

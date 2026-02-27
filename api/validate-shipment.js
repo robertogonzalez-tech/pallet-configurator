@@ -341,22 +341,6 @@ function classifyFromSkuConfig(item) {
 
   const familyRule = matchRuleList(rules.familyRules, sku, name);
   if (familyRule) {
-    // NetSuite sometimes labels Skatedock boxed lines with DD-like 89901-1210 prefixes.
-    // If the line name explicitly indicates Skatedock, force it to product.
-    if (
-      familyRule.role === 'component' &&
-      sku.startsWith('89901-1210') &&
-      name.includes('SKATEDOCK')
-    ) {
-      return {
-        classification: 'product',
-        role: 'primary',
-        family: 'Skatedock',
-        familyKey: 'skatedock',
-        source: 'sku_config',
-      };
-    }
-
     if (familyRule.role === 'non_shippable') {
       return { classification: 'non_shippable', source: 'sku_config', reason: familyRule.note || 'family_non_ship' };
     }
@@ -364,8 +348,6 @@ function classifyFromSkuConfig(item) {
       return {
         classification: 'long_tube_trigger',
         role: familyRule.role,
-        family: familyRule.family,
-        familyKey: familyRule.familyKey,
         source: 'sku_config',
       };
     }
@@ -373,8 +355,6 @@ function classifyFromSkuConfig(item) {
       return {
         classification: 'hardware',
         role: familyRule.role,
-        family: familyRule.family,
-        familyKey: familyRule.familyKey,
         source: 'sku_config',
       };
     }
@@ -382,16 +362,12 @@ function classifyFromSkuConfig(item) {
       return {
         classification: 'component_of_parent',
         role: familyRule.role,
-        family: familyRule.family,
-        familyKey: familyRule.familyKey,
         source: 'sku_config',
       };
     }
     return {
       classification: 'product',
       role: familyRule.role,
-      family: familyRule.family,
-      familyKey: familyRule.familyKey,
       source: 'sku_config',
     };
   }
@@ -407,26 +383,6 @@ function classifyFromSkuConfig(item) {
   }
 
   return null;
-}
-
-function isPrimarySkuOverrideCandidate(item, configHint, legacyClassification) {
-  if (!configHint || configHint.classification !== 'product' || configHint.role !== 'primary') return false;
-  if (!['hardware', 'component_of_parent'].includes(legacyClassification)) return false;
-
-  const sku = normalizeSku(item?.sku || '');
-  const name = String(item?.name || '').toUpperCase();
-
-  if (
-    sku.startsWith('89904-') ||
-    sku.startsWith('89914-') ||
-    sku.startsWith('89901-1210')
-  ) {
-    return true;
-  }
-
-  if (sku.startsWith('89901-1210') && name.includes('SKATEDOCK')) return true;
-
-  return false;
 }
 
 // ============================================================
@@ -552,8 +508,6 @@ function classifyItem(sku, name, orderHasParents) {
     skuLower.endsWith('-kit') &&
     !skuLower.startsWith('80101-0257') &&
     !skuLower.startsWith('80101-0258') &&
-    !skuLower.startsWith('89904-') &&
-    !skuLower.startsWith('89914-') &&
     !skuLower.startsWith('dd-')
   ) {
     return 'hardware';
@@ -839,14 +793,6 @@ function isFlagBypassItem(item) {
   if (normSku.startsWith('DD-')) return true;
   // Locker/assembled parents occasionally marked non-fulfillable in NetSuite
   if (name.includes('LOCKER') && name.includes('KIT')) return true;
-  // Skatedock parent/box lines can be marked as non-fulfillable or grouped.
-  if (
-    normSku.startsWith('89904-') ||
-    normSku.startsWith('89914-') ||
-    normSku.startsWith('89901-1210') ||
-    normSku.startsWith('SM10X') ||
-    normSku.startsWith('SD6X')
-  ) return true;
   return false;
 }
 
@@ -1199,9 +1145,7 @@ function predictPallets(items) {
     let baseClassification = legacyClassification;
     if (configHint?.classification) {
       const configClassification = configHint.classification;
-      const explicitPrimaryOverride = isPrimarySkuOverrideCandidate(item, configHint, legacyClassification);
       const allowOverride =
-        explicitPrimaryOverride ||
         !hardLegacyClassifications.has(legacyClassification) ||
         configClassification === 'long_tube_trigger' ||
         configClassification === 'non_shippable';
@@ -1378,19 +1322,9 @@ function predictPallets(items) {
     });
     const family = product.family;
     if (!families[family]) {
-      families[family] = {
-        qty: 0,
-        maxLineQty: 0,
-        skuSample: normSku,
-        nameSample: item.name,
-        weightPerUnit: product.weight || 50,
-        trays: 0,
-        legs: 0,
-        manifolds: 0,
-      };
+      families[family] = { qty: 0, skuSample: normSku, nameSample: item.name, weightPerUnit: product.weight || 50, trays: 0, legs: 0, manifolds: 0 };
     }
     families[family].qty += item.qty;
-    families[family].maxLineQty = Math.max(families[family].maxLineQty || 0, Math.max(0, Number(item.qty) || 0));
 
     const s = normSku.toUpperCase();
     const n = (item.name || '').toUpperCase();
@@ -1405,22 +1339,14 @@ function predictPallets(items) {
   let totalWeight = 0;
 
   for (const [family, data] of Object.entries(families)) {
-    let effectiveQty = data.qty;
-
-    // Families represented by multiple component/box lines should use a
-    // de-duplicated unit proxy (max line quantity) instead of additive sum.
-    if (family === 'Skatedock') {
-      effectiveQty = Math.max(1, data.maxLineQty || data.qty || 0);
-    }
-
-    const pallets = computePalletsForFamily(family, effectiveQty, data.skuSample, data.nameSample, data);
-    const weight = Math.round(effectiveQty * data.weightPerUnit);
+    const pallets = computePalletsForFamily(family, data.qty, data.skuSample, data.nameSample, data);
+    const weight = Math.round(data.qty * data.weightPerUnit);
     totalPallets += pallets;
     totalWeight += weight;
     breakdown.push({
       sku: data.skuSample,
       name: `${family} (recipe)` ,
-      qty: effectiveQty,
+      qty: data.qty,
       pallets,
       weight,
       matched: family,
