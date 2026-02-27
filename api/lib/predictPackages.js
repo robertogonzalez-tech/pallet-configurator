@@ -31,11 +31,12 @@ function predictPackages(items, {
   predict,
   debug = false,
   sanitizeDiagnostics,
+  context = {},
 } = {}) {
   if (typeof predict !== 'function') {
     throw new Error('predict function is required');
   }
-  const prediction = predict(Array.isArray(items) ? items : []);
+  const prediction = predict(Array.isArray(items) ? items : [], context);
   return {
     ...buildPredictionPayload(prediction, { debug, sanitizeDiagnostics }),
     rawPrediction: prediction,

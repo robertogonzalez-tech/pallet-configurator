@@ -132,6 +132,10 @@ module.exports = async (req, res) => {
         predict: predictPallets,
         debug,
         sanitizeDiagnostics,
+        context: {
+          orderRef: soNumber ? `SO${soNumber}` : quoteNumber,
+          sourceType,
+        },
       });
     return res.status(200).json({
       success: true,
