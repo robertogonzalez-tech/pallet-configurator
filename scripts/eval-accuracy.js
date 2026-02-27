@@ -30,7 +30,7 @@ function toPercent(num, den) {
 
 function familyCountFromBreakdown(breakdown) {
   if (!Array.isArray(breakdown)) return 0;
-  const ignored = new Set(['UNKNOWN', 'SKU_OVERRIDE', 'RIDE_ALONG', 'LONG_TUBE_TRIGGER', 'UNKNOWN_FALLBACK']);
+  const ignored = new Set(['UNKNOWN', 'SKU_OVERRIDE', 'RIDE_ALONG', 'LONG_TUBE_TRIGGER', 'UNKNOWN_FALLBACK', 'CONSERVATIVE_LIFT']);
   const families = new Set();
   for (const row of breakdown) {
     const family = String(row?.matched || '').trim();
@@ -42,7 +42,7 @@ function familyCountFromBreakdown(breakdown) {
 
 function familySetFromBreakdown(breakdown) {
   if (!Array.isArray(breakdown)) return [];
-  const ignored = new Set(['UNKNOWN', 'SKU_OVERRIDE', 'RIDE_ALONG', 'LONG_TUBE_TRIGGER', 'UNKNOWN_FALLBACK']);
+  const ignored = new Set(['UNKNOWN', 'SKU_OVERRIDE', 'RIDE_ALONG', 'LONG_TUBE_TRIGGER', 'UNKNOWN_FALLBACK', 'CONSERVATIVE_LIFT']);
   const families = new Set();
   for (const row of breakdown) {
     const family = String(row?.matched || '').trim();

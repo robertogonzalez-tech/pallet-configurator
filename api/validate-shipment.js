@@ -1022,6 +1022,14 @@ const FAMILY_TEMPLATE = {
 };
 
 const NO_MIX_FAMILIES = new Set(['Double Docker', 'Undergrad', 'Metal Bike Vault / VisiLocker', 'MBA', 'Base Station']);
+const CONSERVATIVE_HIGH_VARIANCE_FAMILIES = new Set([
+  'Double Docker',
+  'VR2 Offset',
+  'VR1 XL',
+  'Varsity',
+  'Base Station',
+  'Skatedock',
+]);
 
 function mapTemplateForBreakdownRow(row) {
   const matched = String(row?.matched || '');
@@ -1163,6 +1171,54 @@ function isPotentiallyPhysicalExcluded(line) {
   if (/^\d{5,}-/.test(sku)) return true;
   if (/^[A-Z]{2,}\d/.test(sku)) return true;
   return false;
+}
+
+function computeConservativeLift({
+  diagnostics,
+  familyNames,
+  longTubeState,
+  currentPallets,
+}) {
+  const excludedLines = Array.isArray(diagnostics?.excludedLines) ? diagnostics.excludedLines : [];
+  const likelyPhysicalExcludedCount = excludedLines.filter(isPotentiallyPhysicalExcluded).length;
+  const netsuiteFlaggedExcluded = excludedLines.filter((line) => line?.reason === REASON_CODES.NETSUITE_FLAGGED).length;
+  const highVarianceFamilyCount = (familyNames || []).filter((family) => CONSERVATIVE_HIGH_VARIANCE_FAMILIES.has(family)).length;
+  const longTubeQty = Math.max(0, Number(longTubeState?.totalQty) || 0);
+
+  const zeroFloorApplied = !!diagnostics?.zeroFloorApplied;
+  const heavyLongTubeMixed =
+    longTubeQty >= 40 &&
+    (familyNames || []).length >= 4 &&
+    currentPallets <= 5 &&
+    likelyPhysicalExcludedCount >= 8;
+
+  // Keep this rewrite strictly targeted.
+  if (!zeroFloorApplied && !heavyLongTubeMixed) {
+    return {
+      lift: 0,
+      likelyPhysicalExcludedCount,
+      netsuiteFlaggedExcluded,
+      highVarianceFamilyCount,
+      longTubeQty,
+      zeroFloorApplied,
+      heavyLongTubeMixed,
+    };
+  }
+
+  let lift = 0;
+  if (zeroFloorApplied && likelyPhysicalExcludedCount >= 8 && highVarianceFamilyCount >= 1) lift = 1;
+  if (heavyLongTubeMixed && highVarianceFamilyCount >= 2) lift = Math.max(lift, 1);
+  lift = Math.max(0, Math.min(1, lift));
+
+  return {
+    lift,
+    likelyPhysicalExcludedCount,
+    netsuiteFlaggedExcluded,
+    highVarianceFamilyCount,
+    longTubeQty,
+    zeroFloorApplied,
+    heavyLongTubeMixed,
+  };
 }
 
 function predictPallets(items) {
@@ -1548,6 +1604,49 @@ function predictPallets(items) {
 
   totalPallets = packages.length;
   totalWeight = Math.round(packages.reduce((sum, p) => sum + (p.weight || 0), 0));
+
+  // Rewrite layer: conservative risk lift on low-visibility, high-variance mixed orders.
+  // This intentionally biases against severe underprediction when many likely-physical
+  // lines are excluded by NetSuite/component filters.
+  const conservative = computeConservativeLift({
+    diagnostics,
+    familyNames,
+    longTubeState,
+    currentPallets: totalPallets,
+  });
+  if (conservative.lift > 0) {
+    const baseId = packages.length;
+    const template = PACKAGE_TEMPLATES.unknown_pallet || PACKAGE_TEMPLATES.standard_pallet;
+    const perPackageWeight = 120;
+    for (let i = 0; i < conservative.lift; i += 1) {
+      packages.push({
+        id: baseId + i + 1,
+        type: 'unknown_pallet',
+        family: 'CONSERVATIVE_LIFT',
+        dims: { l: template.l, w: template.w, h: template.h },
+        weight: perPackageWeight,
+        mergeable: false,
+        contents: [{
+          sku: 'CONSERVATIVE-LIFT',
+          name: 'Conservative risk lift package',
+          qty: 1,
+          matched: 'CONSERVATIVE_LIFT',
+        }],
+      });
+    }
+    breakdown.push({
+      sku: 'CONSERVATIVE-LIFT',
+      name: 'Conservative risk lift package',
+      qty: conservative.lift,
+      pallets: conservative.lift,
+      weight: conservative.lift * perPackageWeight,
+      matched: 'CONSERVATIVE_LIFT',
+    });
+    totalPallets += conservative.lift;
+    totalWeight += conservative.lift * perPackageWeight;
+    diagnostics.conservativeLiftPackages = conservative.lift;
+  }
+  diagnostics.conservativeLiftDetails = conservative;
 
   const productLines = diagnostics.knownProducts + diagnostics.unknownProducts;
   const baseConfidence = productLines > 0 ? Math.round((diagnostics.knownProducts / productLines) * 100) : 100;
