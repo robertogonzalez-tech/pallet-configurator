@@ -90,4 +90,34 @@ run(
   'legacy_fc4plus_vr2_long_tube_mid_qty_plus1'
 );
 
+run(
+  'legacy_fc4_long_tube_base_hoop_extreme_plus3',
+  {
+    breakdown: [
+      row('Base Station', 14),
+      row('Hoop Runner', 15),
+      row('VR2 Offset', 30),
+      row('LONG_TUBE', 50),
+    ],
+    currentPallets: 4,
+    orderRef: 'SO5501',
+  },
+  3,
+  'legacy_fc4_long_tube_base_hoop_extreme_plus3'
+);
+
+run(
+  'zero_floor_heavy_ride_along_plus1',
+  {
+    breakdown: [
+      row('RIDE_ALONG', 351),
+      row('ZERO_FLOOR', 1),
+    ],
+    currentPallets: 1,
+    orderRef: 'SO7595',
+  },
+  1,
+  'zero_floor_heavy_ride_along_plus1'
+);
+
 console.log('All calibration tests passed.');
