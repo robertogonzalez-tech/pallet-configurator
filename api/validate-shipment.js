@@ -1395,6 +1395,25 @@ function predictPallets(items) {
     });
   }
 
+  // Floor guard: if all lines were filtered/suppressed and prediction reached zero,
+  // keep at least one handling unit to avoid systematic zero-package underprediction.
+  if (totalPallets === 0 && diagnostics.totalLines > 0) {
+    const fallbackWeight = Math.max(80, Math.min(450, Math.round((diagnostics.filteredHardware + diagnostics.filteredComponents + diagnostics.filteredNonShippable) * 30)));
+    totalPallets = 1;
+    totalWeight += fallbackWeight;
+    diagnostics.zeroFloorApplied = true;
+    breakdown.push({
+      sku: 'ZERO-FLOOR',
+      name: 'Minimum handling-unit floor',
+      qty: 1,
+      pallets: 1,
+      weight: fallbackWeight,
+      matched: 'ZERO_FLOOR',
+    });
+  } else {
+    diagnostics.zeroFloorApplied = false;
+  }
+
   const rawPackages = buildPackagesFromBreakdown(breakdown);
   const consolidation = consolidatePackages(rawPackages);
   let packages = consolidation.packages;
