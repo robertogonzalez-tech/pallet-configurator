@@ -422,9 +422,7 @@ function isPrimarySkuOverrideCandidate(item, configHint, legacyClassification) {
     sku.startsWith('89901-0408') ||
     sku.startsWith('89901-0418') ||
     sku.startsWith('90101-0408') ||
-    sku.startsWith('90101-0418') ||
-    sku.startsWith('MBV') ||
-    sku.startsWith('VISI')
+    sku.startsWith('90101-0418')
   ) {
     return true;
   }
@@ -852,9 +850,7 @@ function isFlagBypassItem(item) {
     normSku.startsWith('89901-0408') ||
     normSku.startsWith('89901-0418') ||
     normSku.startsWith('90101-0408') ||
-    normSku.startsWith('90101-0418') ||
-    normSku.startsWith('MBV') ||
-    normSku.startsWith('VISI')
+    normSku.startsWith('90101-0418')
   ) return true;
   // Skatedock parent/box lines can be marked as non-fulfillable or grouped.
   if (
