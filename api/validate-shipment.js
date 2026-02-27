@@ -715,6 +715,7 @@ function lookupProduct(sku, name, configHint = null) {
     '26246': 'Pump & Repair',
     '89904': 'Skatedock',
     '89901-1210': 'Skatedock',
+    'fs-mba': 'MBA',
     '90101-1172': 'VR1 XL', '89901-1172': 'VR1 XL', '80101-1172': 'VR1 XL',
     '80101-0230': 'Base Station',
     '80101-0232': 'Base Station',
@@ -847,6 +848,8 @@ function isFlagBypassItem(item) {
   // Skatedock finished-goods are sometimes flagged by NetSuite metadata.
   if (normSku.startsWith('SM10X') || normSku.startsWith('SD6X') || normSku.startsWith('89904-')) return true;
   if ((normSku.startsWith('89901-1210') || normSku.startsWith('80101-1210')) && name.includes('SKATEDOCK')) return true;
+  // Legacy MBA identifiers can also be flagged but represent shipped units.
+  if (normSku.startsWith('FS-MBA')) return true;
   return false;
 }
 
@@ -1038,7 +1041,7 @@ function buildPackagesFromBreakdown(breakdown) {
         family,
         dims: { l: dims.l, w: dims.w, h: dims.h },
         weight: perPackageWeight,
-        mergeable: templateKey === 'standard_pallet' && !NO_MIX_FAMILIES.has(family) && perPackageWeight <= 550,
+        mergeable: templateKey === 'standard_pallet' && !NO_MIX_FAMILIES.has(family) && perPackageWeight <= 700,
         contents: [{
           sku: row?.sku || 'UNKNOWN',
           name: row?.name || 'Unknown Item',
@@ -1055,8 +1058,8 @@ function buildPackagesFromBreakdown(breakdown) {
 function consolidatePackages(packages) {
   if (!Array.isArray(packages) || packages.length < 2) return { packages, merges: [] };
 
-  const MAX_CONSOLIDATED_WEIGHT = 1500;
-  const MAX_MERGES_PER_HOST = 2;
+  const MAX_CONSOLIDATED_WEIGHT = 1900;
+  const MAX_MERGES_PER_HOST = 3;
   const merged = new Set();
   const merges = [];
   const out = packages.map((pkg) => ({
