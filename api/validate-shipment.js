@@ -99,6 +99,7 @@ function sanitizeDiagnostics(diagnostics, debug = false) {
     longTubePallets: diagnostics.longTubePallets,
     packageCountBeforeConsolidation: diagnostics.packageCountBeforeConsolidation,
     packageCountAfterConsolidation: diagnostics.packageCountAfterConsolidation,
+    conservativeLiftPackages: diagnostics.conservativeLiftPackages || 0,
     productLines: diagnostics.productLines,
     baseConfidence: diagnostics.baseConfidence,
     confidenceScore: diagnostics.confidenceScore,
@@ -195,6 +196,13 @@ function compactPatternValue(v) {
     .trim();
 }
 
+function ruleSpecificity(rule) {
+  const pattern = String(rule?.patternCompact || '');
+  const wildcards = (pattern.match(/\*/g) || []).length;
+  const digits = (pattern.match(/[0-9]/g) || []).length;
+  return (pattern.length * 10) + digits - (wildcards * 25);
+}
+
 function patternToRegex(pattern) {
   const compact = compactPatternValue(pattern);
   const escaped = compact.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*');
@@ -239,10 +247,13 @@ function loadCompiledSkuRules() {
 
   const addRule = (target, rule) => {
     if (!rule || !rule.pattern) return;
+    const excludes = Array.isArray(rule.exclude) ? rule.exclude : [];
     target.push({
       ...rule,
       regex: patternToRegex(rule.pattern),
       patternCompact: compactPatternValue(rule.pattern),
+      excludeRegexes: excludes.map((entry) => patternToRegex(entry)),
+      specificity: 0,
     });
   };
 
@@ -279,6 +290,16 @@ function loadCompiledSkuRules() {
     addFamilyRules(details.fee_skus, 'non_shippable');
   }
 
+  const sortRules = (rules) => {
+    rules.forEach((rule) => { rule.specificity = ruleSpecificity(rule); });
+    rules.sort((a, b) => b.specificity - a.specificity);
+  };
+
+  sortRules(compiled.nonShip);
+  sortRules(compiled.hardware);
+  sortRules(compiled.thirdParty);
+  sortRules(compiled.familyRules);
+
   COMPILED_SKU_RULES = compiled;
   console.log(`[SKU-CLASS] Compiled ${compiled.familyRules.length} family rules, ${compiled.hardware.length} hardware rules, ${compiled.nonShip.length} non-ship rules`);
   return COMPILED_SKU_RULES;
@@ -288,18 +309,30 @@ function matchRuleList(ruleList, sku, name) {
   if (!Array.isArray(ruleList) || ruleList.length === 0) return null;
   const compactSku = compactPatternValue(sku);
   const compactName = compactPatternValue(name);
-  return ruleList.find((rule) =>
-    rule.regex.test(compactSku) ||
-    rule.regex.test(compactName) ||
-    compactSku.includes(rule.patternCompact) ||
-    compactName.includes(rule.patternCompact)
-  ) || null;
+  for (const rule of ruleList) {
+    const matched =
+      rule.regex.test(compactSku) ||
+      rule.regex.test(compactName) ||
+      compactSku.includes(rule.patternCompact) ||
+      compactName.includes(rule.patternCompact);
+    if (!matched) continue;
+    if (Array.isArray(rule.excludeRegexes) && rule.excludeRegexes.some((rx) => rx.test(compactSku) || rx.test(compactName))) {
+      continue;
+    }
+    return rule;
+  }
+  return null;
 }
 
 function classifyFromSkuConfig(item) {
   const rules = loadCompiledSkuRules();
   const sku = normalizeSku(item?.sku || '');
   const name = String(item?.name || '').toUpperCase();
+
+  // RAW / manufacturing lines should never be treated as primary shipped units.
+  if (sku.includes('-RAW') || name.includes(' RAW')) {
+    return { classification: 'component_of_parent', source: 'sku_config', reason: 'raw_component' };
+  }
 
   const nonShip = matchRuleList(rules.nonShip, sku, name);
   if (nonShip) {
@@ -821,7 +854,7 @@ function computePalletsForFamily(family, qty, sku, name, familyState = {}) {
     }
     case 'VR2 Offset': return Math.ceil(qty / 10);
     case 'Skatedock': {
-      if (qty <= 2) return qty;
+      if (qty <= 2) return qty * 2;
       if (qty <= 10) return 1;
       return Math.ceil(qty / 8);
     }
@@ -959,36 +992,89 @@ function buildPackagesFromBreakdown(breakdown) {
 function consolidatePackages(packages) {
   if (!Array.isArray(packages) || packages.length < 2) return { packages, merges: [] };
 
+  const MAX_CONSOLIDATED_WEIGHT = 1500;
+  const MAX_MERGES_PER_HOST = 2;
   const merged = new Set();
   const merges = [];
-  const out = packages.map((pkg) => ({ ...pkg, contents: [...(pkg.contents || [])] }));
+  const out = packages.map((pkg) => ({
+    ...pkg,
+    contents: [...(pkg.contents || [])],
+    mergeCount: 0,
+  }));
 
-  for (let i = 0; i < out.length; i += 1) {
-    if (merged.has(i)) continue;
-    const a = out[i];
-    if (!a.mergeable || a.type !== 'standard_pallet') continue;
+  const familySet = (pkg) => {
+    const set = new Set();
+    for (const c of pkg.contents || []) {
+      const fam = String(c?.matched || '').trim();
+      if (fam && fam !== 'UNKNOWN' && fam !== 'UNKNOWN_FALLBACK' && fam !== 'SKU_OVERRIDE') {
+        set.add(fam);
+      }
+    }
+    if (set.size === 0 && pkg.family) set.add(String(pkg.family));
+    return set;
+  };
 
-    for (let j = i + 1; j < out.length; j += 1) {
-      if (merged.has(j)) continue;
-      const b = out[j];
-      if (!b.mergeable || b.type !== 'standard_pallet') continue;
-      if (a.family === b.family) continue;
+  const canMerge = (host, candidate) => {
+    if (!host || !candidate) return false;
+    if (!host.mergeable || !candidate.mergeable) return false;
+    if (host.type !== 'standard_pallet' || candidate.type !== 'standard_pallet') return false;
+    if ((host.mergeCount || 0) >= MAX_MERGES_PER_HOST) return false;
 
-      // Conservative merge gate to avoid under-predicting.
-      const combinedWeight = (a.weight || 0) + (b.weight || 0);
-      if (combinedWeight > 1000) continue;
+    const combinedWeight = (host.weight || 0) + (candidate.weight || 0);
+    if (combinedWeight > MAX_CONSOLIDATED_WEIGHT) return false;
 
-      a.weight = combinedWeight;
-      a.contents.push(...(b.contents || []));
-      a.consolidatedFrom = [...(a.consolidatedFrom || []), b.id];
-      merged.add(j);
-      merges.push({ host: a.id, merged: b.id });
-      break; // at most one merge per host in v0
+    const hostFamilies = familySet(host);
+    const candidateFamilies = familySet(candidate);
+    const overlaps = Array.from(candidateFamilies).some((fam) => hostFamilies.has(fam));
+    if (overlaps) return false;
+    if (hostFamilies.size + candidateFamilies.size > 4) return false;
+
+    return true;
+  };
+
+  // Greedy iterative consolidation: repeatedly merge the lightest valid candidate
+  // into each eligible host until no additional safe merges are available.
+  let progress = true;
+  while (progress) {
+    progress = false;
+    for (let i = 0; i < out.length; i += 1) {
+      if (merged.has(i)) continue;
+      const host = out[i];
+      if (!host.mergeable || host.type !== 'standard_pallet') continue;
+
+      let bestIdx = -1;
+      let bestWeight = Number.POSITIVE_INFINITY;
+      for (let j = 0; j < out.length; j += 1) {
+        if (i === j || merged.has(j)) continue;
+        const candidate = out[j];
+        if (!canMerge(host, candidate)) continue;
+        const weight = candidate.weight || 0;
+        if (weight < bestWeight) {
+          bestWeight = weight;
+          bestIdx = j;
+        }
+      }
+
+      if (bestIdx >= 0) {
+        const candidate = out[bestIdx];
+        host.weight = (host.weight || 0) + (candidate.weight || 0);
+        host.contents.push(...(candidate.contents || []));
+        host.mergeCount = (host.mergeCount || 0) + 1;
+        host.consolidatedFrom = [...(host.consolidatedFrom || []), candidate.id];
+        merged.add(bestIdx);
+        merges.push({ host: host.id, merged: candidate.id, combinedWeight: host.weight });
+        progress = true;
+      }
     }
   }
 
   return {
-    packages: out.filter((_, idx) => !merged.has(idx)).map((pkg, idx) => ({ ...pkg, id: idx + 1 })),
+    packages: out
+      .filter((_, idx) => !merged.has(idx))
+      .map((pkg, idx) => {
+        const { mergeCount, ...rest } = pkg;
+        return { ...rest, id: idx + 1 };
+      }),
     merges,
   };
 }
@@ -1054,7 +1140,19 @@ function predictPallets(items) {
 
     const normSku = normalizeSku(item.sku || 'UNKNOWN');
     const configHint = classifyFromSkuConfig(item);
-    const baseClassification = configHint?.classification || classifyItem(item.sku, item.name, orderHasParents);
+    const legacyClassification = classifyItem(item.sku, item.name, orderHasParents);
+    const hardLegacyClassifications = new Set(['non_shippable', 'packaging', 'component_of_parent', 'hardware']);
+    let baseClassification = legacyClassification;
+    if (configHint?.classification) {
+      const configClassification = configHint.classification;
+      const allowOverride =
+        !hardLegacyClassifications.has(legacyClassification) ||
+        configClassification === 'long_tube_trigger' ||
+        configClassification === 'non_shippable';
+      if (allowOverride) {
+        baseClassification = configClassification;
+      }
+    }
     const flagBypass = isFlagBypassItem(item);
     let classification = baseClassification;
     let netSuiteFlagged = false;
@@ -1283,7 +1381,7 @@ function predictPallets(items) {
   // Controlled floor for unknown-heavy orders: avoid zero-package predictions
   // while still preventing large component-driven overcounts.
   if (totalPallets === 0 && diagnostics.unknownProducts > 0) {
-    const fallbackPallets = Math.max(1, Math.min(4, Math.ceil(unknownQtyTotal / 100)));
+    const fallbackPallets = Math.max(1, Math.min(5, Math.ceil(unknownQtyTotal / 75)));
     const fallbackWeight = Math.max(75, Math.min(1200, Math.round(unknownQtyTotal * 10)));
     totalPallets += fallbackPallets;
     totalWeight += fallbackWeight;
@@ -1299,7 +1397,34 @@ function predictPallets(items) {
 
   const rawPackages = buildPackagesFromBreakdown(breakdown);
   const consolidation = consolidatePackages(rawPackages);
-  const packages = consolidation.packages;
+  let packages = consolidation.packages;
+  const suspiciousExcludedLines = diagnostics.excludedLines.filter(isPotentiallyPhysicalExcluded);
+
+  // Conservative safety lift: when low package counts coincide with excluded
+  // lines that may physically ship, bias slightly high to avoid costly underquotes.
+  if (suspiciousExcludedLines.length > 0 && packages.length <= 2) {
+    const liftCount = Math.min(2, Math.max(1, Math.ceil(suspiciousExcludedLines.length / 4)));
+    const startId = packages.length + 1;
+    for (let i = 0; i < liftCount; i += 1) {
+      packages.push({
+        id: startId + i,
+        type: 'unknown_pallet',
+        family: 'Risk Buffer',
+        dims: { ...PACKAGE_TEMPLATES.unknown_pallet },
+        weight: 120,
+        mergeable: false,
+        contents: [{
+          sku: 'RISK-BUFFER',
+          name: 'Conservative shipping buffer',
+          qty: 1,
+          matched: 'RISK_BUFFER',
+        }],
+      });
+    }
+    diagnostics.conservativeLiftPackages = liftCount;
+  } else {
+    diagnostics.conservativeLiftPackages = 0;
+  }
 
   diagnostics.packageCountBeforeConsolidation = rawPackages.length;
   diagnostics.packageCountAfterConsolidation = packages.length;
@@ -1310,7 +1435,6 @@ function predictPallets(items) {
 
   const productLines = diagnostics.knownProducts + diagnostics.unknownProducts;
   const baseConfidence = productLines > 0 ? Math.round((diagnostics.knownProducts / productLines) * 100) : 100;
-  const suspiciousExcludedLines = diagnostics.excludedLines.filter(isPotentiallyPhysicalExcluded);
   const penalties =
     (diagnostics.unknownProducts * 15) +
     (suspiciousExcludedLines.length * 10) +
