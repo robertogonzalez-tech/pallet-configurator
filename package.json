@@ -13,6 +13,8 @@
     "report:blindness": "node scripts/blindness-report.js",
     "test:classifier": "node scripts/test-classifier-contract.js",
     "test:calibration": "node scripts/test-calibration-adjustment.js",
+    "release:auto": "node scripts/release-when-ready.js",
+    "release:auto:apply": "node scripts/release-when-ready.js --apply",
     "migrate:data-contract": "node scripts/apply-data-contract.js",
     "migrate:eval-consistent": "node scripts/apply-consistent-eval-view.js",
     "backfill:semantics": "node scripts/backfill-shipment-semantics.js"
