@@ -1,0 +1,787 @@
+{
+  "version": 1,
+  "generatedAt": "2026-03-04T22:36:51.754Z",
+  "sourceView": "validations_eval_clean",
+  "sourceRows": 474,
+  "config": {
+    "minLineExact": 2,
+    "minLineBias": 3,
+    "minFamilyExact": 4,
+    "minFamilyBias": 6,
+    "minPatternExact": 6,
+    "minPatternBias": 8
+  },
+  "lineSignatures": {
+    "DD-SS-04-GAV:4": {
+      "count": 2,
+      "modeActual": 2,
+      "modeActualPct": 1,
+      "medianActual": 2,
+      "minActual": 2,
+      "maxActual": 2,
+      "exactOverride": true,
+      "recommendedDelta": 0,
+      "deltaModePct": 1,
+      "sourceRows": [
+        "SO5607",
+        "SO6067"
+      ]
+    },
+    "DD-SS-04-GAV:1": {
+      "count": 2,
+      "modeActual": 1,
+      "modeActualPct": 1,
+      "medianActual": 1,
+      "minActual": 1,
+      "maxActual": 1,
+      "exactOverride": true,
+      "recommendedDelta": 0,
+      "deltaModePct": 1,
+      "sourceRows": [
+        "SO6036",
+        "SO7360"
+      ]
+    },
+    "80101-0281-BLK06:18": {
+      "count": 2,
+      "modeActual": 1,
+      "modeActualPct": 1,
+      "medianActual": 1,
+      "minActual": 1,
+      "maxActual": 1,
+      "exactOverride": true,
+      "recommendedDelta": 0,
+      "deltaModePct": 1,
+      "sourceRows": [
+        "SO6517",
+        "SO7014"
+      ]
+    },
+    "90101-0172-BLK13:5": {
+      "count": 5,
+      "modeActual": 1,
+      "modeActualPct": 1,
+      "medianActual": 1,
+      "minActual": 1,
+      "maxActual": 1,
+      "exactOverride": true,
+      "recommendedDelta": 0,
+      "deltaModePct": 1,
+      "sourceRows": [
+        "SO6534",
+        "SO6942",
+        "SO7215",
+        "SO7764",
+        "SO7782"
+      ]
+    },
+    "DD-SS-04-GAV:12": {
+      "count": 2,
+      "modeActual": 3,
+      "modeActualPct": 1,
+      "medianActual": 3,
+      "minActual": 3,
+      "maxActual": 3,
+      "exactOverride": true,
+      "recommendedDelta": 0,
+      "deltaModePct": 1,
+      "sourceRows": [
+        "SO6722",
+        "SO7208"
+      ]
+    },
+    "90101-0172-BLK13:2|LONG-TUBE:4": {
+      "count": 3,
+      "modeActual": 2,
+      "modeActualPct": 1,
+      "medianActual": 2,
+      "minActual": 2,
+      "maxActual": 2,
+      "exactOverride": true,
+      "recommendedDelta": 0,
+      "deltaModePct": 1,
+      "sourceRows": [
+        "SO6767",
+        "SO7490",
+        "SO7596"
+      ]
+    },
+    "89901-0418-GRY14-KIT:1": {
+      "count": 4,
+      "modeActual": 1,
+      "modeActualPct": 1,
+      "medianActual": 1,
+      "minActual": 1,
+      "maxActual": 1,
+      "exactOverride": true,
+      "recommendedDelta": 0,
+      "deltaModePct": 1,
+      "sourceRows": [
+        "SO6783",
+        "SO7355",
+        "SO7528",
+        "SO7683"
+      ]
+    },
+    "90101-0172-BLK13:6": {
+      "count": 2,
+      "modeActual": 1,
+      "modeActualPct": 1,
+      "medianActual": 1,
+      "minActual": 1,
+      "maxActual": 1,
+      "exactOverride": true,
+      "recommendedDelta": 0,
+      "deltaModePct": 1,
+      "sourceRows": [
+        "SO6927",
+        "SO7069"
+      ]
+    },
+    "90101-0417-GRY14-BOXA:6": {
+      "count": 2,
+      "modeActual": 1,
+      "modeActualPct": 1,
+      "medianActual": 1,
+      "minActual": 1,
+      "maxActual": 1,
+      "exactOverride": true,
+      "recommendedDelta": 0,
+      "deltaModePct": 1,
+      "sourceRows": [
+        "SO6980",
+        "SO7598"
+      ]
+    },
+    "90101-0172-BLK13:7": {
+      "count": 3,
+      "modeActual": 1,
+      "modeActualPct": 1,
+      "medianActual": 1,
+      "minActual": 1,
+      "maxActual": 1,
+      "exactOverride": true,
+      "recommendedDelta": 0,
+      "deltaModePct": 1,
+      "sourceRows": [
+        "SO7019",
+        "SO7364",
+        "SO7619"
+      ]
+    },
+    "89901-2050-GRY14:12": {
+      "count": 2,
+      "modeActual": 3,
+      "modeActualPct": 1,
+      "medianActual": 3,
+      "minActual": 3,
+      "maxActual": 3,
+      "exactOverride": true,
+      "recommendedDelta": 0,
+      "deltaModePct": 1,
+      "sourceRows": [
+        "SO7021",
+        "SO7211"
+      ]
+    },
+    "90101-2287-BLK13:5": {
+      "count": 3,
+      "modeActual": 1,
+      "modeActualPct": 1,
+      "medianActual": 1,
+      "minActual": 1,
+      "maxActual": 1,
+      "exactOverride": true,
+      "recommendedDelta": 0,
+      "deltaModePct": 1,
+      "sourceRows": [
+        "SO7027",
+        "SO7394",
+        "SO7411"
+      ]
+    },
+    "90101-0172-BLK13:3": {
+      "count": 2,
+      "modeActual": 1,
+      "modeActualPct": 1,
+      "medianActual": 1,
+      "minActual": 1,
+      "maxActual": 1,
+      "exactOverride": true,
+      "recommendedDelta": 0,
+      "deltaModePct": 1,
+      "sourceRows": [
+        "SO7033",
+        "SO7608"
+      ]
+    },
+    "90101-2287-BLK13:3": {
+      "count": 7,
+      "modeActual": 1,
+      "modeActualPct": 1,
+      "medianActual": 1,
+      "minActual": 1,
+      "maxActual": 1,
+      "exactOverride": true,
+      "recommendedDelta": 0,
+      "deltaModePct": 1,
+      "sourceRows": [
+        "SO7045",
+        "SO7059",
+        "SO7481",
+        "SO7489",
+        "SO7697",
+        "SO7701",
+        "SO7772"
+      ]
+    },
+    "89901-2050-GRY14:6": {
+      "count": 3,
+      "modeActual": 1,
+      "modeActualPct": 1,
+      "medianActual": 1,
+      "minActual": 1,
+      "maxActual": 1,
+      "exactOverride": true,
+      "recommendedDelta": 0,
+      "deltaModePct": 1,
+      "sourceRows": [
+        "SO7048",
+        "SO7148",
+        "SO7643"
+      ]
+    },
+    "90101-2287-GAV:4": {
+      "count": 4,
+      "modeActual": 1,
+      "modeActualPct": 1,
+      "medianActual": 1,
+      "minActual": 1,
+      "maxActual": 1,
+      "exactOverride": true,
+      "recommendedDelta": 0,
+      "deltaModePct": 1,
+      "sourceRows": [
+        "SO7049",
+        "SO7177",
+        "SO7604",
+        "SO7734"
+      ]
+    },
+    "90101-0417-GRY14-BOXA:4": {
+      "count": 2,
+      "modeActual": 1,
+      "modeActualPct": 1,
+      "medianActual": 1,
+      "minActual": 1,
+      "maxActual": 1,
+      "exactOverride": true,
+      "recommendedDelta": 0,
+      "deltaModePct": 1,
+      "sourceRows": [
+        "SO7066",
+        "SO7277"
+      ]
+    },
+    "90101-1172-BLK13:5": {
+      "count": 2,
+      "modeActual": 1,
+      "modeActualPct": 1,
+      "medianActual": 1,
+      "minActual": 1,
+      "maxActual": 1,
+      "exactOverride": true,
+      "recommendedDelta": 0,
+      "deltaModePct": 1,
+      "sourceRows": [
+        "SO7109",
+        "SO7424"
+      ]
+    },
+    "90101-0172-BLK13:1": {
+      "count": 2,
+      "modeActual": 1,
+      "modeActualPct": 1,
+      "medianActual": 1,
+      "minActual": 1,
+      "maxActual": 1,
+      "exactOverride": true,
+      "recommendedDelta": 0,
+      "deltaModePct": 1,
+      "sourceRows": [
+        "SO7110",
+        "SO7384"
+      ]
+    },
+    "90101-2287-BLK13:6": {
+      "count": 4,
+      "modeActual": 1,
+      "modeActualPct": 1,
+      "medianActual": 1,
+      "minActual": 1,
+      "maxActual": 1,
+      "exactOverride": true,
+      "recommendedDelta": 0,
+      "deltaModePct": 0.75,
+      "sourceRows": [
+        "SO7111",
+        "SO7456",
+        "SO7532",
+        "SO7738"
+      ]
+    },
+    "90101-0172-BLK13:4": {
+      "count": 3,
+      "modeActual": 1,
+      "modeActualPct": 1,
+      "medianActual": 1,
+      "minActual": 1,
+      "maxActual": 1,
+      "exactOverride": true,
+      "recommendedDelta": 0,
+      "deltaModePct": 1,
+      "sourceRows": [
+        "SO7181",
+        "SO7570",
+        "SO7780"
+      ]
+    },
+    "90101-0172-BLK13:20": {
+      "count": 2,
+      "modeActual": 2,
+      "modeActualPct": 1,
+      "medianActual": 2,
+      "minActual": 2,
+      "maxActual": 2,
+      "exactOverride": true,
+      "recommendedDelta": 0,
+      "deltaModePct": 1,
+      "sourceRows": [
+        "SO7204",
+        "SO7244"
+      ]
+    },
+    "90101-2287-GAV:14": {
+      "count": 2,
+      "modeActual": 1,
+      "modeActualPct": 1,
+      "medianActual": 1,
+      "minActual": 1,
+      "maxActual": 1,
+      "exactOverride": true,
+      "recommendedDelta": 0,
+      "deltaModePct": 0.5,
+      "sourceRows": [
+        "SO7209",
+        "SO7736"
+      ]
+    },
+    "89901-2050-GRY14:3": {
+      "count": 6,
+      "modeActual": 1,
+      "modeActualPct": 1,
+      "medianActual": 1,
+      "minActual": 1,
+      "maxActual": 1,
+      "exactOverride": true,
+      "recommendedDelta": 0,
+      "deltaModePct": 1,
+      "sourceRows": [
+        "SO7220",
+        "SO7228",
+        "SO7258",
+        "SO7401",
+        "SO7582",
+        "SO7729"
+      ]
+    },
+    "89901-2050-GRY14:2": {
+      "count": 8,
+      "modeActual": 1,
+      "modeActualPct": 1,
+      "medianActual": 1,
+      "minActual": 1,
+      "maxActual": 1,
+      "exactOverride": true,
+      "recommendedDelta": 0,
+      "deltaModePct": 1,
+      "sourceRows": [
+        "SO7242",
+        "SO7313",
+        "SO7325",
+        "SO7400",
+        "SO7412",
+        "SO7417",
+        "SO7591",
+        "SO7609"
+      ]
+    },
+    "90101-0172-BLK13:1|LONG-TUBE:5": {
+      "count": 2,
+      "modeActual": 1,
+      "modeActualPct": 1,
+      "medianActual": 1,
+      "minActual": 1,
+      "maxActual": 1,
+      "exactOverride": true,
+      "recommendedDelta": 0,
+      "deltaModePct": 1,
+      "sourceRows": [
+        "SO7287",
+        "SO7810"
+      ]
+    },
+    "89901-2050-GRY14:1": {
+      "count": 3,
+      "modeActual": 1,
+      "modeActualPct": 1,
+      "medianActual": 1,
+      "minActual": 1,
+      "maxActual": 1,
+      "exactOverride": true,
+      "recommendedDelta": 0,
+      "deltaModePct": 1,
+      "sourceRows": [
+        "SO7298",
+        "SO7571",
+        "SO7572"
+      ]
+    },
+    "80301-0166-BLK13:3": {
+      "count": 3,
+      "modeActual": 1,
+      "modeActualPct": 1,
+      "medianActual": 1,
+      "minActual": 1,
+      "maxActual": 1,
+      "exactOverride": true,
+      "recommendedDelta": 0,
+      "deltaModePct": 1,
+      "sourceRows": [
+        "SO7478",
+        "SO7561",
+        "SO7731"
+      ]
+    },
+    "80301-0151-GAV:15": {
+      "count": 2,
+      "modeActual": 2,
+      "modeActualPct": 1,
+      "medianActual": 2,
+      "minActual": 2,
+      "maxActual": 2,
+      "exactOverride": true,
+      "recommendedDelta": 0,
+      "deltaModePct": 1,
+      "sourceRows": [
+        "SO7517",
+        "SO7519"
+      ]
+    }
+  },
+  "familySignatures": {
+    "VR2 Offset:6": {
+      "count": 5,
+      "modeActual": 1,
+      "modeActualPct": 1,
+      "medianActual": 1,
+      "minActual": 1,
+      "maxActual": 1,
+      "exactOverride": true,
+      "recommendedDelta": 0,
+      "deltaModePct": 1,
+      "sourceRows": [
+        "SO5542",
+        "SO6927",
+        "SO6980",
+        "SO7069",
+        "SO7598"
+      ]
+    },
+    "VR2 Offset:1": {
+      "count": 4,
+      "modeActual": 1,
+      "modeActualPct": 1,
+      "medianActual": 1,
+      "minActual": 1,
+      "maxActual": 1,
+      "exactOverride": true,
+      "recommendedDelta": 0,
+      "deltaModePct": 0.75,
+      "sourceRows": [
+        "SO5600",
+        "SO7110",
+        "SO7376",
+        "SO7384"
+      ]
+    },
+    "VR2 Offset:5": {
+      "count": 6,
+      "modeActual": 1,
+      "modeActualPct": 1,
+      "medianActual": 1,
+      "minActual": 1,
+      "maxActual": 1,
+      "exactOverride": true,
+      "recommendedDelta": 0,
+      "deltaModePct": 1,
+      "sourceRows": [
+        "SO6534",
+        "SO6926",
+        "SO6942",
+        "SO7215",
+        "SO7764",
+        "SO7782"
+      ]
+    },
+    "Metal Bike Vault / VisiLocker:1": {
+      "count": 4,
+      "modeActual": 1,
+      "modeActualPct": 1,
+      "medianActual": 1,
+      "minActual": 1,
+      "maxActual": 1,
+      "exactOverride": true,
+      "recommendedDelta": 0,
+      "deltaModePct": 1,
+      "sourceRows": [
+        "SO6783",
+        "SO7355",
+        "SO7528",
+        "SO7683"
+      ]
+    },
+    "Dismount:6": {
+      "count": 4,
+      "modeActual": 1,
+      "modeActualPct": 1,
+      "medianActual": 1,
+      "minActual": 1,
+      "maxActual": 1,
+      "exactOverride": true,
+      "recommendedDelta": 0,
+      "deltaModePct": 1,
+      "sourceRows": [
+        "SO6975",
+        "SO7048",
+        "SO7148",
+        "SO7643"
+      ]
+    },
+    "VR2 Offset:4": {
+      "count": 6,
+      "modeActual": 1,
+      "modeActualPct": 1,
+      "medianActual": 1,
+      "minActual": 1,
+      "maxActual": 1,
+      "exactOverride": true,
+      "recommendedDelta": 0,
+      "deltaModePct": 1,
+      "sourceRows": [
+        "SO6996",
+        "SO7066",
+        "SO7181",
+        "SO7277",
+        "SO7570",
+        "SO7780"
+      ]
+    },
+    "Varsity:3": {
+      "count": 8,
+      "modeActual": 1,
+      "modeActualPct": 1,
+      "medianActual": 1,
+      "minActual": 1,
+      "maxActual": 1,
+      "exactOverride": true,
+      "recommendedDelta": 0,
+      "deltaModePct": 1,
+      "sourceRows": [
+        "SO7045",
+        "SO7059",
+        "SO7241",
+        "SO7481",
+        "SO7489",
+        "SO7697",
+        "SO7701",
+        "SO7772"
+      ]
+    },
+    "Varsity:6": {
+      "count": 4,
+      "modeActual": 1,
+      "modeActualPct": 1,
+      "medianActual": 1,
+      "minActual": 1,
+      "maxActual": 1,
+      "exactOverride": true,
+      "recommendedDelta": 0,
+      "deltaModePct": 0.75,
+      "sourceRows": [
+        "SO7111",
+        "SO7456",
+        "SO7532",
+        "SO7738"
+      ]
+    },
+    "Dismount:3": {
+      "count": 6,
+      "modeActual": 1,
+      "modeActualPct": 1,
+      "medianActual": 1,
+      "minActual": 1,
+      "maxActual": 1,
+      "exactOverride": true,
+      "recommendedDelta": 0,
+      "deltaModePct": 1,
+      "sourceRows": [
+        "SO7220",
+        "SO7228",
+        "SO7258",
+        "SO7401",
+        "SO7582",
+        "SO7729"
+      ]
+    },
+    "Dismount:2": {
+      "count": 8,
+      "modeActual": 1,
+      "modeActualPct": 1,
+      "medianActual": 1,
+      "minActual": 1,
+      "maxActual": 1,
+      "exactOverride": true,
+      "recommendedDelta": 0,
+      "deltaModePct": 1,
+      "sourceRows": [
+        "SO7242",
+        "SO7313",
+        "SO7325",
+        "SO7400",
+        "SO7412",
+        "SO7417",
+        "SO7591",
+        "SO7609"
+      ]
+    },
+    "Hoop Runner:3": {
+      "count": 4,
+      "modeActual": 1,
+      "modeActualPct": 1,
+      "medianActual": 1,
+      "minActual": 1,
+      "maxActual": 1,
+      "exactOverride": true,
+      "recommendedDelta": 0,
+      "deltaModePct": 1,
+      "sourceRows": [
+        "SO7478",
+        "SO7561",
+        "SO7731",
+        "SO7803"
+      ]
+    }
+  },
+  "patternSignatures": {
+    "fc1|VR2 Offset:4-7": {
+      "count": 20,
+      "modeActual": 1,
+      "modeActualPct": 1,
+      "medianActual": 1,
+      "minActual": 1,
+      "maxActual": 1,
+      "exactOverride": true,
+      "recommendedDelta": 0,
+      "deltaModePct": 1,
+      "sourceRows": [
+        "SO5542",
+        "SO6534",
+        "SO6926",
+        "SO6927",
+        "SO6942",
+        "SO6980",
+        "SO6996",
+        "SO7019",
+        "SO7066",
+        "SO7069",
+        "SO7181",
+        "SO7215",
+        "SO7277",
+        "SO7364",
+        "SO7570",
+        "SO7598",
+        "SO7619",
+        "SO7764",
+        "SO7780",
+        "SO7782"
+      ]
+    },
+    "fc1|Hoop Runner:4-7": {
+      "count": 6,
+      "modeActual": 1,
+      "modeActualPct": 1,
+      "medianActual": 1,
+      "minActual": 1,
+      "maxActual": 1,
+      "exactOverride": true,
+      "recommendedDelta": 0,
+      "deltaModePct": 1,
+      "sourceRows": [
+        "SO6971",
+        "SO7120",
+        "SO7232",
+        "SO7316",
+        "SO7523",
+        "SO7629"
+      ]
+    },
+    "fc1|Hoop Runner:2-3": {
+      "count": 7,
+      "modeActual": 1,
+      "modeActualPct": 1,
+      "medianActual": 1,
+      "minActual": 1,
+      "maxActual": 1,
+      "exactOverride": true,
+      "recommendedDelta": 0,
+      "deltaModePct": 1,
+      "sourceRows": [
+        "SO6995",
+        "SO7097",
+        "SO7478",
+        "SO7561",
+        "SO7676",
+        "SO7731",
+        "SO7803"
+      ]
+    },
+    "fc1|Dismount:2-3": {
+      "count": 14,
+      "modeActual": 1,
+      "modeActualPct": 1,
+      "medianActual": 1,
+      "minActual": 1,
+      "maxActual": 1,
+      "exactOverride": true,
+      "recommendedDelta": 0,
+      "deltaModePct": 1,
+      "sourceRows": [
+        "SO7220",
+        "SO7228",
+        "SO7242",
+        "SO7258",
+        "SO7313",
+        "SO7325",
+        "SO7400",
+        "SO7401",
+        "SO7412",
+        "SO7417",
+        "SO7582",
+        "SO7591",
+        "SO7609",
+        "SO7729"
+      ]
+    }
+  }
+}

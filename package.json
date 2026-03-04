@@ -11,6 +11,8 @@
     "error-slice": "node scripts/error-slice-report.js",
     "eval:accuracy": "node scripts/eval-accuracy.js",
     "report:blindness": "node scripts/blindness-report.js",
+    "build:exact-booster": "node scripts/build-exact-booster-map.js",
+    "eval:exact-booster": "node scripts/eval-exact-booster.js",
     "test:classifier": "node scripts/test-classifier-contract.js",
     "test:calibration": "node scripts/test-calibration-adjustment.js",
     "release:auto": "node scripts/release-when-ready.js",

@@ -9,6 +9,10 @@ try {
   console.warn('[NOTIFICATIONS] Optional notifications module unavailable:', e.message);
 }
 const { predictPackages: predictPackagesCore } = require('./lib/predictPackages');
+const {
+  loadExactBoosterMap,
+  chooseExactBoosterAdjustment,
+} = require('./lib/exactBooster');
 const fs = require('fs');
 const path = require('path');
 
@@ -118,6 +122,7 @@ function sanitizeDiagnostics(diagnostics, debug = false) {
     packageCountBeforeConsolidation: diagnostics.packageCountBeforeConsolidation,
     packageCountAfterConsolidation: diagnostics.packageCountAfterConsolidation,
     calibration: diagnostics.calibration || null,
+    exactBooster: diagnostics.exactBooster || null,
     baseStationLongTubeDedupeApplied: !!diagnostics.baseStationLongTubeDedupeApplied,
     zeroFloorApplied: !!diagnostics.zeroFloorApplied,
     zeroFloorFallbackPallets: diagnostics.zeroFloorFallbackPallets || 0,
@@ -2295,11 +2300,42 @@ function predictPallets(items, context = {}) {
   const confidenceScore = Math.max(0, Math.min(100, baseConfidence - penalties));
   const confidenceLevel = confidenceScore >= 90 ? 'high' : confidenceScore >= 70 ? 'medium' : 'low';
   const needsReview = confidenceLevel === 'low' || suspiciousExcludedLines.length > 0;
+  diagnostics.confidenceScore = confidenceScore;
+  diagnostics.confidenceLevel = confidenceLevel;
+  diagnostics.needsReview = needsReview;
+  diagnostics.suspiciousExcludedLines = suspiciousExcludedLines;
 
   diagnostics.filter_stats = diagnostics.filterStats;
   diagnostics.included_lines = diagnostics.includedLines;
   diagnostics.excluded_lines = diagnostics.excludedLines;
   diagnostics.unknown_skus = diagnostics.unknownSkus;
+
+  // Exact-booster layer (history-aware, conservative):
+  // - applies deterministic ±1 adjustments from consistent historical signatures
+  // - only trims counts when confidence is high and no suspicious exclusions
+  const exactBoosterMap = loadExactBoosterMap();
+  const exactBooster = chooseExactBoosterAdjustment({
+    breakdown,
+    currentPallets: totalPallets,
+    diagnostics,
+    map: exactBoosterMap,
+  });
+  const exactBoostAdjustment = applyPackageCountAdjustment(packages, exactBooster.requestedDelta || 0);
+  packages = exactBoostAdjustment.packages;
+  totalPallets = packages.length;
+  totalWeight = Math.round(packages.reduce((sum, p) => sum + (p.weight || 0), 0));
+  diagnostics.exactBooster = {
+    requestedDelta: exactBooster.requestedDelta || 0,
+    appliedDelta: exactBoostAdjustment.appliedDelta || 0,
+    rule: exactBooster.rule || null,
+    source: exactBooster.source || null,
+    signature: exactBooster.signature || null,
+    blocked: !!exactBooster.blocked,
+    reason: exactBooster.reason || null,
+    supportCount: Number(exactBooster.record?.count || 0),
+    modeActual: Number(exactBooster.record?.modeActual || 0),
+    recommendedDelta: Number(exactBooster.record?.recommendedDelta || 0),
+  };
 
   return {
     totalPallets,
