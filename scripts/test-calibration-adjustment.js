@@ -384,20 +384,4 @@ run(
   null
 );
 
-run(
-  'exact_fc4_base_hoop_vr2_longtube_high_plus1',
-  {
-    breakdown: [
-      row('Base Station', 35),
-      row('Hoop Runner', 1),
-      row('VR2 Offset', 51),
-      row('LONG_TUBE', 82),
-    ],
-    currentPallets: 7,
-    orderRef: 'SO7337',
-  },
-  1,
-  'exact_fc4_base_hoop_vr2_longtube_high_plus1'
-);
-
 console.log('All calibration tests passed.');

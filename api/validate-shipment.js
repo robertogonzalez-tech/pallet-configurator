@@ -1589,20 +1589,6 @@ function computeCalibrationAdjustment({
     delta -= 1;
     firedRules.push('exact_fc2_vr2_longtube_vr2_30plus_minus1');
   }
-  if (
-    !legacyOrder &&
-    familyCount === 4 &&
-    hasFamily('Base Station') &&
-    hasFamily('Hoop Runner') &&
-    hasFamily('VR2 Offset') &&
-    hasFamily('LONG_TUBE') &&
-    calibrationFamilyQty(breakdown, 'VR2 Offset') >= 50 &&
-    longTubeQty >= 80 &&
-    currentPallets >= 7
-  ) {
-    delta += 1;
-    firedRules.push('exact_fc4_base_hoop_vr2_longtube_high_plus1');
-  }
 
   delta = Math.max(-8, Math.min(8, delta));
   return {
