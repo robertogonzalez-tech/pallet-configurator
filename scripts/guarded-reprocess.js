@@ -8,11 +8,17 @@ const args = process.argv.slice(2);
 const apply = args.includes('--apply');
 const allowExactDropArg = args.find((a) => a.startsWith('--allow-exact-drop='));
 const allowWithin1DropArg = args.find((a) => a.startsWith('--allow-within1-drop='));
+const apiBaseArg = args.find((a) => a.startsWith('--api-base='));
 const allowExactDrop = allowExactDropArg ? Number(allowExactDropArg.split('=')[1]) : 1.0;
 const allowWithin1Drop = allowWithin1DropArg ? Number(allowWithin1DropArg.split('=')[1]) : 1.0;
+const apiBase = apiBaseArg ? String(apiBaseArg.split('=')[1] || '').trim() : '';
 
-function run(cmd, cmdArgs) {
-  const result = spawnSync(cmd, cmdArgs, { encoding: 'utf8', stdio: 'pipe' });
+function run(cmd, cmdArgs, envOverride = null) {
+  const result = spawnSync(cmd, cmdArgs, {
+    encoding: 'utf8',
+    stdio: 'pipe',
+    env: envOverride ? { ...process.env, ...envOverride } : process.env,
+  });
   return result;
 }
 
@@ -58,8 +64,16 @@ function printSummary(prefix, log) {
 }
 
 (async () => {
+  if (apiBase) {
+    console.log(`Using reprocess API base: ${apiBase}`);
+  }
+
   console.log('Running guarded dry-run reprocess...');
-  const dry = run('node', ['batch-reprocess-validations.js', '--dry-run']);
+  const dry = run(
+    'node',
+    ['batch-reprocess-validations.js', '--dry-run'],
+    apiBase ? { REPROCESS_API_BASE: apiBase } : null
+  );
   process.stdout.write(dry.stdout || '');
   process.stderr.write(dry.stderr || '');
   if (dry.status !== 0) {
@@ -89,7 +103,11 @@ function printSummary(prefix, log) {
   }
 
   console.log('Gates passed. Running live reprocess...');
-  const live = run('node', ['batch-reprocess-validations.js']);
+  const live = run(
+    'node',
+    ['batch-reprocess-validations.js'],
+    apiBase ? { REPROCESS_API_BASE: apiBase } : null
+  );
   process.stdout.write(live.stdout || '');
   process.stderr.write(live.stderr || '');
   if (live.status !== 0) {

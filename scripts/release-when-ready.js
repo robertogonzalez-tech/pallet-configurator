@@ -44,33 +44,47 @@ async function waitForQuotaWindow() {
   await sleepMs(waitMinutes * 60 * 1000);
 }
 
-async function deployWithRetry() {
-  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    console.log(`\n=== Deploy Attempt ${attempt}/${maxAttempts} ===`);
-    const result = run('vercel', ['--prod', '--yes']);
-    if (result.status === 0) {
-      console.log('Production deploy succeeded.');
-      return;
-    }
+function parsePreviewUrl(result) {
+  const text = `${result.stdout || ''}\n${result.stderr || ''}`;
+  const tagged = text.match(/Preview:\s*(https:\/\/[^\s]+)/i);
+  if (tagged && tagged[1]) return tagged[1];
 
-    if (isQuotaError(result) && attempt < maxAttempts) {
-      await waitForQuotaWindow();
-      continue;
-    }
-
-    throw new Error(`Deploy failed on attempt ${attempt} (exit ${result.status ?? 'unknown'}).`);
+  const allUrls = text.match(/https:\/\/[a-z0-9.-]+\.vercel\.app/gi);
+  if (allUrls && allUrls.length > 0) {
+    return allUrls[allUrls.length - 1];
   }
-
-  throw new Error('Deploy attempts exhausted.');
+  return '';
 }
 
-function runGuardedRelease() {
+function deployPreview() {
+  console.log('\n=== Preview Deploy ===');
+  const result = run('vercel', ['--yes']);
+  if (result.status !== 0) {
+    throw new Error(`Preview deploy failed (exit ${result.status ?? 'unknown'}).`);
+  }
+
+  const previewUrl = parsePreviewUrl(result);
+  if (!previewUrl) {
+    throw new Error('Preview deploy succeeded but preview URL could not be parsed.');
+  }
+
+  console.log(`Preview URL: ${previewUrl}`);
+  return previewUrl;
+}
+
+function runGuardedDryRun(apiBase = '') {
   console.log('\n=== Guarded Dry-Run ===');
-  const dry = run('node', ['scripts/guarded-reprocess.js']);
+  const dryArgs = ['scripts/guarded-reprocess.js'];
+  if (apiBase) {
+    dryArgs.push(`--api-base=${apiBase}`);
+  }
+  const dry = run('node', dryArgs);
   if (dry.status !== 0) {
     throw new Error(`Guarded dry-run failed (exit ${dry.status ?? 'unknown'}).`);
   }
+}
 
+function runGuardedRelease() {
   if (apply) {
     console.log('\n=== Guarded Apply ===');
     const live = run('node', ['scripts/guarded-reprocess.js', '--apply']);
@@ -88,10 +102,33 @@ function runGuardedRelease() {
   }
 }
 
+async function runReleaseFlow() {
+  const previewUrl = deployPreview();
+  runGuardedDryRun(previewUrl);
+  console.log('\nPreview dry-run gates passed. Proceeding to production deploy...');
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    console.log(`\n=== Production Deploy Attempt ${attempt}/${maxAttempts} ===`);
+    const result = run('vercel', ['--prod', '--yes']);
+    if (result.status === 0) {
+      console.log('Production deploy succeeded.');
+      runGuardedRelease();
+      return;
+    }
+
+    if (isQuotaError(result) && attempt < maxAttempts) {
+      await waitForQuotaWindow();
+      continue;
+    }
+
+    throw new Error(`Production deploy failed on attempt ${attempt} (exit ${result.status ?? 'unknown'}).`);
+  }
+
+  throw new Error('Production deploy attempts exhausted.');
+}
+
 (async () => {
   try {
-    await deployWithRetry();
-    runGuardedRelease();
+    await runReleaseFlow();
   } catch (error) {
     console.error(`\nRelease runner failed: ${error.message || error}`);
     process.exit(1);
