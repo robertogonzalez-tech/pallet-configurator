@@ -11,7 +11,12 @@ const DEFAULT_PALLET = {
 
 const VALIDATORS = ['Anisa', 'Avianna', 'Berto', 'Chad', 'Tristan']
 const SHIPMENT_COMPLETENESS_OPTIONS = ['complete', 'partial', 'unknown']
-const ACTUAL_UNIT_BASIS_OPTIONS = ['package_count', 'pallet_positions', 'unknown']
+const ACTUAL_UNIT_BASIS_OPTIONS = [
+  { value: 'package_count', label: 'Physical packages shipped' },
+  { value: 'pallet_positions', label: 'Total pallet spaces used on truck' },
+  { value: 'unknown', label: 'Unknown / not sure' },
+]
+const ACTUAL_UNIT_BASIS_VALUES = new Set(ACTUAL_UNIT_BASIS_OPTIONS.map((option) => option.value))
 const SHIPMENT_COMPLETENESS_REASON_OPTIONS = {
   complete: [
     { value: 'packed_and_shipped_full', label: 'Packed and shipped in full' },
@@ -110,7 +115,7 @@ export default function ValidationForm() {
     if (shipmentCompletenessReason.endsWith('_other') && !notes.trim()) {
       return 'Notes are required when reason is set to Other'
     }
-    if (!ACTUAL_UNIT_BASIS_OPTIONS.includes(actualUnitBasis)) {
+    if (!ACTUAL_UNIT_BASIS_VALUES.has(actualUnitBasis)) {
       return 'Actual unit basis is required'
     }
     if (actualUnitBasis === 'pallet_positions') {
@@ -551,21 +556,21 @@ export default function ValidationForm() {
               </div>
 
               <div className="form-group validator">
-                <label htmlFor="actual-unit-basis">Actual Unit Basis</label>
+                <label htmlFor="actual-unit-basis">How was actual counted?</label>
                 <select
                   id="actual-unit-basis"
                   value={actualUnitBasis}
                   onChange={(e) => setActualUnitBasis(e.target.value)}
                   className="validator-select"
                 >
-                  {ACTUAL_UNIT_BASIS_OPTIONS.map(value => (
-                    <option key={value} value={value}>{value}</option>
+                  {ACTUAL_UNIT_BASIS_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
                   ))}
                 </select>
               </div>
 
               <div className="form-group validator">
-                <label htmlFor="actual-positions">Actual Positions</label>
+                <label htmlFor="actual-positions">Total Pallet Spaces {actualUnitBasis === 'pallet_positions' ? '*' : '(optional)'}</label>
                 <input
                   id="actual-positions"
                   type="number"

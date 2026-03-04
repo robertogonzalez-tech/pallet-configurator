@@ -2504,13 +2504,13 @@ const handler = async (req, res) => {
     if (!skipSave && !hasCompletenessReason) {
       return res.status(400).json({
         success: false,
-        error: 'shipmentCompletenessReason is required when saving a validation',
+        error: 'Completeness reason is required. Select a reason (complete, partial, or unknown) before saving.',
       });
     }
     if (hasCompletenessReason && !allowedReasons.has(shipmentCompletenessReason)) {
       return res.status(400).json({
         success: false,
-        error: `Invalid shipmentCompletenessReason for ${shipmentCompleteness}`,
+        error: `Completeness reason does not match shipment completeness (${shipmentCompleteness}).`,
       });
     }
 

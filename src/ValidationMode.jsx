@@ -21,6 +21,11 @@ const SHIPMENT_COMPLETENESS_REASON_OPTIONS = {
     { value: 'unknown_other', label: 'Other (unknown)' },
   ],
 }
+const ACTUAL_UNIT_BASIS_OPTIONS = [
+  { value: 'package_count', label: 'Physical packages shipped' },
+  { value: 'pallet_positions', label: 'Total pallet spaces used on truck' },
+  { value: 'unknown', label: 'Unknown / not sure' },
+]
 
 function reasonOptionsForCompleteness(completeness) {
   return SHIPMENT_COMPLETENESS_REASON_OPTIONS[completeness] || []
@@ -388,19 +393,19 @@ export default function ValidationMode() {
             </div>
 
             <div className="form-group">
-              <label>Actual Unit Basis *</label>
+              <label>How was actual counted? *</label>
               <select
                 value={validation.actualUnitBasis}
                 onChange={(e) => setValidation({...validation, actualUnitBasis: e.target.value})}
               >
-                <option value="package_count">package_count</option>
-                <option value="pallet_positions">pallet_positions</option>
-                <option value="unknown">unknown</option>
+                {ACTUAL_UNIT_BASIS_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
               </select>
             </div>
 
             <div className="form-group">
-              <label>Actual Positions {validation.actualUnitBasis === 'pallet_positions' ? '*' : '(optional)'}</label>
+              <label>Total Pallet Spaces {validation.actualUnitBasis === 'pallet_positions' ? '*' : '(optional)'}</label>
               <input
                 type="number"
                 min="0"
