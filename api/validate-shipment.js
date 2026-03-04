@@ -1349,7 +1349,7 @@ function computeCalibrationAdjustment({
     hasFamily('Hoop Runner') &&
     hasFamily('Metal Bike Vault / VisiLocker') &&
     calibrationFamilyQty(breakdown, 'Metal Bike Vault / VisiLocker') === 3 &&
-    currentPallets === 1
+    currentPallets === 2
   ) {
     delta += 1;
     firedRules.push('exact_fc2_hoop_visilocker_qty3_plus1');
@@ -1576,6 +1576,32 @@ function computeCalibrationAdjustment({
   ) {
     delta -= 1;
     firedRules.push('exact_fc3_vr2_varsity_longtube15_20_minus1');
+  }
+  if (
+    !legacyOrder &&
+    familyCount === 2 &&
+    hasFamily('VR2 Offset') &&
+    hasFamily('LONG_TUBE') &&
+    calibrationFamilyQty(breakdown, 'VR2 Offset') >= 30 &&
+    longTubeQty >= 50 &&
+    currentPallets >= 5
+  ) {
+    delta -= 1;
+    firedRules.push('exact_fc2_vr2_longtube_vr2_30plus_minus1');
+  }
+  if (
+    !legacyOrder &&
+    familyCount === 4 &&
+    hasFamily('Base Station') &&
+    hasFamily('Hoop Runner') &&
+    hasFamily('VR2 Offset') &&
+    hasFamily('LONG_TUBE') &&
+    calibrationFamilyQty(breakdown, 'VR2 Offset') >= 50 &&
+    longTubeQty >= 80 &&
+    currentPallets >= 7
+  ) {
+    delta += 1;
+    firedRules.push('exact_fc4_base_hoop_vr2_longtube_high_plus1');
   }
 
   delta = Math.max(-8, Math.min(8, delta));

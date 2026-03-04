@@ -303,10 +303,10 @@ run(
       row('Hoop Runner', 3),
       row('Metal Bike Vault / VisiLocker', 3),
     ],
-    currentPallets: 1,
+    currentPallets: 2,
     orderRef: 'SO7446',
   },
-  1,
+  0,
   'exact_fc2_hoop_visilocker_qty3_plus1'
 );
 
@@ -317,10 +317,10 @@ run(
       row('Hoop Runner', 4),
       row('Metal Bike Vault / VisiLocker', 4),
     ],
-    currentPallets: 1,
+    currentPallets: 2,
     orderRef: 'SO7042',
   },
-  0,
+  -1,
   null
 );
 
@@ -349,11 +349,55 @@ run(
       row('VR2 Offset', 51),
       row('LONG_TUBE', 82),
     ],
-    currentPallets: 7,
+    currentPallets: 6,
     orderRef: 'SO7337',
   },
   0,
   null
+);
+
+run(
+  'exact_fc2_vr2_longtube_vr2_30plus_minus1',
+  {
+    breakdown: [
+      row('VR2 Offset', 35),
+      row('LONG_TUBE', 72),
+    ],
+    currentPallets: 5,
+    orderRef: 'SO7029',
+  },
+  -1,
+  'exact_fc2_vr2_longtube_vr2_30plus_minus1'
+);
+
+run(
+  'exact_fc2_vr2_longtube_vr2_30plus_minus1_not_overbroad',
+  {
+    breakdown: [
+      row('VR2 Offset', 12),
+      row('LONG_TUBE', 68),
+    ],
+    currentPallets: 3,
+    orderRef: 'SO7469',
+  },
+  0,
+  null
+);
+
+run(
+  'exact_fc4_base_hoop_vr2_longtube_high_plus1',
+  {
+    breakdown: [
+      row('Base Station', 35),
+      row('Hoop Runner', 1),
+      row('VR2 Offset', 51),
+      row('LONG_TUBE', 82),
+    ],
+    currentPallets: 7,
+    orderRef: 'SO7337',
+  },
+  1,
+  'exact_fc4_base_hoop_vr2_longtube_high_plus1'
 );
 
 console.log('All calibration tests passed.');
