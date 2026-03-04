@@ -384,4 +384,134 @@ run(
   null
 );
 
+run(
+  'exact_fc2_vr2_longtube_1_4_minus1',
+  {
+    breakdown: [
+      row('VR2 Offset', 1),
+      row('LONG_TUBE', 4),
+    ],
+    currentPallets: 2,
+    orderRef: 'SO7263',
+  },
+  -1,
+  'exact_fc2_vr2_longtube_1_4_minus1'
+);
+
+run(
+  'exact_fc2_vr2_longtube_small_vr2_high_tube_minus1',
+  {
+    breakdown: [
+      row('VR2 Offset', 7),
+      row('LONG_TUBE', 64),
+    ],
+    currentPallets: 2,
+    orderRef: 'SO7475',
+  },
+  -1,
+  'exact_fc2_vr2_longtube_small_vr2_high_tube_minus1'
+);
+
+run(
+  'exact_fc2_vr2_longtube_13_24_minus1',
+  {
+    breakdown: [
+      row('VR2 Offset', 13),
+      row('LONG_TUBE', 24),
+    ],
+    currentPallets: 3,
+    orderRef: 'SO7217',
+  },
+  -1,
+  'exact_fc2_vr2_longtube_13_24_minus1'
+);
+
+run(
+  'exact_fc2_hoop_saris_15plus_minus1',
+  {
+    breakdown: [
+      row('Hoop Runner', 37),
+      row('Saris', 28),
+    ],
+    currentPallets: 3,
+    orderRef: 'SO7065',
+  },
+  -2,
+  'exact_fc2_hoop_saris_15plus_minus1'
+);
+
+run(
+  'exact_fc2_dd_hoop_small_minus1',
+  {
+    breakdown: [
+      row('Double Docker', 6),
+      row('Hoop Runner', 3),
+    ],
+    currentPallets: 3,
+    orderRef: 'SO7686',
+  },
+  -1,
+  'exact_fc2_dd_hoop_small_minus1'
+);
+
+run(
+  'exact_fc2_dd_hoop_mid_plus1',
+  {
+    breakdown: [
+      row('Double Docker', 12),
+      row('Hoop Runner', 3),
+    ],
+    currentPallets: 4,
+    orderRef: 'SO7101',
+  },
+  1,
+  'exact_fc2_dd_hoop_mid_plus1'
+);
+
+run(
+  'exact_fc2_dd_hoop_heavy_plus1',
+  {
+    breakdown: [
+      row('Double Docker', 24),
+      row('Hoop Runner', 9),
+    ],
+    currentPallets: 5,
+    orderRef: 'SO7606',
+  },
+  1,
+  'exact_fc2_dd_hoop_heavy_plus1'
+);
+
+run(
+  'exact_fc4_base_hoop_vr2_longtube_micro_minus1',
+  {
+    breakdown: [
+      row('Base Station', 5),
+      row('Hoop Runner', 1),
+      row('VR2 Offset', 1),
+      row('LONG_TUBE', 6),
+    ],
+    currentPallets: 2,
+    orderRef: 'SO7730',
+  },
+  -1,
+  'exact_fc4_base_hoop_vr2_longtube_micro_minus1'
+);
+
+run(
+  'exact_fc4_base_hoop_vr2_longtube_large_minus1',
+  {
+    breakdown: [
+      row('Base Station', 35),
+      row('Hoop Runner', 1),
+      row('VR2 Offset', 51),
+      row('LONG_TUBE', 82),
+    ],
+    currentPallets: 7,
+    orderRef: 'SO7337',
+  },
+  -1,
+  'exact_fc4_base_hoop_vr2_longtube_large_minus1'
+);
+
 console.log('All calibration tests passed.');
