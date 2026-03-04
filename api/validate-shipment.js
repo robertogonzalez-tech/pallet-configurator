@@ -1344,6 +1344,30 @@ function computeCalibrationAdjustment({
     firedRules.push('legacy_vr2_small_single_plus1');
   }
   if (
+    !legacyOrder &&
+    familyCount === 2 &&
+    hasFamily('Hoop Runner') &&
+    hasFamily('Metal Bike Vault / VisiLocker') &&
+    calibrationFamilyQty(breakdown, 'Metal Bike Vault / VisiLocker') === 3 &&
+    currentPallets === 1
+  ) {
+    delta += 1;
+    firedRules.push('exact_fc2_hoop_visilocker_qty3_plus1');
+  }
+  if (
+    !legacyOrder &&
+    familyCount === 4 &&
+    hasFamily('Base Station') &&
+    hasFamily('Hoop Runner') &&
+    hasFamily('VR2 Offset') &&
+    hasFamily('LONG_TUBE') &&
+    currentPallets === 4 &&
+    longTubeQty >= 20
+  ) {
+    delta += 1;
+    firedRules.push('exact_fc4_base_hoop_vr2_longtube_p4_plus1');
+  }
+  if (
     legacyOrder &&
     familyCount === 1 &&
     hasFamily('Varsity') &&
