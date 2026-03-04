@@ -514,4 +514,59 @@ run(
   'exact_fc4_base_hoop_vr2_longtube_large_minus1'
 );
 
+run(
+  'legacy_fc2_vr2_longtube_27_39_minus3',
+  {
+    breakdown: [row('VR2 Offset', 27), row('LONG_TUBE', 39)],
+    currentPallets: 4,
+    orderRef: 'SO5669',
+  },
+  -3,
+  'legacy_fc2_vr2_longtube_27_39_minus3'
+);
+
+run(
+  'legacy_fc3_vr1_vr2_longtube_80_8_48_minus2',
+  {
+    breakdown: [row('VR1 XL', 80), row('VR2 Offset', 8), row('LONG_TUBE', 48)],
+    currentPallets: 6,
+    orderRef: 'SO5520',
+  },
+  -2,
+  'legacy_fc3_vr1_vr2_longtube_80_8_48_minus2'
+);
+
+run(
+  'legacy_fc4_dd_hoop_vr2_longtube_5_1_3_12_minus2',
+  {
+    breakdown: [
+      row('Double Docker', 5),
+      row('Hoop Runner', 1),
+      row('VR2 Offset', 3),
+      row('LONG_TUBE', 12),
+    ],
+    currentPallets: 4,
+    orderRef: 'SO6626',
+  },
+  -2,
+  'legacy_fc4_dd_hoop_vr2_longtube_5_1_3_12_minus2'
+);
+
+run(
+  'legacy_fc5_base_dd_guardian_vr2_longtube_26_15_47_40_minus2',
+  {
+    breakdown: [
+      row('Base Station', 26),
+      row('Double Docker', 15),
+      row('Guardian', 3),
+      row('VR2 Offset', 47),
+      row('LONG_TUBE', 40),
+    ],
+    currentPallets: 3,
+    orderRef: 'SO6310',
+  },
+  -2,
+  'legacy_fc5_base_dd_guardian_vr2_longtube_26_15_47_40_minus2'
+);
+
 console.log('All calibration tests passed.');

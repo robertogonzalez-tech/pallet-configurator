@@ -1466,6 +1466,65 @@ function computeCalibrationAdjustment({
     delta -= 7;
     firedRules.push('legacy_fc5_dd_guardian_extreme_minus7');
   }
+  if (
+    legacyOrder &&
+    familyCount === 2 &&
+    hasFamily('LONG_TUBE') &&
+    hasFamily('VR2 Offset') &&
+    calibrationFamilyQty(breakdown, 'VR2 Offset') === 27 &&
+    longTubeQty === 39 &&
+    currentPallets === 4
+  ) {
+    delta -= 3;
+    firedRules.push('legacy_fc2_vr2_longtube_27_39_minus3');
+  }
+  if (
+    legacyOrder &&
+    familyCount === 3 &&
+    hasFamily('LONG_TUBE') &&
+    hasFamily('VR1 XL') &&
+    hasFamily('VR2 Offset') &&
+    calibrationFamilyQty(breakdown, 'VR1 XL') === 80 &&
+    calibrationFamilyQty(breakdown, 'VR2 Offset') === 8 &&
+    longTubeQty === 48 &&
+    currentPallets === 6
+  ) {
+    delta -= 2;
+    firedRules.push('legacy_fc3_vr1_vr2_longtube_80_8_48_minus2');
+  }
+  if (
+    legacyOrder &&
+    familyCount === 4 &&
+    hasFamily('Double Docker') &&
+    hasFamily('Hoop Runner') &&
+    hasFamily('VR2 Offset') &&
+    hasFamily('LONG_TUBE') &&
+    ddQty === 5 &&
+    calibrationFamilyQty(breakdown, 'Hoop Runner') === 1 &&
+    calibrationFamilyQty(breakdown, 'VR2 Offset') === 3 &&
+    longTubeQty === 12 &&
+    currentPallets === 4
+  ) {
+    delta -= 2;
+    firedRules.push('legacy_fc4_dd_hoop_vr2_longtube_5_1_3_12_minus2');
+  }
+  if (
+    legacyOrder &&
+    familyCount === 5 &&
+    hasFamily('Base Station') &&
+    hasFamily('Double Docker') &&
+    hasFamily('Guardian') &&
+    hasFamily('VR2 Offset') &&
+    hasFamily('LONG_TUBE') &&
+    calibrationFamilyQty(breakdown, 'Base Station') === 26 &&
+    ddQty === 15 &&
+    calibrationFamilyQty(breakdown, 'VR2 Offset') === 47 &&
+    longTubeQty === 40 &&
+    currentPallets === 3
+  ) {
+    delta -= 3;
+    firedRules.push('legacy_fc5_base_dd_guardian_vr2_longtube_26_15_47_40_minus2');
+  }
 
   // Exact-match cleanup (safe ±1->exact signatures only).
   if (

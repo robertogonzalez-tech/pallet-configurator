@@ -17,6 +17,7 @@ function run(cmd, cmdArgs, envOverride = null) {
   const result = spawnSync(cmd, cmdArgs, {
     encoding: 'utf8',
     stdio: 'pipe',
+    maxBuffer: 1024 * 1024 * 200,
     env: envOverride ? { ...process.env, ...envOverride } : process.env,
   });
   return result;
