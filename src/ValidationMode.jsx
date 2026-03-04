@@ -2,6 +2,30 @@ import { useState, useEffect } from 'react'
 import { supabase, isSupabaseConfigured, getSupabaseStatus } from './lib/supabase'
 import PhotoUpload from './components/PhotoUpload'
 
+const SHIPMENT_COMPLETENESS_REASON_OPTIONS = {
+  complete: [
+    { value: 'packed_and_shipped_full', label: 'Packed and shipped in full' },
+    { value: 'reconciled_complete', label: 'Fully reconciled (multiple loads)' },
+    { value: 'complete_other', label: 'Other (complete)' },
+  ],
+  partial: [
+    { value: 'split_shipment', label: 'Split shipment / not all shipped yet' },
+    { value: 'backorder_remaining', label: 'Backorder remaining' },
+    { value: 'shipped_in_stages', label: 'Shipping in stages' },
+    { value: 'partial_other', label: 'Other (partial)' },
+  ],
+  unknown: [
+    { value: 'conflicting_records', label: 'Conflicting records' },
+    { value: 'missing_documents', label: 'Missing documentation' },
+    { value: 'cannot_verify_with_warehouse', label: 'Could not verify with warehouse' },
+    { value: 'unknown_other', label: 'Other (unknown)' },
+  ],
+}
+
+function reasonOptionsForCompleteness(completeness) {
+  return SHIPMENT_COMPLETENESS_REASON_OPTIONS[completeness] || []
+}
+
 export default function ValidationMode() {
   const [pickTicketId, setPickTicketId] = useState('')
   const [loading, setLoading] = useState(false)
@@ -12,6 +36,7 @@ export default function ValidationMode() {
     actualWeight: '',
     actualPositions: '',
     shipmentCompleteness: 'complete',
+    shipmentCompletenessReason: 'packed_and_shipped_full',
     actualUnitBasis: 'package_count',
     notes: '',
     validatedBy: 'Chad', // Default
@@ -61,6 +86,7 @@ export default function ValidationMode() {
             actualWeight: existing.actual_weight_lbs?.toString() || '',
             actualPositions: existing.actual_positions?.toString() || '',
             shipmentCompleteness: existing.shipment_completeness || 'complete',
+            shipmentCompletenessReason: existing.shipment_completeness_reason || 'packed_and_shipped_full',
             actualUnitBasis: existing.actual_unit_basis || 'package_count',
             notes: existing.actual_notes || '',
             validatedBy: existing.validated_by || 'Chad',
@@ -119,6 +145,15 @@ export default function ValidationMode() {
       setError('Please enter actual positions when basis is pallet_positions')
       return
     }
+    const allowedReasons = reasonOptionsForCompleteness(validation.shipmentCompleteness).map((option) => option.value)
+    if (!validation.shipmentCompletenessReason || !allowedReasons.includes(validation.shipmentCompletenessReason)) {
+      setError('Please select a completeness reason')
+      return
+    }
+    if (validation.shipmentCompletenessReason.endsWith('_other') && !validation.notes.trim()) {
+      setError('Please add notes when reason is Other')
+      return
+    }
     
     setSubmitting(true)
     setError(null)
@@ -140,6 +175,7 @@ export default function ValidationMode() {
             actual_weight_lbs: validation.actualWeight ? parseFloat(validation.actualWeight) : null,
             actual_positions: validation.actualPositions ? parseInt(validation.actualPositions, 10) : null,
             shipment_completeness: validation.shipmentCompleteness || 'unknown',
+            shipment_completeness_reason: validation.shipmentCompletenessReason || null,
             actual_unit_basis: validation.actualUnitBasis || 'unknown',
             actual_notes: validation.notes,
             validated_by: validation.validatedBy,
@@ -323,11 +359,31 @@ export default function ValidationMode() {
               <label>Shipment Completeness *</label>
               <select
                 value={validation.shipmentCompleteness}
-                onChange={(e) => setValidation({...validation, shipmentCompleteness: e.target.value})}
+                onChange={(e) => {
+                  const nextCompleteness = e.target.value
+                  const nextOptions = reasonOptionsForCompleteness(nextCompleteness)
+                  setValidation({
+                    ...validation,
+                    shipmentCompleteness: nextCompleteness,
+                    shipmentCompletenessReason: nextOptions[0]?.value || '',
+                  })
+                }}
               >
                 <option value="complete">complete</option>
                 <option value="partial">partial</option>
                 <option value="unknown">unknown</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label>Completeness Reason *</label>
+              <select
+                value={validation.shipmentCompletenessReason}
+                onChange={(e) => setValidation({...validation, shipmentCompletenessReason: e.target.value})}
+              >
+                {reasonOptionsForCompleteness(validation.shipmentCompleteness).map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
               </select>
             </div>
 
@@ -467,6 +523,7 @@ export default function ValidationMode() {
                 actualWeight: '',
                 actualPositions: '',
                 shipmentCompleteness: 'complete',
+                shipmentCompletenessReason: 'packed_and_shipped_full',
                 actualUnitBasis: 'package_count',
                 notes: '',
                 validatedBy: 'Chad'

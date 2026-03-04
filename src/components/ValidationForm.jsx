@@ -12,12 +12,36 @@ const DEFAULT_PALLET = {
 const VALIDATORS = ['Anisa', 'Avianna', 'Berto', 'Chad', 'Tristan']
 const SHIPMENT_COMPLETENESS_OPTIONS = ['complete', 'partial', 'unknown']
 const ACTUAL_UNIT_BASIS_OPTIONS = ['package_count', 'pallet_positions', 'unknown']
+const SHIPMENT_COMPLETENESS_REASON_OPTIONS = {
+  complete: [
+    { value: 'packed_and_shipped_full', label: 'Packed and shipped in full' },
+    { value: 'reconciled_complete', label: 'Fully reconciled (multiple loads)' },
+    { value: 'complete_other', label: 'Other (complete)' },
+  ],
+  partial: [
+    { value: 'split_shipment', label: 'Split shipment / not all shipped yet' },
+    { value: 'backorder_remaining', label: 'Backorder remaining' },
+    { value: 'shipped_in_stages', label: 'Shipping in stages' },
+    { value: 'partial_other', label: 'Other (partial)' },
+  ],
+  unknown: [
+    { value: 'conflicting_records', label: 'Conflicting records' },
+    { value: 'missing_documents', label: 'Missing documentation' },
+    { value: 'cannot_verify_with_warehouse', label: 'Could not verify with warehouse' },
+    { value: 'unknown_other', label: 'Other (unknown)' },
+  ],
+}
+
+function reasonOptionsForCompleteness(completeness) {
+  return SHIPMENT_COMPLETENESS_REASON_OPTIONS[completeness] || []
+}
 
 export default function ValidationForm() {
   // Form state
   const [soNumber, setSoNumber] = useState('')
   const [validatedBy, setValidatedBy] = useState('Chad')
   const [shipmentCompleteness, setShipmentCompleteness] = useState('complete')
+  const [shipmentCompletenessReason, setShipmentCompletenessReason] = useState('packed_and_shipped_full')
   const [actualUnitBasis, setActualUnitBasis] = useState('package_count')
   const [actualPositions, setActualPositions] = useState('')
   const [notes, setNotes] = useState('')
@@ -78,6 +102,13 @@ export default function ValidationForm() {
     }
     if (!SHIPMENT_COMPLETENESS_OPTIONS.includes(shipmentCompleteness)) {
       return 'Shipment completeness is required'
+    }
+    const allowedReasons = reasonOptionsForCompleteness(shipmentCompleteness).map((option) => option.value)
+    if (!shipmentCompletenessReason || !allowedReasons.includes(shipmentCompletenessReason)) {
+      return 'Completeness reason is required'
+    }
+    if (shipmentCompletenessReason.endsWith('_other') && !notes.trim()) {
+      return 'Notes are required when reason is set to Other'
     }
     if (!ACTUAL_UNIT_BASIS_OPTIONS.includes(actualUnitBasis)) {
       return 'Actual unit basis is required'
@@ -191,6 +222,7 @@ export default function ValidationForm() {
           soNumber: soNumber.trim(),
           validatedBy,
           shipmentCompleteness,
+          shipmentCompletenessReason,
           actualUnitBasis,
           actualPositions: actualPositions ? parseInt(actualPositions, 10) : null,
           notes: notes.trim(),
@@ -233,6 +265,7 @@ export default function ValidationForm() {
       // Clear form for next entry
       setSoNumber('')
       setShipmentCompleteness('complete')
+      setShipmentCompletenessReason('packed_and_shipped_full')
       setActualUnitBasis('package_count')
       setActualPositions('')
       setNotes('')
@@ -489,11 +522,30 @@ export default function ValidationForm() {
                 <select
                   id="shipment-completeness"
                   value={shipmentCompleteness}
-                  onChange={(e) => setShipmentCompleteness(e.target.value)}
+                  onChange={(e) => {
+                    const nextCompleteness = e.target.value
+                    const nextOptions = reasonOptionsForCompleteness(nextCompleteness)
+                    setShipmentCompleteness(nextCompleteness)
+                    setShipmentCompletenessReason(nextOptions[0]?.value || '')
+                  }}
                   className="validator-select"
                 >
                   {SHIPMENT_COMPLETENESS_OPTIONS.map(value => (
                     <option key={value} value={value}>{value}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group validator">
+                <label htmlFor="shipment-completeness-reason">Completeness Reason *</label>
+                <select
+                  id="shipment-completeness-reason"
+                  value={shipmentCompletenessReason}
+                  onChange={(e) => setShipmentCompletenessReason(e.target.value)}
+                  className="validator-select"
+                >
+                  {reasonOptionsForCompleteness(shipmentCompleteness).map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
                   ))}
                 </select>
               </div>

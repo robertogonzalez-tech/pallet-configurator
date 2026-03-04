@@ -3,6 +3,8 @@
 -- Rollback:
 --   DROP VIEW IF EXISTS validations_eval_clean;
 
+DROP VIEW IF EXISTS validations_eval_clean;
+
 CREATE OR REPLACE VIEW validations_eval_clean AS
 WITH ranked AS (
   SELECT

@@ -41,6 +41,15 @@ const REASON_CODES = {
 
 const SHIPMENT_COMPLETENESS_VALUES = new Set(['complete', 'partial', 'unknown']);
 const ACTUAL_UNIT_BASIS_VALUES = new Set(['package_count', 'pallet_positions', 'unknown']);
+const SHIPMENT_COMPLETENESS_REASON_VALUES_BY_COMPLETENESS = {
+  complete: new Set(['packed_and_shipped_full', 'reconciled_complete', 'complete_other']),
+  partial: new Set(['split_shipment', 'backorder_remaining', 'shipped_in_stages', 'partial_other']),
+  unknown: new Set(['conflicting_records', 'missing_documents', 'cannot_verify_with_warehouse', 'unknown_other']),
+};
+const SHIPMENT_COMPLETENESS_REASON_VALUES = new Set(
+  Object.values(SHIPMENT_COMPLETENESS_REASON_VALUES_BY_COMPLETENESS)
+    .flatMap((values) => Array.from(values))
+);
 
 function normalizeEnumValue(value, allowedValues, defaultValue) {
   const normalized = String(value ?? defaultValue).trim().toLowerCase();
@@ -2456,6 +2465,11 @@ const handler = async (req, res) => {
       SHIPMENT_COMPLETENESS_VALUES,
       'unknown'
     );
+    const shipmentCompletenessReason = normalizeEnumValue(
+      body.shipmentCompletenessReason ?? body.shipment_completeness_reason,
+      SHIPMENT_COMPLETENESS_REASON_VALUES,
+      null
+    );
     const actualUnitBasis = normalizeEnumValue(
       body.actualUnitBasis ?? body.actual_unit_basis,
       ACTUAL_UNIT_BASIS_VALUES,
@@ -2482,6 +2496,21 @@ const handler = async (req, res) => {
       return res.status(400).json({
         success: false,
         error: "Invalid shipmentCompleteness. Allowed values: complete, partial, unknown",
+      });
+    }
+
+    const allowedReasons = SHIPMENT_COMPLETENESS_REASON_VALUES_BY_COMPLETENESS[shipmentCompleteness] || new Set();
+    const hasCompletenessReason = Boolean(shipmentCompletenessReason);
+    if (!skipSave && !hasCompletenessReason) {
+      return res.status(400).json({
+        success: false,
+        error: 'shipmentCompletenessReason is required when saving a validation',
+      });
+    }
+    if (hasCompletenessReason && !allowedReasons.has(shipmentCompletenessReason)) {
+      return res.status(400).json({
+        success: false,
+        error: `Invalid shipmentCompletenessReason for ${shipmentCompleteness}`,
       });
     }
 
@@ -2553,6 +2582,7 @@ const handler = async (req, res) => {
         actual_weight: actualWeight,
         actual_dimensions: pallets,
         shipment_completeness: shipmentCompleteness,
+        shipment_completeness_reason: shipmentCompletenessReason,
         actual_unit_basis: actualUnitBasis,
         actual_positions: actualPositions,
         actual_notes: notes || null,
@@ -2564,9 +2594,10 @@ const handler = async (req, res) => {
       let result = await supabase.from('validations').insert(insertPayload).select('id');
 
       // Migration-safe fallback if semantics columns are not yet present.
-      if (result.error && /actual_unit_basis|actual_positions|shipment_completeness/i.test(result.error.message || '')) {
+      if (result.error && /actual_unit_basis|actual_positions|shipment_completeness(_reason)?/i.test(result.error.message || '')) {
         const {
           shipment_completeness: _ignoredCompleteness,
+          shipment_completeness_reason: _ignoredCompletenessReason,
           actual_unit_basis: _ignoredBasis,
           actual_positions: _ignoredPositions,
           ...legacyPayload
@@ -2614,6 +2645,7 @@ const handler = async (req, res) => {
         positions: actualPositions,
         unitBasis: actualUnitBasis,
         shipmentCompleteness,
+        shipmentCompletenessReason: shipmentCompletenessReason || null,
         weight: actualWeight,
         dimensions: pallets,
       },

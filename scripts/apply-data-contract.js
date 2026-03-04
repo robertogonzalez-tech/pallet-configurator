@@ -33,7 +33,12 @@ async function executeSql(sql) {
 }
 
 async function verifyColumns() {
-  const requiredColumns = ['shipment_completeness', 'actual_unit_basis', 'actual_positions'];
+  const requiredColumns = [
+    'shipment_completeness',
+    'shipment_completeness_reason',
+    'actual_unit_basis',
+    'actual_positions',
+  ];
   for (const column of requiredColumns) {
     const { error } = await supabase.from('validations').select(column).limit(1);
     if (error) {

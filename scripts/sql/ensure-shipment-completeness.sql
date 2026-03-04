@@ -1,5 +1,7 @@
 -- Safe migration: shipment semantics contract for evaluation/training slices.
 -- Rollback:
+--   ALTER TABLE validations DROP CONSTRAINT IF EXISTS validations_shipment_completeness_reason_not_blank_check;
+--   ALTER TABLE validations DROP COLUMN IF EXISTS shipment_completeness_reason;
 --   ALTER TABLE validations DROP CONSTRAINT IF EXISTS validations_actual_unit_basis_check;
 --   ALTER TABLE validations DROP COLUMN IF EXISTS actual_positions;
 --   ALTER TABLE validations DROP COLUMN IF EXISTS actual_unit_basis;
@@ -29,6 +31,32 @@ BEGIN
     ALTER TABLE validations
       ADD CONSTRAINT validations_shipment_completeness_check
       CHECK (shipment_completeness IN ('complete', 'partial', 'unknown'));
+  END IF;
+END $$;
+
+ALTER TABLE validations
+ADD COLUMN IF NOT EXISTS shipment_completeness_reason TEXT;
+
+UPDATE validations
+SET shipment_completeness_reason = 'legacy_unspecified'
+WHERE shipment_completeness_reason IS NULL OR btrim(shipment_completeness_reason) = '';
+
+ALTER TABLE validations
+ALTER COLUMN shipment_completeness_reason SET DEFAULT 'legacy_unspecified';
+
+ALTER TABLE validations
+ALTER COLUMN shipment_completeness_reason SET NOT NULL;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'validations_shipment_completeness_reason_not_blank_check'
+  ) THEN
+    ALTER TABLE validations
+      ADD CONSTRAINT validations_shipment_completeness_reason_not_blank_check
+      CHECK (length(btrim(shipment_completeness_reason)) > 0);
   END IF;
 END $$;
 

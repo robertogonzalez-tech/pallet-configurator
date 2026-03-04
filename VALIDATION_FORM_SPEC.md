@@ -13,6 +13,10 @@ Add a new "Validate Shipment" tab to the existing mode switcher (Sales/Validatio
 **Top section:**
 - Sales Order # (4-digit number input, required)
 - Validated by (dropdown: Chad, Anisa, Brady, Connor)
+- Shipment Completeness (required: `complete` / `partial` / `unknown`)
+- Completeness Reason (required and constrained by completeness selection)
+- Actual Unit Basis (required: `package_count` / `pallet_positions` / `unknown`)
+- Actual Positions (required only when basis = `pallet_positions`)
 - Notes (textarea, optional)
 
 **Pallet Table (dynamic rows):**
@@ -40,6 +44,10 @@ When user clicks Submit:
    - SO# is 4 digits
    - At least 1 pallet row exists
    - All pallet fields filled
+   - Shipment completeness is selected
+   - Completeness reason is selected and valid for selected completeness
+   - If reason is an `*_other` variant, notes are required
+   - If `actual_unit_basis = pallet_positions`, `actual_positions` is required and positive
 
 2. **Look up SO in NetSuite**
    - Use existing NetSuite integration (see `api/quote.js`)
