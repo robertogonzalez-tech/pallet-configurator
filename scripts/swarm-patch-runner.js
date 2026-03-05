@@ -215,6 +215,18 @@ function shortTail(text, lines = 80) {
   return parts.slice(Math.max(0, parts.length - lines)).join('\n');
 }
 
+function getHeadCommit(repo) {
+  const head = run('git', ['rev-parse', 'HEAD'], { cwd: repo });
+  if (!head.ok) throw new Error(`git rev-parse HEAD failed: ${head.stderr || head.stdout}`);
+  return String(head.stdout || '').trim();
+}
+
+function getAheadCount(repo, fromRef, toRef = 'HEAD') {
+  const r = run('git', ['rev-list', '--count', `${fromRef}..${toRef}`], { cwd: repo });
+  if (!r.ok) throw new Error(`git rev-list failed: ${r.stderr || r.stdout}`);
+  return Number(String(r.stdout || '0').trim()) || 0;
+}
+
 function main() {
   const opts = parseArgs(process.argv.slice(2));
   if (opts.help) {
@@ -280,6 +292,8 @@ function main() {
       r = run('git', ['checkout', '-B', branch, opts.baseBranch], { cwd: repo });
       if (!r.ok) throw new Error(`git checkout -B ${branch} failed: ${r.stderr || r.stdout}`);
       step('branch_created', { ok: true });
+      const branchBaseHead = getHeadCommit(repo);
+      step('branch_base', { ok: true, head: branchBaseHead });
 
       const prompt = buildCodexPrompt(idea);
       const codexOutFile = path.join(ideaDir, 'codex-output.md');
@@ -304,12 +318,32 @@ function main() {
       const changed = run('git', ['status', '--short'], { cwd: repo });
       if (!changed.ok) throw new Error('git status failed after codex run');
       const changedLines = changed.stdout.trim();
-      if (!changedLines) {
-        step('changes', { ok: true, changed: false });
+      const aheadAfterCodex = getAheadCount(repo, branchBaseHead, 'HEAD');
+      step('branch_after_codex', { ok: true, aheadCommits: aheadAfterCodex, cleanTree: !changedLines });
+
+      if (changedLines) {
+        fs.writeFileSync(path.join(ideaDir, 'changed-files.txt'), changed.stdout);
+      }
+
+      if (!changedLines && aheadAfterCodex === 0) {
+        step('changes', { ok: true, changed: false, branchAdvanced: false });
         result.status = 'no_changes';
       } else {
-        fs.writeFileSync(path.join(ideaDir, 'changed-files.txt'), changed.stdout);
-        step('changes', { ok: true, changed: true });
+        step('changes', { ok: true, changed: !!changedLines, branchAdvanced: aheadAfterCodex > 0 });
+
+        // If Codex did not commit, create one commit before running gates.
+        if (aheadAfterCodex === 0 && changedLines) {
+          const commitMsg = `Swarm candidate: ${String(idea.title || slug).slice(0, 60)}`;
+          const add = run('git', ['add', '-A'], { cwd: repo });
+          if (!add.ok) throw new Error(`git add failed: ${add.stderr || add.stdout}`);
+          const commit = run('git', ['commit', '-m', commitMsg], { cwd: repo });
+          fs.writeFileSync(path.join(ideaDir, 'commit.log'), `${commit.stdout}\n${commit.stderr}`);
+          if (!commit.ok) throw new Error(`git commit failed: ${commit.stderr || commit.stdout}`);
+          const commitHash = getHeadCommit(repo);
+          step('commit', { ok: true, commit: commitHash, source: 'runner' });
+        } else if (aheadAfterCodex > 0) {
+          step('commit', { ok: true, commit: getHeadCommit(repo), source: 'codex' });
+        }
 
         const check = run('node', ['--check', 'api/validate-shipment.js'], { cwd: repo });
         fs.writeFileSync(path.join(ideaDir, 'node-check.log'), `${check.stdout}\n${check.stderr}`);
@@ -361,16 +395,6 @@ function main() {
             throw new Error(`guarded reprocess failed: ${shortTail(guardedText, 30)}`);
           }
         }
-
-        const commitMsg = `Swarm candidate: ${String(idea.title || slug).slice(0, 60)}`;
-        const add = run('git', ['add', '-A'], { cwd: repo });
-        if (!add.ok) throw new Error(`git add failed: ${add.stderr || add.stdout}`);
-        const commit = run('git', ['commit', '-m', commitMsg], { cwd: repo });
-        fs.writeFileSync(path.join(ideaDir, 'commit.log'), `${commit.stdout}\n${commit.stderr}`);
-        if (!commit.ok) throw new Error(`git commit failed: ${commit.stderr || commit.stdout}`);
-        const head = run('git', ['rev-parse', 'HEAD'], { cwd: repo });
-        const commitHash = (head.stdout || '').trim();
-        step('commit', { ok: true, commit: commitHash });
 
         if (opts.pushPass) {
           const push = run('git', ['push', '-u', 'origin', branch], { cwd: repo });
