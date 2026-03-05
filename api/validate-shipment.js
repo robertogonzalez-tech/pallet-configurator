@@ -1131,65 +1131,39 @@ function consolidatePackages(packages) {
     return true;
   };
 
-  // Greedy iterative consolidation with constrained-first ordering:
-  // select the host with the fewest valid options first, then pick the most
-  // constrained candidate for that host. This reduces stranded mergeable pallets
-  // in 3+ family mixed orders without loosening any safety constraints.
+  // Greedy iterative consolidation: repeatedly merge the lightest valid candidate
+  // into each eligible host until no additional safe merges are available.
   let progress = true;
   while (progress) {
     progress = false;
-    const candidateHostCounts = new Map();
-    const hostCandidates = [];
-
     for (let i = 0; i < out.length; i += 1) {
       if (merged.has(i)) continue;
       const host = out[i];
       if (!host.mergeable || host.type !== 'standard_pallet') continue;
 
-      const candidates = [];
+      let bestIdx = -1;
+      let bestWeight = Number.POSITIVE_INFINITY;
       for (let j = 0; j < out.length; j += 1) {
         if (i === j || merged.has(j)) continue;
         const candidate = out[j];
         if (!canMerge(host, candidate)) continue;
-        candidates.push(j);
-        candidateHostCounts.set(j, (candidateHostCounts.get(j) || 0) + 1);
+        const weight = candidate.weight || 0;
+        if (weight < bestWeight) {
+          bestWeight = weight;
+          bestIdx = j;
+        }
       }
-      if (candidates.length > 0) hostCandidates.push({ hostIdx: i, candidates });
-    }
 
-    if (hostCandidates.length === 0) break;
-
-    hostCandidates.sort((a, b) => {
-      const byOptions = a.candidates.length - b.candidates.length;
-      if (byOptions !== 0) return byOptions;
-      const aSlack = MAX_CONSOLIDATED_WEIGHT - (out[a.hostIdx].weight || 0);
-      const bSlack = MAX_CONSOLIDATED_WEIGHT - (out[b.hostIdx].weight || 0);
-      if (aSlack !== bSlack) return aSlack - bSlack;
-      return a.hostIdx - b.hostIdx;
-    });
-
-    const selectedHost = hostCandidates[0];
-    const host = out[selectedHost.hostIdx];
-    const rankedCandidates = [...selectedHost.candidates].sort((a, b) => {
-      const hostOptionsA = candidateHostCounts.get(a) || 0;
-      const hostOptionsB = candidateHostCounts.get(b) || 0;
-      if (hostOptionsA !== hostOptionsB) return hostOptionsA - hostOptionsB;
-      const weightA = out[a].weight || 0;
-      const weightB = out[b].weight || 0;
-      if (weightA !== weightB) return weightB - weightA;
-      return a - b;
-    });
-
-    const chosenIdx = rankedCandidates[0];
-    if (chosenIdx != null) {
-      const candidate = out[chosenIdx];
-      host.weight = (host.weight || 0) + (candidate.weight || 0);
-      host.contents.push(...(candidate.contents || []));
-      host.mergeCount = (host.mergeCount || 0) + 1;
-      host.consolidatedFrom = [...(host.consolidatedFrom || []), candidate.id];
-      merged.add(chosenIdx);
-      merges.push({ host: host.id, merged: candidate.id, combinedWeight: host.weight });
-      progress = true;
+      if (bestIdx >= 0) {
+        const candidate = out[bestIdx];
+        host.weight = (host.weight || 0) + (candidate.weight || 0);
+        host.contents.push(...(candidate.contents || []));
+        host.mergeCount = (host.mergeCount || 0) + 1;
+        host.consolidatedFrom = [...(host.consolidatedFrom || []), candidate.id];
+        merged.add(bestIdx);
+        merges.push({ host: host.id, merged: candidate.id, combinedWeight: host.weight });
+        progress = true;
+      }
     }
   }
 
