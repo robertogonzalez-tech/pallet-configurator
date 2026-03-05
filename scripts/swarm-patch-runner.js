@@ -6,7 +6,7 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 
 const DEFAULT_CODEX_BIN = '/Applications/Codex.app/Contents/Resources/codex';
-const DEFAULT_MODEL = 'gpt-5.3-codex';
+const DEFAULT_MODEL = 'gpt-5.4';
 const DEFAULT_TOP = 3;
 const DEFAULT_BASE_BRANCH = 'main';
 const DEFAULT_REPO = process.cwd();
