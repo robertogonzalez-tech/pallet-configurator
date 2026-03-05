@@ -27,10 +27,6 @@ function normalizeQty(value) {
   return Math.round(n);
 }
 
-function normalizeOrderRef(value) {
-  return String(value || '').trim().toUpperCase();
-}
-
 function shouldUseRowForSignature(row) {
   if (!row || typeof row !== 'object') return false;
   const qty = normalizeQty(row.qty);
@@ -101,19 +97,6 @@ function buildPatternSignatureFromBreakdown(breakdown) {
   return `fc${tokens.length}|${tokens.join('|')}`;
 }
 
-function buildMultiFamilySignatureFromBreakdown(breakdown) {
-  if (!Array.isArray(breakdown)) return '';
-  const families = new Set();
-  for (const row of breakdown) {
-    if (!shouldUseRowForSignature(row)) continue;
-    const family = String(row.matched || '').trim();
-    if (!family) continue;
-    families.add(family);
-  }
-  if (families.size < 2) return '';
-  return `mf${families.size}|${Array.from(families).sort((a, b) => a.localeCompare(b)).join('|')}`;
-}
-
 function loadExactBoosterMap() {
   if (EXACT_BOOSTER_MAP) return EXACT_BOOSTER_MAP;
   const paths = [
@@ -130,14 +113,7 @@ function loadExactBoosterMap() {
       // Keep searching.
     }
   }
-  EXACT_BOOSTER_MAP = {
-    lineSignatures: {},
-    familySignatures: {},
-    patternSignatures: {},
-    multiFamilySignatures: {},
-    version: 1,
-    generatedAt: null,
-  };
+  EXACT_BOOSTER_MAP = { lineSignatures: {}, familySignatures: {}, version: 1, generatedAt: null };
   return EXACT_BOOSTER_MAP;
 }
 
@@ -170,34 +146,15 @@ function buildResponse({
   };
 }
 
-function recordContainsOrderRef(record, orderRef) {
-  const normalized = normalizeOrderRef(orderRef);
-  if (!normalized) return false;
-  const sourceRows = Array.isArray(record?.sourceRows) ? record.sourceRows : [];
-  return sourceRows.some((entry) => normalizeOrderRef(entry) === normalized);
-}
-
 function chooseAdjustmentFromRecord({
   record,
   currentPallets,
   allowTrim,
   source,
   signature,
-  orderRef,
-  blockSelfMatch = false,
 }) {
   if (!record || !Number.isFinite(Number(currentPallets))) {
     return buildResponse({});
-  }
-
-  if (blockSelfMatch && recordContainsOrderRef(record, orderRef)) {
-    return buildResponse({
-      blocked: true,
-      reason: 'self_match_blocked',
-      source,
-      signature,
-      record,
-    });
   }
 
   const modeActual = Number(record.modeActual);
@@ -253,7 +210,6 @@ function chooseExactBoosterAdjustment({
   currentPallets,
   diagnostics,
   map,
-  orderRef,
 }) {
   const boosterMap = map || loadExactBoosterMap();
   if (!boosterMap || typeof boosterMap !== 'object') return buildResponse({});
@@ -262,7 +218,6 @@ function chooseExactBoosterAdjustment({
   const allowTrim = confidenceAllowsTrim(diagnostics);
   const lineSignature = buildLineSignatureFromBreakdown(breakdown);
   const familySignature = buildFamilySignatureFromBreakdown(breakdown);
-  const multiFamilySignature = buildMultiFamilySignatureFromBreakdown(breakdown);
 
   if (lineSignature) {
     const lineRecord = boosterMap.lineSignatures?.[lineSignature];
@@ -272,7 +227,6 @@ function chooseExactBoosterAdjustment({
       allowTrim,
       source: 'line_signature',
       signature: lineSignature,
-      orderRef,
     });
     if (lineAdjustment.requestedDelta !== 0 || lineAdjustment.blocked) return lineAdjustment;
   }
@@ -285,23 +239,8 @@ function chooseExactBoosterAdjustment({
       allowTrim,
       source: 'family_signature',
       signature: familySignature,
-      orderRef,
     });
     if (familyAdjustment.requestedDelta !== 0 || familyAdjustment.blocked) return familyAdjustment;
-  }
-
-  if (multiFamilySignature) {
-    const multiFamilyRecord = boosterMap.multiFamilySignatures?.[multiFamilySignature];
-    const multiFamilyAdjustment = chooseAdjustmentFromRecord({
-      record: multiFamilyRecord,
-      currentPallets,
-      allowTrim: false, // coarse multi-family source is +1-only
-      source: 'multi_family_signature',
-      signature: multiFamilySignature,
-      orderRef,
-      blockSelfMatch: true,
-    });
-    if (multiFamilyAdjustment.requestedDelta === 1 || multiFamilyAdjustment.blocked) return multiFamilyAdjustment;
   }
 
   const patternSignature = buildPatternSignatureFromBreakdown(breakdown);
@@ -313,14 +252,13 @@ function chooseExactBoosterAdjustment({
       allowTrim,
       source: 'pattern_signature',
       signature: patternSignature,
-      orderRef,
     });
     if (patternAdjustment.requestedDelta !== 0 || patternAdjustment.blocked) return patternAdjustment;
   }
 
   return buildResponse({
-    source: lineSignature || familySignature || multiFamilySignature || patternSignature ? 'none' : null,
-    signature: lineSignature || familySignature || multiFamilySignature || patternSignature || null,
+    source: lineSignature || familySignature || patternSignature ? 'none' : null,
+    signature: lineSignature || familySignature || patternSignature || null,
   });
 }
 
@@ -328,11 +266,9 @@ module.exports = {
   IGNORED_MATCHED,
   normalizeSku,
   normalizeQty,
-  normalizeOrderRef,
   buildLineSignatureFromBreakdown,
   buildFamilySignatureFromBreakdown,
   buildPatternSignatureFromBreakdown,
-  buildMultiFamilySignatureFromBreakdown,
   loadExactBoosterMap,
   chooseExactBoosterAdjustment,
 };

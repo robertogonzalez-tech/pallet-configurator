@@ -59,7 +59,6 @@ function pct(n, d) {
         suspiciousExcludedLines: [],
       },
       map,
-      orderRef: row.sales_order_id,
     });
 
     const adjusted = Math.max(1, predicted + (adjustment.requestedDelta || 0));

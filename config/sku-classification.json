@@ -32,11 +32,9 @@
       "primary_skus": [
         {"pattern": "90101-*", "note": "VR2 rack assemblies (all variants)"}
       ],
-      "accessory_skus": [
-        {"pattern": "50301-0062-*", "note": "Rail end caps - accessory/ride-along, never a long-tube trigger"}
-      ],
       "conditional_packages": [
-        {"pattern": "50801-0012-*", "note": "Rail tubes - may ship as separate long tube package"}
+        {"pattern": "50801-0012-*", "note": "Rail tubes - may ship as separate long tube package"},
+        {"pattern": "50301-0062-*", "note": "Rail end caps - ship with rails"}
       ]
     },
 
