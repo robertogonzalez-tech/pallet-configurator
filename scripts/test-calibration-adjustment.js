@@ -656,6 +656,48 @@ run(
 );
 
 run(
+  'exact_legacy_fc2_omega_vr2_mid_plus1',
+  {
+    breakdown: [
+      row('Circle Series (Omega)', 2),
+      row('VR2 Offset', 15),
+    ],
+    currentPallets: 2,
+    orderRef: 'SO5724',
+  },
+  2,
+  'exact_legacy_fc2_omega_vr2_mid_plus1'
+);
+
+run(
+  'exact_fc2_omega_vr2_mid_plus1',
+  {
+    breakdown: [
+      row('Circle Series (Omega)', 8),
+      row('VR2 Offset', 20),
+    ],
+    currentPallets: 3,
+    orderRef: 'SO7267',
+  },
+  1,
+  'exact_fc2_omega_vr2_mid_plus1'
+);
+
+run(
+  'exact_fc2_omega_vr2_mid_plus1_not_overbroad',
+  {
+    breakdown: [
+      row('Circle Series (Omega)', 3),
+      row('VR2 Offset', 7),
+    ],
+    currentPallets: 1,
+    orderRef: 'SO7419',
+  },
+  0,
+  null
+);
+
+run(
   'exact_fc2_dd_hoop_small_minus1',
   {
     breakdown: [
@@ -698,6 +740,34 @@ run(
 );
 
 run(
+  'exact_fc2_dd_hoop_midband_minus1',
+  {
+    breakdown: [
+      row('Double Docker', 24),
+      row('Hoop Runner', 2),
+    ],
+    currentPallets: 5,
+    orderRef: 'SO6307',
+  },
+  -1,
+  'exact_fc2_dd_hoop_midband_minus1'
+);
+
+run(
+  'exact_fc2_dd_hoop_midband_minus1_not_overbroad',
+  {
+    breakdown: [
+      row('Double Docker', 24),
+      row('Hoop Runner', 9),
+    ],
+    currentPallets: 5,
+    orderRef: 'SO7606',
+  },
+  1,
+  'exact_fc2_dd_hoop_heavy_plus1'
+);
+
+run(
   'exact_fc4_base_hoop_vr2_longtube_micro_minus1',
   {
     breakdown: [
@@ -727,6 +797,54 @@ run(
   },
   -1,
   'exact_fc4_base_hoop_vr2_longtube_large_minus1'
+);
+
+run(
+  'exact_fc4_base_dd_vr2_longtube_micro_plus1',
+  {
+    breakdown: [
+      row('Base Station', 8),
+      row('Double Docker', 2),
+      row('VR2 Offset', 7),
+      row('LONG_TUBE', 11),
+    ],
+    currentPallets: 3,
+    orderRef: 'SO6921',
+  },
+  1,
+  'exact_fc4_base_dd_vr2_longtube_micro_plus1'
+);
+
+run(
+  'exact_fc4_base_dd_vr2_longtube_micro_plus1_not_overbroad',
+  {
+    breakdown: [
+      row('Base Station', 8),
+      row('Double Docker', 7),
+      row('VR2 Offset', 4),
+      row('LONG_TUBE', 11),
+    ],
+    currentPallets: 4,
+    orderRef: 'SO7133',
+  },
+  0,
+  null
+);
+
+run(
+  'exact_fc4_base_dd_vr2_longtube_large_plus1',
+  {
+    breakdown: [
+      row('Base Station', 62),
+      row('Double Docker', 10),
+      row('VR2 Offset', 32),
+      row('LONG_TUBE', 90),
+    ],
+    currentPallets: 7,
+    orderRef: 'SO7092',
+  },
+  1,
+  'exact_fc4_base_dd_vr2_longtube_large_plus1'
 );
 
 run(

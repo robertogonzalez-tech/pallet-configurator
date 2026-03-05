@@ -1243,6 +1243,10 @@ function computeCalibrationAdjustment({
   const longTubeQty = calibrationFamilyQty(breakdown, 'LONG_TUBE');
   const varsityQty = calibrationFamilyQty(breakdown, 'Varsity');
   const ddQty = calibrationFamilyQty(breakdown, 'Double Docker');
+  const hoopQty = calibrationFamilyQty(breakdown, 'Hoop Runner');
+  const baseQty = calibrationFamilyQty(breakdown, 'Base Station');
+  const vr2Qty = calibrationFamilyQty(breakdown, 'VR2 Offset');
+  const omegaQty = calibrationFamilyQty(breakdown, 'Circle Series (Omega)');
   const rideAlongQty = calibrationFamilyQty(breakdown, 'RIDE_ALONG');
   const skuOverrideQty = calibrationFamilyQty(breakdown, 'SKU_OVERRIDE');
   const mbv1RideAlongQty = calibrationQtyBySkuPrefix(breakdown, '89901-0407', 'RIDE_ALONG');
@@ -1659,11 +1663,77 @@ function computeCalibrationAdjustment({
 
   // Exact-match cleanup (safe ±1->exact signatures only).
   if (
+    legacyOrder &&
+    familyCount === 2 &&
+    hasFamily('Circle Series (Omega)') &&
+    hasFamily('VR2 Offset') &&
+    omegaQty >= 2 &&
+    vr2Qty >= 15 &&
+    currentPallets === 2
+  ) {
+    delta += 1;
+    firedRules.push('exact_legacy_fc2_omega_vr2_mid_plus1');
+  }
+  if (
+    familyCount === 2 &&
+    hasFamily('Circle Series (Omega)') &&
+    hasFamily('VR2 Offset') &&
+    omegaQty >= 2 &&
+    vr2Qty >= 15 &&
+    currentPallets === 3
+  ) {
+    delta += 1;
+    firedRules.push('exact_fc2_omega_vr2_mid_plus1');
+  }
+  if (
+    familyCount === 2 &&
+    hasFamily('Double Docker') &&
+    hasFamily('Hoop Runner') &&
+    ddQty >= 18 &&
+    ddQty <= 24 &&
+    hoopQty >= 2 &&
+    hoopQty <= 4 &&
+    currentPallets === 5
+  ) {
+    delta -= 1;
+    firedRules.push('exact_fc2_dd_hoop_midband_minus1');
+  }
+  if (
+    familyCount === 4 &&
+    hasFamily('Base Station') &&
+    hasFamily('Double Docker') &&
+    hasFamily('VR2 Offset') &&
+    hasFamily('LONG_TUBE') &&
+    baseQty <= 10 &&
+    ddQty <= 3 &&
+    vr2Qty <= 8 &&
+    longTubeQty <= 12 &&
+    currentPallets === 3
+  ) {
+    delta += 1;
+    firedRules.push('exact_fc4_base_dd_vr2_longtube_micro_plus1');
+  }
+  if (
+    familyCount === 4 &&
+    hasFamily('Base Station') &&
+    hasFamily('Double Docker') &&
+    hasFamily('VR2 Offset') &&
+    hasFamily('LONG_TUBE') &&
+    baseQty >= 50 &&
+    ddQty >= 10 &&
+    vr2Qty >= 30 &&
+    longTubeQty >= 80 &&
+    currentPallets === 7
+  ) {
+    delta += 1;
+    firedRules.push('exact_fc4_base_dd_vr2_longtube_large_plus1');
+  }
+  if (
     !legacyOrder &&
     familyCount === 2 &&
     hasFamily('VR2 Offset') &&
     hasFamily('LONG_TUBE') &&
-    calibrationFamilyQty(breakdown, 'VR2 Offset') === 1 &&
+    vr2Qty === 1 &&
     longTubeQty === 5 &&
     currentPallets === 2
   ) {
@@ -1746,8 +1816,8 @@ function computeCalibrationAdjustment({
     hasFamily('Hoop Runner') &&
     hasFamily('VR2 Offset') &&
     !hasFamily('LONG_TUBE') &&
-    calibrationFamilyQty(breakdown, 'VR2 Offset') >= 10 &&
-    calibrationFamilyQty(breakdown, 'VR2 Offset') <= 11 &&
+    vr2Qty >= 10 &&
+    vr2Qty <= 11 &&
     currentPallets === 2
   ) {
     delta -= 1;
@@ -1758,7 +1828,7 @@ function computeCalibrationAdjustment({
     hasFamily('VR2 Offset') &&
     hasFamily('Varsity') &&
     hasFamily('LONG_TUBE') &&
-    calibrationFamilyQty(breakdown, 'VR2 Offset') === 10 &&
+    vr2Qty === 10 &&
     calibrationFamilyQty(breakdown, 'Varsity') === 1 &&
     longTubeQty >= 15 &&
     longTubeQty <= 20 &&
@@ -1772,7 +1842,7 @@ function computeCalibrationAdjustment({
     familyCount === 2 &&
     hasFamily('VR2 Offset') &&
     hasFamily('LONG_TUBE') &&
-    calibrationFamilyQty(breakdown, 'VR2 Offset') >= 30 &&
+    vr2Qty >= 30 &&
     longTubeQty >= 50 &&
     currentPallets >= 5
   ) {
@@ -1784,7 +1854,7 @@ function computeCalibrationAdjustment({
     familyCount === 2 &&
     hasFamily('VR2 Offset') &&
     hasFamily('LONG_TUBE') &&
-    calibrationFamilyQty(breakdown, 'VR2 Offset') === 1 &&
+    vr2Qty === 1 &&
     longTubeQty === 4 &&
     currentPallets === 2
   ) {
@@ -1796,7 +1866,7 @@ function computeCalibrationAdjustment({
     familyCount === 2 &&
     hasFamily('VR2 Offset') &&
     hasFamily('LONG_TUBE') &&
-    calibrationFamilyQty(breakdown, 'VR2 Offset') <= 7 &&
+    vr2Qty <= 7 &&
     longTubeQty >= 60 &&
     currentPallets === 2
   ) {
@@ -1808,7 +1878,7 @@ function computeCalibrationAdjustment({
     familyCount === 2 &&
     hasFamily('VR2 Offset') &&
     hasFamily('LONG_TUBE') &&
-    calibrationFamilyQty(breakdown, 'VR2 Offset') === 13 &&
+    vr2Qty === 13 &&
     longTubeQty === 24 &&
     currentPallets === 3
   ) {
@@ -1832,8 +1902,8 @@ function computeCalibrationAdjustment({
     familyCount === 2 &&
     hasFamily('Double Docker') &&
     hasFamily('Hoop Runner') &&
-    calibrationFamilyQty(breakdown, 'Double Docker') <= 6 &&
-    calibrationFamilyQty(breakdown, 'Hoop Runner') <= 3 &&
+    ddQty <= 6 &&
+    hoopQty <= 3 &&
     currentPallets >= 2
   ) {
     delta -= 1;
@@ -1844,9 +1914,9 @@ function computeCalibrationAdjustment({
     familyCount === 2 &&
     hasFamily('Double Docker') &&
     hasFamily('Hoop Runner') &&
-    calibrationFamilyQty(breakdown, 'Double Docker') >= 10 &&
-    calibrationFamilyQty(breakdown, 'Double Docker') <= 14 &&
-    calibrationFamilyQty(breakdown, 'Hoop Runner') <= 3 &&
+    ddQty >= 10 &&
+    ddQty <= 14 &&
+    hoopQty <= 3 &&
     currentPallets === 4
   ) {
     delta += 1;
@@ -1857,8 +1927,8 @@ function computeCalibrationAdjustment({
     familyCount === 2 &&
     hasFamily('Double Docker') &&
     hasFamily('Hoop Runner') &&
-    calibrationFamilyQty(breakdown, 'Double Docker') >= 24 &&
-    calibrationFamilyQty(breakdown, 'Hoop Runner') >= 9 &&
+    ddQty >= 24 &&
+    hoopQty >= 9 &&
     currentPallets === 5
   ) {
     delta += 1;
@@ -1871,9 +1941,9 @@ function computeCalibrationAdjustment({
     hasFamily('Hoop Runner') &&
     hasFamily('VR2 Offset') &&
     hasFamily('LONG_TUBE') &&
-    calibrationFamilyQty(breakdown, 'Base Station') <= 5 &&
-    calibrationFamilyQty(breakdown, 'Hoop Runner') <= 1 &&
-    calibrationFamilyQty(breakdown, 'VR2 Offset') <= 1 &&
+    baseQty <= 5 &&
+    hoopQty <= 1 &&
+    vr2Qty <= 1 &&
     longTubeQty <= 6 &&
     currentPallets === 2
   ) {
@@ -1887,9 +1957,9 @@ function computeCalibrationAdjustment({
     hasFamily('Hoop Runner') &&
     hasFamily('VR2 Offset') &&
     hasFamily('LONG_TUBE') &&
-    calibrationFamilyQty(breakdown, 'Base Station') >= 30 &&
-    calibrationFamilyQty(breakdown, 'Hoop Runner') <= 1 &&
-    calibrationFamilyQty(breakdown, 'VR2 Offset') >= 50 &&
+    baseQty >= 30 &&
+    hoopQty <= 1 &&
+    vr2Qty >= 50 &&
     longTubeQty >= 80 &&
     currentPallets === 7
   ) {
@@ -1906,6 +1976,10 @@ function computeCalibrationAdjustment({
     longTubeQty,
     varsityQty,
     ddQty,
+    hoopQty,
+    baseQty,
+    vr2Qty,
+    omegaQty,
     rideAlongQty,
     skuOverrideQty,
     varsitySku,
