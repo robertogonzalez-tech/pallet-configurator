@@ -6,6 +6,7 @@ const fs = require('fs');
 
 const args = process.argv.slice(2);
 const apply = args.includes('--apply');
+const localEngine = args.includes('--local-engine') || process.env.REPROCESS_LOCAL_ENGINE === '1';
 const allowExactDropArg = args.find((a) => a.startsWith('--allow-exact-drop='));
 const allowWithin1DropArg = args.find((a) => a.startsWith('--allow-within1-drop='));
 const apiBaseArg = args.find((a) => a.startsWith('--api-base='));
@@ -68,12 +69,22 @@ function printSummary(prefix, log) {
   if (apiBase) {
     console.log(`Using reprocess API base: ${apiBase}`);
   }
+  if (localEngine) {
+    console.log('Using local prediction engine for reprocess.');
+  }
 
   console.log('Running guarded dry-run reprocess...');
+  const dryArgs = ['batch-reprocess-validations.js', '--dry-run'];
+  if (localEngine) dryArgs.push('--local-engine');
   const dry = run(
     'node',
-    ['batch-reprocess-validations.js', '--dry-run'],
-    apiBase ? { REPROCESS_API_BASE: apiBase } : null
+    dryArgs,
+    apiBase || localEngine
+      ? {
+          ...(apiBase ? { REPROCESS_API_BASE: apiBase } : {}),
+          ...(localEngine ? { REPROCESS_LOCAL_ENGINE: '1' } : {}),
+        }
+      : null
   );
   process.stdout.write(dry.stdout || '');
   process.stderr.write(dry.stderr || '');
@@ -104,10 +115,17 @@ function printSummary(prefix, log) {
   }
 
   console.log('Gates passed. Running live reprocess...');
+  const liveArgs = ['batch-reprocess-validations.js'];
+  if (localEngine) liveArgs.push('--local-engine');
   const live = run(
     'node',
-    ['batch-reprocess-validations.js'],
-    apiBase ? { REPROCESS_API_BASE: apiBase } : null
+    liveArgs,
+    apiBase || localEngine
+      ? {
+          ...(apiBase ? { REPROCESS_API_BASE: apiBase } : {}),
+          ...(localEngine ? { REPROCESS_LOCAL_ENGINE: '1' } : {}),
+        }
+      : null
   );
   process.stdout.write(live.stdout || '');
   process.stderr.write(live.stderr || '');

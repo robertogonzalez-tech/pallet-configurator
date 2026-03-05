@@ -18,6 +18,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
 const args = process.argv.slice(2);
 const dryRun = args.includes('--dry-run');
+const localEngine = args.includes('--local-engine') || process.env.REPROCESS_LOCAL_ENGINE === '1';
 const limitArg = args.find(a => a.startsWith('--limit='));
 const startArg = args.find(a => a.startsWith('--start-from='));
 const limit = limitArg ? parseInt(limitArg.split('=')[1], 10) : null;
@@ -34,6 +35,60 @@ function getPrediction(result) {
   const weight = result?.prediction?.totalWeight ?? result?.predicted?.weight ?? result?.predicted_weight;
   const breakdown = result?.prediction?.breakdown ?? result?.predicted?.breakdown ?? result?.predicted_breakdown;
   return { pallets, weight, breakdown };
+}
+
+function buildLocalPredictor() {
+  const validateShipment = require('./api/validate-shipment');
+  const { predictPackages: predictPackagesCore } = require('./api/lib/predictPackages');
+  const {
+    predictPallets,
+    getSalesOrderViaSuiteQL,
+    normalizeInputItems,
+    sanitizeDiagnostics,
+  } = validateShipment.__private__ || {};
+
+  if (
+    typeof predictPallets !== 'function' ||
+    typeof getSalesOrderViaSuiteQL !== 'function' ||
+    typeof normalizeInputItems !== 'function'
+  ) {
+    throw new Error('Local predictor unavailable: missing validate-shipment private exports');
+  }
+
+  return async function fetchPredictionLocal(soNumber) {
+    const soData = await getSalesOrderViaSuiteQL(soNumber);
+    if (!soData?.success || !Array.isArray(soData.items) || soData.items.length === 0) {
+      throw new Error(soData?.error || `Sales order SO${soNumber} not found or has no items`);
+    }
+
+    const sourceItems = normalizeInputItems(soData.items);
+    if (!sourceItems.length) {
+      throw new Error(`No normalized items found for SO${soNumber}`);
+    }
+
+    const predictionResult = predictPackagesCore(sourceItems, {
+      predict: predictPallets,
+      debug: false,
+      sanitizeDiagnostics,
+      context: {
+        orderRef: `SO${soNumber}`,
+        sourceType: 'sales_order',
+      },
+    });
+
+    const prediction = predictionResult?.rawPrediction || {};
+    const mapped = {
+      pallets: prediction?.totalPallets ?? predictionResult?.predicted_pallets,
+      weight: prediction?.totalWeight ?? predictionResult?.predicted_weight,
+      breakdown: prediction?.breakdown ?? predictionResult?.predicted_breakdown,
+    };
+
+    if (mapped.pallets == null || mapped.weight == null || !Array.isArray(mapped.breakdown)) {
+      throw new Error('Local prediction mapping failed: missing pallets/weight/breakdown');
+    }
+
+    return mapped;
+  };
 }
 
 async function fetchValidatedRows() {
@@ -110,8 +165,10 @@ function calcAccuracy(rows, useNew = false) {
 
 (async () => {
   const startedAt = new Date().toISOString();
-  console.log(`Starting batch reprocess ${dryRun ? '(DRY RUN)' : ''}`);
-  console.log(`API: ${API_BASE}`);
+  console.log(`Starting batch reprocess ${dryRun ? '(DRY RUN)' : ''}${localEngine ? ' [LOCAL_ENGINE]' : ''}`);
+  console.log(localEngine ? 'Engine: local validate-shipment.js' : `API: ${API_BASE}`);
+
+  const fetchPredictionFn = localEngine ? buildLocalPredictor() : fetchPrediction;
 
   let rows = await fetchValidatedRows();
   rows = rows.filter(r => (r.sales_order_id || r.pick_ticket_id || '').toUpperCase().startsWith('SO'));
@@ -136,7 +193,7 @@ function calcAccuracy(rows, useNew = false) {
     const so = soNorm(row.sales_order_id || row.pick_ticket_id).replace(/^SO/, '');
 
     try {
-      const prediction = await fetchPrediction(so);
+      const prediction = await fetchPredictionFn(so);
       row._new_predicted_pallets = prediction.pallets;
       row._new_predicted_weight = prediction.weight;
       row._new_predicted_breakdown = prediction.breakdown;
@@ -176,6 +233,7 @@ function calcAccuracy(rows, useNew = false) {
     startedAt,
     finishedAt: new Date().toISOString(),
     dryRun,
+    localEngine,
     apiBase: API_BASE,
     totalSelected: rows.length,
     processed: successes.length + errors.length,
