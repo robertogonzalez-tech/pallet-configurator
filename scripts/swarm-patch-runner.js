@@ -42,6 +42,7 @@ function parseArgs(argv) {
     baseBranch: DEFAULT_BASE_BRANCH,
     noPreview: false,
     noGuarded: false,
+    localEngine: false,
     pushPass: false,
     includeMediumRisk: false,
     help: false,
@@ -57,6 +58,7 @@ function parseArgs(argv) {
     else if (arg.startsWith('--base-branch=')) out.baseBranch = arg.split('=')[1] || out.baseBranch;
     else if (arg === '--no-preview') out.noPreview = true;
     else if (arg === '--no-guarded') out.noGuarded = true;
+    else if (arg === '--local-engine') out.localEngine = true;
     else if (arg === '--push-pass') out.pushPass = true;
     else if (arg === '--include-medium-risk') out.includeMediumRisk = true;
   }
@@ -77,6 +79,7 @@ function usage() {
     '  --base-branch=main            Base branch to branch from',
     '  --no-preview                  Skip preview deploy per candidate',
     '  --no-guarded                  Skip guarded dry-run gates',
+    '  --local-engine                Run guarded gates against local branch engine',
     '  --push-pass                   Push passing branches to origin',
     '  --include-medium-risk         Include medium-risk ideas (default: low only)',
   ].join('\n');
@@ -367,6 +370,7 @@ function main() {
 
         if (!opts.noGuarded) {
           const guardedArgs = ['scripts/guarded-reprocess.js'];
+          if (opts.localEngine) guardedArgs.push('--local-engine');
           if (previewUrl) guardedArgs.push(`--api-base=${previewUrl}`);
           let guarded = run('node', guardedArgs, { cwd: repo });
           let guardedText = `${guarded.stdout}\n${guarded.stderr}`;
@@ -382,6 +386,7 @@ function main() {
           step('guarded_reprocess', {
             ok: guarded.ok,
             previewUrl: previewUrl || null,
+            localEngine: !!opts.localEngine,
             gatePass: gates.pass,
             gateFail: gates.gateFail,
             exactFrom: gates.exactFrom,
