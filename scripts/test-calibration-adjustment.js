@@ -295,6 +295,32 @@ run(
 );
 
 run(
+  'exact_legacy_varsity_surface_small_cancel_plus1',
+  {
+    breakdown: [
+      { matched: 'Varsity', qty: 2, sku: '89901-2287-BLK13-T' },
+    ],
+    currentPallets: 1,
+    orderRef: 'SO5527',
+  },
+  0,
+  'exact_legacy_varsity_surface_small_cancel_plus1'
+);
+
+run(
+  'exact_legacy_varsity_grey23_qty7_cancel_plus1',
+  {
+    breakdown: [
+      { matched: 'Varsity', qty: 7, sku: '89901-2287-GRY23' },
+    ],
+    currentPallets: 1,
+    orderRef: 'SO6123',
+  },
+  0,
+  'exact_legacy_varsity_grey23_qty7_cancel_plus1'
+);
+
+run(
   'exact_single_dismount_qty8_plus1',
   {
     breakdown: [

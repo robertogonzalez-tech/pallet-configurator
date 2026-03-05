@@ -1480,6 +1480,28 @@ function computeCalibrationAdjustment({
     legacyOrder &&
     familyCount === 1 &&
     hasFamily('Varsity') &&
+    currentPallets === 1 &&
+    varsitySku.startsWith('89901-2287-BLK13-T') &&
+    varsityQty <= 2
+  ) {
+    delta -= 1;
+    firedRules.push('exact_legacy_varsity_surface_small_cancel_plus1');
+  }
+  if (
+    legacyOrder &&
+    familyCount === 1 &&
+    hasFamily('Varsity') &&
+    currentPallets === 1 &&
+    varsitySku.startsWith('89901-2287-GRY23') &&
+    varsityQty === 7
+  ) {
+    delta -= 1;
+    firedRules.push('exact_legacy_varsity_grey23_qty7_cancel_plus1');
+  }
+  if (
+    legacyOrder &&
+    familyCount === 1 &&
+    hasFamily('Varsity') &&
     varsityQty === 8 &&
     currentPallets === 2 &&
     varsitySku.startsWith('89901-2287-BLK13-T')
