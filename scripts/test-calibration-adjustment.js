@@ -357,6 +357,88 @@ run(
 );
 
 run(
+  'exact_single_varsity_boxed_qty_signature_plus1',
+  {
+    breakdown: [
+      row('RIDE_ALONG', 196),
+      row('Varsity', 49),
+    ],
+    currentPallets: 2,
+    orderRef: 'SO7620',
+  },
+  1,
+  'exact_single_varsity_boxed_qty_signature_plus1'
+);
+
+run(
+  'exact_single_varsity_boxed_qty_signature_plus1_not_overbroad',
+  {
+    breakdown: [
+      row('RIDE_ALONG', 200),
+      row('Varsity', 50),
+    ],
+    currentPallets: 2,
+    orderRef: 'SO7742',
+  },
+  0,
+  null
+);
+
+run(
+  'exact_single_visilocker_qty_signature_plus1',
+  {
+    breakdown: [
+      row('Metal Bike Vault / VisiLocker', 10),
+    ],
+    currentPallets: 3,
+    orderRef: 'SO7617',
+  },
+  1,
+  'exact_single_visilocker_qty_signature_plus1'
+);
+
+run(
+  'exact_single_visilocker_qty_signature_plus1_not_overbroad',
+  {
+    breakdown: [
+      row('Metal Bike Vault / VisiLocker', 5),
+    ],
+    currentPallets: 2,
+    orderRef: 'SO7272',
+  },
+  0,
+  null
+);
+
+run(
+  'exact_single_dd_qty_signature_plus1',
+  {
+    breakdown: [
+      row('RIDE_ALONG', 264),
+      row('Double Docker', 22),
+    ],
+    currentPallets: 4,
+    orderRef: 'SO7136',
+  },
+  1,
+  'exact_single_dd_qty_signature_plus1'
+);
+
+run(
+  'exact_single_dd_qty_signature_plus1_not_overbroad',
+  {
+    breakdown: [
+      row('RIDE_ALONG', 240),
+      row('Double Docker', 25),
+    ],
+    currentPallets: 4,
+    orderRef: 'SO7082',
+  },
+  0,
+  null
+);
+
+run(
   'exact_fc2_vr2_longtube_vr2_30plus_minus1',
   {
     breakdown: [
