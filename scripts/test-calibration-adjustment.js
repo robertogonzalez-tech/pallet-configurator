@@ -121,6 +121,61 @@ run(
 );
 
 run(
+  'exact_single_zero_floor_mbv1_qty7_8_plus1',
+  {
+    breakdown: [
+      { matched: 'RIDE_ALONG', qty: 7, sku: '89901-0407-GRY14-KIT' },
+      row('ZERO_FLOOR', 1),
+    ],
+    currentPallets: 1,
+    orderRef: 'SO7431',
+  },
+  1,
+  'exact_single_zero_floor_mbv1_qty7_8_plus1'
+);
+
+run(
+  'exact_single_zero_floor_mbv1_qty7_8_plus1_not_overbroad',
+  {
+    breakdown: [
+      { matched: 'RIDE_ALONG', qty: 5, sku: '89901-0407-GRY14-KIT' },
+      row('ZERO_FLOOR', 1),
+    ],
+    currentPallets: 1,
+    orderRef: 'SO7430',
+  },
+  0
+);
+
+run(
+  'legacy_fc2_2up_hoop_mbv1_qty3_plus1',
+  {
+    breakdown: [
+      { matched: 'RIDE_ALONG', qty: 3, sku: '89901-0407-GRY14-KIT' },
+      { matched: '2UP', qty: 26, sku: '80101-0281-BLK06' },
+      { matched: 'Hoop Runner', qty: 1, sku: '80301-0166-BLK13' },
+    ],
+    currentPallets: 1,
+    orderRef: 'SO6776',
+  },
+  1,
+  'legacy_fc2_2up_hoop_mbv1_qty3_plus1'
+);
+
+run(
+  'legacy_fc2_2up_hoop_mbv1_qty3_plus1_not_overbroad',
+  {
+    breakdown: [
+      { matched: 'RIDE_ALONG', qty: 3, sku: '89901-0407-GRY14-KIT' },
+      { matched: '2UP', qty: 26, sku: '80101-0281-BLK06' },
+    ],
+    currentPallets: 1,
+    orderRef: 'SO7776',
+  },
+  0
+);
+
+run(
   'legacy_dd_q42_high_minus3',
   {
     breakdown: [row('Double Docker', 42)],

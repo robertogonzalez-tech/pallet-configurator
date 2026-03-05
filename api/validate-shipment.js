@@ -1211,6 +1211,20 @@ function calibrationFamilySku(breakdown, family) {
   return '';
 }
 
+function calibrationQtyBySkuPrefix(breakdown, prefix, family = null) {
+  if (!Array.isArray(breakdown) || !prefix) return 0;
+  const needle = String(prefix || '').trim().toUpperCase();
+  let qty = 0;
+  for (const row of breakdown) {
+    const matchedFamily = String(row?.matched || '').trim();
+    if (family && matchedFamily !== family) continue;
+    const sku = String(row?.sku || '').trim().toUpperCase();
+    if (!sku.startsWith(needle)) continue;
+    qty += Math.max(0, Number(row?.qty) || 0);
+  }
+  return qty;
+}
+
 function isLegacySalesOrderRef(orderRef) {
   return /^SO[56]/i.test(String(orderRef || '').trim().toUpperCase());
 }
@@ -1231,6 +1245,7 @@ function computeCalibrationAdjustment({
   const ddQty = calibrationFamilyQty(breakdown, 'Double Docker');
   const rideAlongQty = calibrationFamilyQty(breakdown, 'RIDE_ALONG');
   const skuOverrideQty = calibrationFamilyQty(breakdown, 'SKU_OVERRIDE');
+  const mbv1RideAlongQty = calibrationQtyBySkuPrefix(breakdown, '89901-0407', 'RIDE_ALONG');
   const varsitySku = calibrationFamilySku(breakdown, 'Varsity').toUpperCase();
   const dismountSku = calibrationFamilySku(breakdown, 'Dismount').toUpperCase();
   const vr2Sku = calibrationFamilySku(breakdown, 'VR2 Offset').toUpperCase();
@@ -1352,6 +1367,27 @@ function computeCalibrationAdjustment({
   if (!legacyOrder && familyCount === 1 && hasFamily('ZERO_FLOOR') && currentPallets === 1 && rideAlongQty >= 300) {
     delta += 1;
     firedRules.push('zero_floor_heavy_ride_along_plus1');
+  }
+  if (
+    !legacyOrder &&
+    familyCount === 1 &&
+    hasFamily('ZERO_FLOOR') &&
+    currentPallets === 1 &&
+    [7, 8].includes(mbv1RideAlongQty)
+  ) {
+    delta += 1;
+    firedRules.push('exact_single_zero_floor_mbv1_qty7_8_plus1');
+  }
+  if (
+    legacyOrder &&
+    familyCount === 2 &&
+    hasFamily('2UP') &&
+    hasFamily('Hoop Runner') &&
+    currentPallets === 1 &&
+    mbv1RideAlongQty === 3
+  ) {
+    delta += 1;
+    firedRules.push('legacy_fc2_2up_hoop_mbv1_qty3_plus1');
   }
   if (legacyOrder && familyCount === 1 && hasFamily('VR2 Offset') && calibrationFamilyQty(breakdown, 'VR2 Offset') <= 2 && currentPallets === 1) {
     delta += 1;
