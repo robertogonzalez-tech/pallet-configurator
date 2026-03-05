@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-03-04T22:36:51.754Z",
+  "generatedAt": "2026-03-05T02:06:53.580Z",
   "sourceView": "validations_eval_clean",
   "sourceRows": 474,
   "config": {
@@ -9,7 +9,9 @@
     "minFamilyExact": 4,
     "minFamilyBias": 6,
     "minPatternExact": 6,
-    "minPatternBias": 8
+    "minPatternBias": 8,
+    "minMultiFamilyPlus1": 4,
+    "minMultiFamilyDeltaPct": 0.9
   },
   "lineSignatures": {
     "DD-SS-04-GAV:4": {
@@ -783,5 +785,6 @@
         "SO7729"
       ]
     }
-  }
+  },
+  "multiFamilySignatures": {}
 }

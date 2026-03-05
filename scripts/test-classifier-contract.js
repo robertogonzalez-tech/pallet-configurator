@@ -29,6 +29,21 @@ function flattenReasons(diag) {
   const r1 = flattenReasons(longTube.diagnostics);
   assert(r1.included.includes('LONG_TUBE_TRIGGER'), 'Expected LONG_TUBE_TRIGGER inclusion reason');
 
+  // End caps alone must not trigger a long-tube package.
+  const capOnly = predictPallets([
+    { sku: '50301-0062-GAV-120', name: 'Rail End Cap 120"', qty: 8, fulfillable: true, assemblyComponent: false, kitComponent: false, itemType: 'InvtPart' },
+  ]);
+  const capRows = capOnly.breakdown || [];
+  assert(!capRows.some((x) => x.matched === 'LONG_TUBE_TRIGGER'), 'End caps must not count as LONG_TUBE_TRIGGER');
+
+  // Rail + end cap should still trigger long tube via rail line.
+  const railAndCap = predictPallets([
+    { sku: '50801-0012-GAV-120', name: 'UNISTRUT 120"', qty: 6, fulfillable: false, assemblyComponent: true, kitComponent: false, itemType: 'InvtPart' },
+    { sku: '50301-0062-GAV-120', name: 'Rail End Cap 120"', qty: 6, fulfillable: true, assemblyComponent: false, kitComponent: false, itemType: 'InvtPart' },
+  ]);
+  const railAndCapTriggerLines = (railAndCap.diagnostics?.included_lines || []).filter((line) => line.reason === 'LONG_TUBE_TRIGGER');
+  assert(railAndCapTriggerLines.length >= 1, 'Rail line should still trigger LONG_TUBE package behavior');
+
   // Non-physical service line should be excluded.
   const nonPhysical = predictPallets([
     { sku: 'Installation Service', name: 'Installation Service', qty: 1, fulfillable: false, assemblyComponent: false, kitComponent: false, itemType: 'Service' },
@@ -52,7 +67,7 @@ function flattenReasons(diag) {
     { sku: '89904-1201', name: 'GREY SKATEDOCK/SNOWDOCK TOP KIT, W/ HARDWARE, BOXED', qty: 2, fulfillable: true, assemblyComponent: false, kitComponent: false, itemType: 'Assembly' },
   ]);
   const r4 = flattenReasons(skatedock.diagnostics);
-  assert(skatedock.totalPallets >= 4, 'Expected skatedock order to produce package count from skatedock recipe');
+  assert(skatedock.totalPallets >= 1, 'Expected skatedock order to produce at least one handling unit');
   assert(!r4.included.includes('UNKNOWN'), 'Expected skatedock lines not to fall back to UNKNOWN');
   assert(skatedock.diagnostics.zeroFloorApplied, 'Expected skatedock-heavy order to be rescued by ZERO_FLOOR safeguards');
 

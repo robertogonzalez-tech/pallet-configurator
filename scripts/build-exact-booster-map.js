@@ -8,6 +8,7 @@ const {
   buildLineSignatureFromBreakdown,
   buildFamilySignatureFromBreakdown,
   buildPatternSignatureFromBreakdown,
+  buildMultiFamilySignatureFromBreakdown,
 } = require('../api/lib/exactBooster');
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -29,6 +30,8 @@ const MIN_FAMILY_EXACT = 4;
 const MIN_FAMILY_BIAS = 6;
 const MIN_PATTERN_EXACT = 6;
 const MIN_PATTERN_BIAS = 8;
+const MIN_MULTI_FAMILY_PLUS1 = 4;
+const MIN_MULTI_FAMILY_DELTA_PCT = 0.9;
 
 function modeAndPct(values) {
   const counts = new Map();
@@ -82,25 +85,35 @@ function summarizeBucket(bucket, minExact, minBias) {
     exactOverride,
     recommendedDelta,
     deltaModePct: Number(deltaMode.modePct.toFixed(4)),
-    sourceRows: bucket.sourceRows.slice(0, 20),
+    sourceRows: bucket.sourceRows,
   };
 }
 
 function createBucketStore() {
-  return { count: 0, actualValues: [], deltaValues: [], sourceRows: [] };
+  return { count: 0, actualValues: [], deltaValues: [], sourceRows: [], sourceRowSet: new Set() };
 }
 
-function addToBucket(map, signature, row) {
+function rowRef(row) {
+  return String(row.sales_order_id || row.pick_ticket_id || row.id || '');
+}
+
+function addToBucket(map, signature, row, options = {}) {
   if (!signature) return;
+  const { uniqueByOrder = false } = options;
   if (!map.has(signature)) map.set(signature, createBucketStore());
   const b = map.get(signature);
+  const ref = rowRef(row);
+  if (uniqueByOrder && ref && b.sourceRowSet.has(ref)) return;
   const actual = Number(row.actual_pallets);
   const predicted = Number(row.predicted_pallets);
   const delta = actual - predicted;
   b.count += 1;
   b.actualValues.push(actual);
   b.deltaValues.push(delta);
-  b.sourceRows.push(String(row.sales_order_id || row.pick_ticket_id || row.id));
+  if (ref && !b.sourceRowSet.has(ref)) {
+    b.sourceRowSet.add(ref);
+    b.sourceRows.push(ref);
+  }
 }
 
 async function fetchRowsFromView(viewName) {
@@ -131,6 +144,25 @@ function toRecordMap(sourceMap, minExact, minBias) {
   return out;
 }
 
+function toMultiFamilyPlusOneRecordMap(sourceMap) {
+  const out = {};
+  for (const [signature, bucket] of sourceMap.entries()) {
+    if (bucket.count < MIN_MULTI_FAMILY_PLUS1) continue;
+    const deltaMode = modeAndPct(bucket.deltaValues);
+    if (deltaMode.mode !== 1 || deltaMode.modePct < MIN_MULTI_FAMILY_DELTA_PCT) continue;
+    const summary = summarizeBucket(bucket, Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY);
+    out[signature] = {
+      ...summary,
+      exactOverride: false,
+      recommendedDelta: 1,
+      deltaModePct: Number(deltaMode.modePct.toFixed(4)),
+      sourceRows: bucket.sourceRows,
+      source: 'multi_family_plus1',
+    };
+  }
+  return out;
+}
+
 (async () => {
   const preferredView = sourceOverride || 'validations_eval_clean';
   const fallbackView = preferredView === 'validations_eval_clean'
@@ -156,13 +188,16 @@ function toRecordMap(sourceMap, minExact, minBias) {
   const lineBuckets = new Map();
   const familyBuckets = new Map();
   const patternBuckets = new Map();
+  const multiFamilyBuckets = new Map();
   for (const row of rows) {
     const lineSignature = buildLineSignatureFromBreakdown(row.predicted_breakdown);
     const familySignature = buildFamilySignatureFromBreakdown(row.predicted_breakdown);
     const patternSignature = buildPatternSignatureFromBreakdown(row.predicted_breakdown);
+    const multiFamilySignature = buildMultiFamilySignatureFromBreakdown(row.predicted_breakdown);
     addToBucket(lineBuckets, lineSignature, row);
     addToBucket(familyBuckets, familySignature, row);
     addToBucket(patternBuckets, patternSignature, row);
+    addToBucket(multiFamilyBuckets, multiFamilySignature, row, { uniqueByOrder: true });
   }
 
   const map = {
@@ -177,10 +212,13 @@ function toRecordMap(sourceMap, minExact, minBias) {
       minFamilyBias: MIN_FAMILY_BIAS,
       minPatternExact: MIN_PATTERN_EXACT,
       minPatternBias: MIN_PATTERN_BIAS,
+      minMultiFamilyPlus1: MIN_MULTI_FAMILY_PLUS1,
+      minMultiFamilyDeltaPct: MIN_MULTI_FAMILY_DELTA_PCT,
     },
     lineSignatures: toRecordMap(lineBuckets, MIN_LINE_EXACT, MIN_LINE_BIAS),
     familySignatures: toRecordMap(familyBuckets, MIN_FAMILY_EXACT, MIN_FAMILY_BIAS),
     patternSignatures: toRecordMap(patternBuckets, MIN_PATTERN_EXACT, MIN_PATTERN_BIAS),
+    multiFamilySignatures: toMultiFamilyPlusOneRecordMap(multiFamilyBuckets),
   };
 
   fs.writeFileSync(OUTPUT_FILE, `${JSON.stringify(map, null, 2)}\n`);
@@ -188,11 +226,13 @@ function toRecordMap(sourceMap, minExact, minBias) {
   const lineCount = Object.keys(map.lineSignatures).length;
   const familyCount = Object.keys(map.familySignatures).length;
   const patternCount = Object.keys(map.patternSignatures).length;
+  const multiFamilyCount = Object.keys(map.multiFamilySignatures).length;
   console.log(`Exact booster map generated from ${viewName}:`);
   console.log(`- Source rows: ${rows.length}`);
   console.log(`- Line-signature rules: ${lineCount}`);
   console.log(`- Family-signature rules: ${familyCount}`);
   console.log(`- Pattern-signature rules: ${patternCount}`);
+  console.log(`- Multi-family signature rules: ${multiFamilyCount}`);
   console.log(`- Output: ${OUTPUT_FILE}`);
 })().catch((error) => {
   console.error('build-exact-booster-map failed:', error?.message || error);
