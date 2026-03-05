@@ -256,6 +256,58 @@ run(
 );
 
 run(
+  'exact_single_varsity_skuoverride_current2_minus1',
+  {
+    breakdown: [
+      { matched: 'SKU_OVERRIDE', qty: 29, sku: '80301-0093-C-ZRP' },
+      { matched: 'Varsity', qty: 14, sku: '90101-2287-GAV' },
+    ],
+    currentPallets: 2,
+    orderRef: 'SO7209',
+  },
+  -1,
+  'exact_single_varsity_skuoverride_current2_minus1'
+);
+
+run(
+  'exact_single_varsity_skuoverride_current2_minus1_not_overbroad',
+  {
+    breakdown: [
+      { matched: 'Varsity', qty: 14, sku: '90101-2287-GAV' },
+    ],
+    currentPallets: 2,
+    orderRef: 'SO7209',
+  },
+  0
+);
+
+run(
+  'exact_legacy_single_visilocker_qty3_5_plus1',
+  {
+    breakdown: [
+      { matched: 'Metal Bike Vault / VisiLocker', qty: 5, sku: '89901-0418-GRY14-KIT' },
+    ],
+    currentPallets: 2,
+    orderRef: 'SO6919',
+  },
+  1,
+  'exact_legacy_single_visilocker_qty3_5_plus1'
+);
+
+run(
+  'exact_single_dismount_qty8_plus1',
+  {
+    breakdown: [
+      { matched: 'Dismount', qty: 8, sku: '89901-2050-GRY14' },
+    ],
+    currentPallets: 1,
+    orderRef: 'SO7043',
+  },
+  1,
+  'exact_single_dismount_qty8_plus1'
+);
+
+run(
   'exact_legacy_vr2_12_blk13_minus1',
   {
     breakdown: [

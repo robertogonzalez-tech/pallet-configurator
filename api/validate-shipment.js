@@ -1421,6 +1421,36 @@ function computeCalibrationAdjustment({
     !legacyOrder &&
     familyCount === 1 &&
     hasFamily('Varsity') &&
+    currentPallets === 2 &&
+    skuOverrideQty > 0
+  ) {
+    delta -= 1;
+    firedRules.push('exact_single_varsity_skuoverride_current2_minus1');
+  }
+  if (
+    legacyOrder &&
+    familyCount === 1 &&
+    hasFamily('Metal Bike Vault / VisiLocker') &&
+    currentPallets === 2 &&
+    [3, 5].includes(calibrationFamilyQty(breakdown, 'Metal Bike Vault / VisiLocker'))
+  ) {
+    delta += 1;
+    firedRules.push('exact_legacy_single_visilocker_qty3_5_plus1');
+  }
+  if (
+    !legacyOrder &&
+    familyCount === 1 &&
+    hasFamily('Dismount') &&
+    currentPallets === 1 &&
+    calibrationFamilyQty(breakdown, 'Dismount') === 8
+  ) {
+    delta += 1;
+    firedRules.push('exact_single_dismount_qty8_plus1');
+  }
+  if (
+    !legacyOrder &&
+    familyCount === 1 &&
+    hasFamily('Varsity') &&
     skuOverrideQty === 0 &&
     [34, 39, 49, 51, 76, 108].includes(varsityQty)
   ) {
