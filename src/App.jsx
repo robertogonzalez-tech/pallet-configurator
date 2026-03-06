@@ -459,6 +459,186 @@ const NETSUITE_CONFIG = {
   productsEndpoint: '/api/products',
 }
 
+function normalizeSkuKey(value) {
+  return String(value || '').trim().toUpperCase()
+}
+
+function roundToTenth(value) {
+  return Math.round((Number(value) || 0) * 10) / 10
+}
+
+function getFreightClassFromDensity(density) {
+  if (density >= 50) return 50
+  if (density >= 35) return 55
+  if (density >= 30) return 60
+  if (density >= 22.5) return 65
+  if (density >= 15) return 70
+  if (density >= 13.5) return 77.5
+  if (density >= 12) return 85
+  if (density >= 10.5) return 92.5
+  if (density >= 9) return 100
+  if (density >= 8) return 110
+  if (density >= 7) return 125
+  if (density >= 6) return 150
+  if (density >= 5) return 175
+  if (density >= 4) return 200
+  if (density >= 3) return 250
+  if (density >= 2) return 300
+  if (density >= 1) return 400
+  return 500
+}
+
+function getShippingMethodFromPackages(packages, totalWeight) {
+  const normalizedPackages = Array.isArray(packages) ? packages : []
+  const parcelEligible = normalizedPackages.length > 0 && normalizedPackages.every((pkg) => {
+    const l = Number(pkg?.dims?.l ?? pkg?.dims?.[0] ?? 0)
+    const w = Number(pkg?.dims?.w ?? pkg?.dims?.[1] ?? 0)
+    const h = Number(pkg?.dims?.h ?? pkg?.dims?.[2] ?? 0)
+    const weight = Number(pkg?.weight || 0)
+    const cubicFeet = (l * w * h) / 1728
+    return weight <= 50 && cubicFeet <= 1
+  })
+
+  if (parcelEligible && totalWeight < 150) return 'Parcel'
+  if (totalWeight > 15000 || normalizedPackages.length > 10) return 'Full Truckload'
+  if (totalWeight > 10000 || normalizedPackages.length > 6) return 'Partial TL'
+  return 'LTL'
+}
+
+function buildFallbackPackageFromBreakdownRow(row, idx) {
+  const pallets = Math.max(0, Number(row?.pallets) || 0)
+  if (pallets <= 0) return []
+
+  const templateByFamily = {
+    'Base Station': { l: 120, w: 11, h: 11, type: 'long_tube' },
+    'Strut Install Kit': { l: 120, w: 11, h: 11, type: 'long_tube' },
+    'Double Docker': { l: 79, w: 43, h: 63, type: 'dd_mixed_crate' },
+    'Metal Bike Vault / VisiLocker': { l: 85, w: 48, h: 39, type: 'large_pallet' },
+    MBA: { l: 85, w: 48, h: 39, type: 'large_pallet' },
+    Undergrad: { l: 96, w: 48, h: 28, type: 'oversized_pallet' },
+    Skatedock: { l: 73, w: 14, h: 13, type: 'skatedock_box' },
+  }
+
+  const family = String(row?.matched || row?.family || 'Unknown')
+  const template = templateByFamily[family] || { l: 48, w: 40, h: 30, type: 'standard_pallet' }
+  const perPackageWeight = Math.max(1, Math.round((Number(row?.weight) || 0) / pallets))
+
+  return Array.from({ length: pallets }, (_, palletIdx) => ({
+    id: `${idx + 1}-${palletIdx + 1}`,
+    type: template.type,
+    family,
+    dims: { l: template.l, w: template.w, h: template.h },
+    weight: perPackageWeight,
+    contents: [{
+      sku: row?.sku || 'UNKNOWN',
+      name: row?.name || 'Unknown Item',
+      qty: row?.qty || 0,
+      matched: row?.matched || row?.family || 'UNKNOWN',
+    }],
+  }))
+}
+
+function mapPredictionToResults(data, orderItems) {
+  const prediction = data?.prediction || {}
+  const breakdown = Array.isArray(data?.predicted_breakdown)
+    ? data.predicted_breakdown
+    : (Array.isArray(prediction?.breakdown) ? prediction.breakdown : [])
+  const rawPackages = Array.isArray(data?.predicted_packages)
+    ? data.predicted_packages
+    : (Array.isArray(prediction?.packages) ? prediction.packages : [])
+  const packages = rawPackages.length > 0
+    ? rawPackages
+    : breakdown.flatMap((row, idx) => buildFallbackPackageFromBreakdownRow(row, idx))
+
+  const itemLookup = new Map(
+    (Array.isArray(orderItems) ? orderItems : []).map((item) => [normalizeSkuKey(item?.sku), item])
+  )
+
+  const pallets = packages.map((pkg, idx) => {
+    const l = Number(pkg?.dims?.l ?? pkg?.dims?.[0] ?? 48) || 48
+    const w = Number(pkg?.dims?.w ?? pkg?.dims?.[1] ?? 40) || 40
+    const h = Number(pkg?.dims?.h ?? pkg?.dims?.[2] ?? 30) || 30
+    const weight = Math.max(0, Math.round(Number(pkg?.weight) || 0))
+    const contents = Array.isArray(pkg?.contents) ? pkg.contents : []
+    const totalContentQty = contents.reduce((sum, entry) => sum + Math.max(0, Number(entry?.qty) || 0), 0)
+
+    const items = (contents.length > 0 ? contents : [null]).map((entry) => {
+      const matchedItem = itemLookup.get(normalizeSkuKey(entry?.sku))
+      const qty = Math.max(1, Number(entry?.qty) || 1)
+      const fallbackUnitWeight = totalContentQty > 0
+        ? Math.max(1, roundToTenth(weight / totalContentQty))
+        : Math.max(1, roundToTenth(weight / qty))
+      const family = (entry?.matched && !['UNKNOWN', 'UNKNOWN_FALLBACK', 'SKU_OVERRIDE'].includes(entry.matched))
+        ? entry.matched
+        : (matchedItem?.family || pkg?.family || 'Unknown')
+
+      return {
+        sku: entry?.sku || matchedItem?.sku || 'UNKNOWN',
+        displayName: matchedItem?.displayName || matchedItem?.name || entry?.name || entry?.desc || pkg?.family || 'Unknown Item',
+        name: entry?.name || entry?.desc || matchedItem?.displayName || matchedItem?.name || pkg?.family || 'Unknown Item',
+        family,
+        qty,
+        weight: matchedItem?.packaged?.weight_lbs || matchedItem?.weight || fallbackUnitWeight,
+        isUnknown: Boolean(matchedItem?.isUnknown || entry?.matched === 'UNKNOWN' || entry?.matched === 'UNKNOWN_FALLBACK' || pkg?.type === 'unknown_pallet'),
+      }
+    })
+
+    const familyNames = [...new Set(items.map((item) => item.family).filter(Boolean))]
+    const family = familyNames.length === 1 ? familyNames[0] : 'Mixed'
+    const cubicFeet = roundToTenth((l * w * h) / 1728)
+    const density = cubicFeet > 0 ? roundToTenth(weight / cubicFeet) : 0
+
+    return {
+      id: pkg?.id || idx + 1,
+      items,
+      dims: [l, w, h],
+      weight,
+      family,
+      type: pkg?.type || 'standard_pallet',
+      group: family === 'Double Docker' ? 'double-docker' : (family === 'Mixed' ? 'mixed' : undefined),
+      palletSize: `${l}x${w}`,
+      cubicFeet,
+      density,
+      freightClass: getFreightClassFromDensity(density),
+      mergeable: Boolean(pkg?.mergeable),
+      packingNote: pkg?.type === 'long_tube' ? 'Long tube ships as a separate handling unit.' : undefined,
+    }
+  })
+
+  const predictedWeight = Number(data?.predicted_weight ?? prediction?.totalWeight)
+  const totalWeight = Math.max(
+    0,
+    Math.round(Number.isFinite(predictedWeight) ? predictedWeight : pallets.reduce((sum, pallet) => sum + (pallet.weight || 0), 0))
+  )
+  const totalPallets = Math.max(
+    0,
+    Number(data?.predicted_pallets ?? prediction?.totalPallets ?? pallets.length) || pallets.length
+  )
+  const totalCubicFeet = roundToTenth(pallets.reduce((sum, pallet) => sum + (pallet.cubicFeet || 0), 0))
+  const shippingMethod = getShippingMethodFromPackages(packages, totalWeight)
+  const diagnostics = data?.diagnostics || {}
+  const unknownSkus = diagnostics?.unknown_skus || diagnostics?.unknownSkus || []
+  const hasUnknownItems = unknownSkus.length > 0 || pallets.some((pallet) => pallet.items.some((item) => item.isUnknown))
+  const totalItems = (Array.isArray(orderItems) && orderItems.length > 0)
+    ? orderItems.reduce((sum, item) => sum + (item?.qty || 0), 0)
+    : pallets.reduce((sum, pallet) => sum + pallet.items.reduce((itemSum, item) => itemSum + (item?.qty || 0), 0), 0)
+
+  return {
+    pallets,
+    totalWeight,
+    totalCubicFeet,
+    totalPallets,
+    shippingMethod,
+    totalItems,
+    parcelItems: shippingMethod === 'Parcel' ? [{ count: totalPallets, totalWeight }] : [],
+    hasUnknownItems,
+    has3DPositions: false,
+    diagnostics,
+    confidence: prediction?.summary?.confidence || diagnostics?.confidence || 'low',
+    needsReview: Boolean(prediction?.summary?.needsReview || diagnostics?.needsReview),
+  }
+}
+
 function App() {
   // App mode: 'sales' | 'validation' | 'warehouse'
   const [appMode, setAppMode] = useState('sales')
@@ -787,518 +967,58 @@ function App() {
     }
   }
 
-  // Calculate pallets - TRUE 3D BIN PACKING with exact positions
-  const calculatePallets = () => {
-    console.log('🎯 Running 3D bin-packing algorithm...')
-    
-    // Prepare items for bin-packing with accurate dimensions
-    const packingItems = []
-    
-    // Handle DD products specially (component-based packing)
-    let dd4Count = 0
-    let dd6Count = 0
-    
-    orderItems.forEach(item => {
-      const key = getProductKey(item.sku, item.family, item.name)
-      
-      if (key === 'dd4') {
-        dd4Count += item.qty
-        return // Handle DD separately
-      }
-      if (key === 'dd6') {
-        dd6Count += item.qty
-        return // Handle DD separately
-      }
-      
-      // Get accurate dims from STEP files if available
-      const accurateDims = getAccurateDims(item.sku, item.packaged)
-      const realWeight = getRealWeight(item.sku, item.family, accurateDims.weight_lbs || 50)
-      
-      packingItems.push({
-        sku: item.sku,
-        name: item.displayName || item.sku,
-        family: item.family,
-        qty: item.qty,
-        dims: {
-          l: accurateDims.length_in || 24,
-          w: accurateDims.width_in || 18,
-          h: accurateDims.height_in || 12,
-        },
-        weight: realWeight,
-        color: getBoxColor(item.family),
-      })
-    })
-    
-    // ============================================================
-    // OVERSIZED ITEMS - Handle separately (won't fit on standard pallets)
-    // Standard pallet: 86" × 40". Items larger than this need oversized pallets.
-    // ============================================================
-    const STANDARD_PALLET_L = 86
-    const STANDARD_PALLET_W = 40
-    
-    const oversizedItems = []
-    const regularItems = []
-    
-    packingItems.forEach(item => {
-      const l = item.dims.l || 24
-      const w = item.dims.w || 18
-      // Check if item fits on standard pallet (including rotated)
-      const fitsNormal = l <= STANDARD_PALLET_L && w <= STANDARD_PALLET_W
-      const fitsRotated = w <= STANDARD_PALLET_L && l <= STANDARD_PALLET_W
-      
-      if (fitsNormal || fitsRotated) {
-        regularItems.push(item)
-      } else {
-        console.log(`📦 Oversized item detected: ${item.name} (${l}×${w})`)
-        oversizedItems.push(item)
-      }
-    })
-    
-    // Create oversized pallets for items that won't fit standard pallets
-    const oversizedPallets = []
-    oversizedItems.forEach(item => {
-      // Each oversized item (or group of same item) gets its own pallet
-      const l = item.dims.l || 24
-      const w = item.dims.w || 18
-      const h = item.dims.h || 12
-      const weight = (item.weight || 50) * (item.qty || 1)
-      
-      // Determine pallet size needed (with overhang allowance)
-      const palletL = Math.max(Math.ceil(l / 12) * 12, 48) // Round up to nearest foot, min 48"
-      const palletW = Math.max(Math.ceil(w / 12) * 12, 40) // Round up to nearest foot, min 40"
-      
-      oversizedPallets.push({
-        id: `oversized-${oversizedPallets.length + 1}`,
-        items: [{
-          ...item,
-          positions: [{
-            x: 0, y: 0, z: 0,
-            l: l, w: w, h: h * (item.qty || 1), // Stack height
-          }]
-        }],
-        boxes: Array.from({ length: item.qty || 1 }, (_, idx) => ({
-          x: 0, y: idx * h, z: 0,
-          l: l, w: w, h: h,
-          item: item,
-          orientation: 0,
-        })),
-        dims: [palletL, palletW, Math.ceil(h * (item.qty || 1) + 6)],
-        weight: weight + 50, // Include pallet weight
-        cubicFeet: Math.round((palletL * palletW * (h * (item.qty || 1))) / 1728 * 10) / 10,
-        density: Math.round(weight / ((palletL * palletW * (h * (item.qty || 1))) / 1728) * 10) / 10,
-        utilization: 0.8, // Estimated
-        family: item.family,
-        palletSize: 'oversized',
-        note: `Oversized pallet (${palletL}"×${palletW}")`,
-      })
-    })
-    
-    console.log(`📦 Items split: ${regularItems.length} regular, ${oversizedItems.length} oversized`)
-    
-    // Run 3D bin-packing for REGULAR products only
-    // DD products are handled separately below (completely isolated)
-    let packedPallets = []
-    
-    if (regularItems.length > 0) {
-      // Try new optimizer for regular products
-      try {
-        const optimizerResult = optimizePalletPacking(
-          regularItems.map(item => ({
-            l: item.dims.l,
-            w: item.dims.w,
-            h: item.dims.h,
-            weight: item.weight || 50,
-            qty: item.qty || 1,
-            sku: item.sku,
-            name: item.name,
-            family: item.family,
-            color: item.color,
-            item: item, // Keep original reference
-          })),
-          {
-            length: 86,
-            width: 40,
-            maxHeight: PACKING_RULES.maxPalletHeight || 72,
-            maxWeight: 2500,
-            deckHeight: 6,
-          }
-        )
-        
-        // Convert optimizer output to match old packer format
-        packedPallets = optimizerResult.pallets.map((p, idx) => ({
-          id: idx + 1,
-          boxes: p.boxes.map(b => ({
-            x: b.x,
-            y: b.y,
-            z: b.z,
-            l: b.l,
-            w: b.w,
-            h: b.h,
-            item: b.item?.item || b.item, // Unwrap nested item
-            orientation: b.rotated ? 1 : 0,
-          })),
-          metrics: {
-            weight: p.weight || 0,
-            height: Math.max(...p.boxes.map(b => b.y + b.h), 0),
-            utilization: p.utilization || 0,
-          },
-          dims: p.dims,
-        }))
-        
-        console.log('📦 Layer-based packing result:', {
-          strategy: optimizerResult.strategy,
-          pallets: packedPallets.length,
-          utilization: ((optimizerResult.metrics?.avgUtilization || 0) * 100).toFixed(1) + '%'
-        })
-      } catch (err) {
-        console.warn('📦 Optimizer failed, falling back to old packer:', err.message)
-        packedPallets = packItemsWithConstraints(packingItems, {
-          maxHeight: PACKING_RULES.maxPalletHeight,
-          allowRotation: true,
-        })
-      }
-    }
-    
-    console.log('📦 Regular products packing result:', packedPallets.length, 'pallets')
-    
-    // Convert packed pallets to our format with exact positions
-    const pallets = packedPallets.map(p => {
-      // Group items by SKU for summary
-      const itemSummary = {}
-      p.boxes.forEach(box => {
-        const key = box.item.sku
-        if (!itemSummary[key]) {
-          itemSummary[key] = {
-            ...box.item,
-            qty: 0,
-            positions: [],
-          }
-        }
-        itemSummary[key].qty += 1
-        itemSummary[key].positions.push({
-          x: box.x,
-          y: box.y,
-          z: box.z,
-          l: box.l,
-          w: box.w,
-          h: box.h,
-        })
-      })
-      
-      const items = Object.values(itemSummary)
-      const maxDims = p.boxes.reduce((max, b) => ({
-        l: Math.max(max.l, b.x + b.l),
-        w: Math.max(max.w, b.z + b.w),
-        h: Math.max(max.h, b.y + b.h),
-      }), { l: 0, w: 0, h: 0 })
-      
-      // Calculate cubic feet and density
-      const cubicFeet = (48 * 40 * maxDims.h) / 1728
-      const density = p.metrics.weight / cubicFeet
-      
-      return {
-        id: p.id,
-        items,
-        boxes: p.boxes, // Exact positions for 3D viewer!
-        dims: [48, 40, Math.ceil(maxDims.h + 6)], // Include pallet height
-        weight: p.metrics.weight + 50, // Include pallet weight
-        cubicFeet: Math.round(cubicFeet * 10) / 10,
-        density: Math.round(density * 10) / 10,
-        utilization: p.metrics.utilization,
-        family: items.length === 1 ? items[0].family : 'Mixed',
-        group: p.group,
-      }
-    })
-    
-    // Add freight class to each pallet
-    pallets.forEach(pallet => {
-      const density = pallet.density
-      if (density >= 50) pallet.freightClass = 50
-      else if (density >= 35) pallet.freightClass = 55
-      else if (density >= 30) pallet.freightClass = 60
-      else if (density >= 22.5) pallet.freightClass = 65
-      else if (density >= 15) pallet.freightClass = 70
-      else if (density >= 13.5) pallet.freightClass = 77.5
-      else if (density >= 12) pallet.freightClass = 85
-      else if (density >= 10.5) pallet.freightClass = 92.5
-      else if (density >= 9) pallet.freightClass = 100
-      else if (density >= 8) pallet.freightClass = 110
-      else if (density >= 7) pallet.freightClass = 125
-      else if (density >= 6) pallet.freightClass = 150
-      else if (density >= 5) pallet.freightClass = 175
-      else if (density >= 4) pallet.freightClass = 200
-      else if (density >= 3) pallet.freightClass = 250
-      else if (density >= 2) pallet.freightClass = 300
-      else pallet.freightClass = 400
-    })
-    
-    // ============================================================
-    // ============================================================
-    // DD PACKING - SEPARATE CRATES (per Chad 2026-02-02)
-    // ============================================================
-    // DD ships as 3 SEPARATE crate types - never mixed:
-    // 1. Slide/Track crates (80×43×56", 21 sets each)
-    // 2. Manifold crate (54×28×55", 40 per crate)
-    // 3. Legs pallet (48×45×53", 30 per pallet)
-    // ============================================================
-    if (dd4Count > 0 || dd6Count > 0) {
-      console.log('📦 DD packing: creating separate crates per Chad specs...')
-      
-      const totalDDUnits = dd4Count + dd6Count
-      
-      // Component counts
-      const totalSlides = (dd4Count * 2) + (dd6Count * 3)  // DD4=2, DD6=3 slides
-      const totalTracks = (dd4Count * 2) + (dd6Count * 3)  // DD4=2, DD6=3 tracks
-      const totalLegs = totalDDUnits * 1                    // 1 leg per unit
-      const totalManifolds = totalDDUnits * 1               // 1 manifold per unit
-      
-      // Crate capacities (per Chad)
-      const SLIDE_TRACK_SETS_PER_CRATE = 21  // 7 per layer × 3 layers
-      const MANIFOLDS_PER_CRATE = 40
-      const LEGS_PER_PALLET = 40  // Updated per Chad 2026-02-03
-      
-      // Calculate crates needed
-      const totalSets = totalSlides  // slides = tracks = sets
-      const slideTrackCrates = Math.ceil(totalSets / SLIDE_TRACK_SETS_PER_CRATE)
-      const manifoldCrates = Math.ceil(totalManifolds / MANIFOLDS_PER_CRATE)
-      const legPallets = Math.ceil(totalLegs / LEGS_PER_PALLET)
-      
-      console.log(`   Slide/Track crates: ${slideTrackCrates} (${totalSets} sets ÷ 21)`)
-      console.log(`   Manifold crates: ${manifoldCrates} (${totalManifolds} ÷ 40)`)
-      console.log(`   Leg pallets: ${legPallets} (${totalLegs} ÷ 40)`)
-      
-      // ========================================
-      // CRATE 1: SLIDE/TRACK CRATES (80×43×56")
-      // ========================================
-      // Simple box representation - one box per crate
-      let setsRemaining = totalSets
-      for (let crateIdx = 0; crateIdx < slideTrackCrates; crateIdx++) {
-        const setsOnCrate = Math.min(SLIDE_TRACK_SETS_PER_CRATE, setsRemaining)
-        setsRemaining -= setsOnCrate
-        
-        // Single box representing the entire crate
-        const boxes = [{
-          x: 0, y: 0, z: 0,
-          l: 78, w: 41, h: 54,
-          item: { 
-            sku: 'dd-crate-slidetrack', 
-            name: `Slide/Track Crate - ${setsOnCrate} sets`, 
-            family: 'DD Crate',
-            color: '#dc2626'  // Red for slides/tracks
-          }
-        }]
-        
-        pallets.push({
-          id: pallets.length + 1,
-          items: [
-            { sku: 'dd-slide', name: 'Upper Slide', qty: setsOnCrate },
-            { sku: 'dd-lower', name: 'Lower Track', qty: setsOnCrate }
-          ],
-          boxes,
-          dims: [80, 43, 56],
-          weight: Math.round((setsOnCrate / 21) * 1510) + 50,
-          family: 'Double Docker',
-          group: 'double-docker',
-          palletSize: '80x43',
-          packingNote: `Slide/Track Crate: ${setsOnCrate} sets`,
-          source: 'dd-slide-track'
-        })
-      }
-      
-      // ========================================
-      // CRATE 2: MANIFOLD CRATES (54×28×55")
-      // ========================================
-      let manifoldsRemaining = totalManifolds
-      for (let crateIdx = 0; crateIdx < manifoldCrates; crateIdx++) {
-        const manifoldsOnCrate = Math.min(MANIFOLDS_PER_CRATE, manifoldsRemaining)
-        manifoldsRemaining -= manifoldsOnCrate
-        
-        // Single box representing the entire crate
-        const boxes = [{
-          x: 0, y: 0, z: 0,
-          l: 52, w: 26, h: 53,
-          item: { 
-            sku: 'dd-crate-manifold', 
-            name: `Manifold Crate - ${manifoldsOnCrate} pcs`, 
-            family: 'DD Crate',
-            color: '#3b82f6'  // Blue for manifolds
-          }
-        }]
-        
-        pallets.push({
-          id: pallets.length + 1,
-          items: [{ sku: 'dd-manifold', name: 'Manifold', qty: manifoldsOnCrate }],
-          boxes,
-          dims: [54, 28, 55],
-          weight: manifoldsOnCrate * 25 + 50,
-          family: 'Double Docker',
-          group: 'double-docker',
-          palletSize: '54x28',
-          packingNote: `Manifold Crate: ${manifoldsOnCrate} pcs`,
-          source: 'dd-manifold'
-        })
-      }
-      
-      // ========================================
-      // CRATE 3: LEGS PALLETS (48×45×53")
-      // ========================================
-      let legsRemaining = totalLegs
-      for (let palletIdx = 0; palletIdx < legPallets; palletIdx++) {
-        const legsOnPallet = Math.min(LEGS_PER_PALLET, legsRemaining)
-        legsRemaining -= legsOnPallet
-        
-        const stackHeight = Math.ceil(legsOnPallet * 1.8)
-        
-        // Single box representing the stacked legs
-        const boxes = [{
-          x: 0, y: 0, z: 0,
-          l: 44, w: 43, h: stackHeight,
-          item: { 
-            sku: 'dd-pallet-legs', 
-            name: `Legs Pallet - ${legsOnPallet} pcs`, 
-            family: 'DD Crate',
-            color: '#737373'  // Gray for legs
-          }
-        }]
-        
-        pallets.push({
-          id: pallets.length + 1,
-          items: [{ sku: 'dd-leg', name: 'Support Leg', qty: legsOnPallet }],
-          boxes,
-          dims: [48, 45, stackHeight],
-          weight: legsOnPallet * 30 + 50,
-          family: 'Double Docker',
-          group: 'double-docker',
-          palletSize: '48x45',
-          packingNote: `Legs Pallet: ${legsOnPallet} pcs`,
-          source: 'dd-legs'
-        })
-      }
-      
-      const totalDDPallets = slideTrackCrates + manifoldCrates + legPallets
-      console.log(`✅ DD pallets total: ${totalDDPallets} (${slideTrackCrates} slide/track + ${manifoldCrates} manifold + ${legPallets} legs)`)
-    }
-    
-    // ============================================================
-    // Add oversized pallets (Undergrad, etc.)
-    // ============================================================
-    if (oversizedPallets.length > 0) {
-      console.log(`📦 Adding ${oversizedPallets.length} oversized pallets`)
-      
-      // Add freight class to oversized pallets
-      oversizedPallets.forEach(pallet => {
-        const density = pallet.density || 10
-        if (density >= 50) pallet.freightClass = 50
-        else if (density >= 35) pallet.freightClass = 55
-        else if (density >= 30) pallet.freightClass = 60
-        else if (density >= 22.5) pallet.freightClass = 65
-        else if (density >= 15) pallet.freightClass = 70
-        else if (density >= 13.5) pallet.freightClass = 77.5
-        else if (density >= 12) pallet.freightClass = 85
-        else if (density >= 10.5) pallet.freightClass = 92.5
-        else if (density >= 9) pallet.freightClass = 100
-        else if (density >= 8) pallet.freightClass = 110
-        else if (density >= 7) pallet.freightClass = 125
-        else if (density >= 6) pallet.freightClass = 150
-        else if (density >= 5) pallet.freightClass = 175
-        else if (density >= 4) pallet.freightClass = 200
-        else if (density >= 3) pallet.freightClass = 250
-        else if (density >= 2) pallet.freightClass = 300
-        else pallet.freightClass = 400
-        
-        pallet.group = 'oversized'
-      })
-      
-      pallets.push(...oversizedPallets)
-    }
-    
-    // Sort pallets: DD, oversized, then mixed
-    pallets.sort((a, b) => {
-      // DD pallets first
-      if (a.group === 'double-docker' && b.group !== 'double-docker') return -1
-      if (b.group === 'double-docker' && a.group !== 'double-docker') return 1
-      // Oversized pallets second
-      if (a.group === 'oversized' && b.group !== 'oversized' && b.group !== 'double-docker') return -1
-      if (b.group === 'oversized' && a.group !== 'oversized' && a.group !== 'double-docker') return 1
-      return a.id - b.id
-    })
-    
-    // Renumber pallets
-    pallets.forEach((p, i) => p.id = i + 1)
-    
-    // Calculate totals
-    const totalWeight = pallets.reduce((sum, p) => sum + p.weight, 0)
-    const totalCubicFeet = pallets.reduce((sum, p) => sum + p.cubicFeet, 0)
-    const totalPallets = pallets.length
-    
-    // Log for debugging
-    console.log('✅ 3D Packing complete:', totalPallets, 'pallets')
-    
-    // Check for parcel-eligible items
-    // Parcel = individual item <50 lbs AND <1 cubic foot (1728 cubic inches)
-    const PARCEL_WEIGHT_LIMIT = 50
-    const PARCEL_CUBIC_INCH_LIMIT = 1728 // 1 cubic foot
-    
-    const parcelEligible = orderItems.every(item => {
-      const dims = getAccurateDims(item.sku, item.packaged)
-      const weight = getRealWeight(item.sku, item.family, dims.weight_lbs || 50)
-      const cubicInches = (dims.length_in || 24) * (dims.width_in || 18) * (dims.height_in || 12)
-      return weight <= PARCEL_WEIGHT_LIMIT && cubicInches <= PARCEL_CUBIC_INCH_LIMIT
-    })
-    
-    // If all items parcel-eligible AND total <150 lbs → ship parcel (no pallet needed)
-    const allParcel = parcelEligible && totalWeight < 150
-    
-    // Determine shipping method
-    let shippingMethod = 'LTL'
-    let parcelItems = []
-    
-    if (allParcel) {
-      shippingMethod = 'Parcel'
-      // Calculate parcel packages (UPS/FedEx limit ~50 lbs per box)
-      let parcelWeight = 0
-      let parcelCount = 1
-      orderItems.forEach(item => {
-        const itemWeight = getRealWeight(item.sku, item.family, item.packaged?.weight_lbs || 25)
-        for (let i = 0; i < item.qty; i++) {
-          if (parcelWeight + itemWeight > 50) {
-            parcelCount++
-            parcelWeight = itemWeight
-          } else {
-            parcelWeight += itemWeight
-          }
-        }
-      })
-      parcelItems = [{ count: parcelCount, totalWeight }]
-    } else if (totalWeight > 15000 || totalPallets > 10) {
-      shippingMethod = 'Full Truckload'
-    } else if (totalWeight > 10000 || totalPallets > 6) {
-      shippingMethod = 'Partial TL'
-    }
-    
-    // Check for unknown items
-    const hasUnknownItems = orderItems.some(item => item.isUnknown)
-    
-    // Log this calculation for ML training
-    logPackingCalculation({
-      quoteNumber: quoteNumber || null,
-      items: orderItems,
-      pallets: allParcel ? [] : pallets,
-      ddExpanded: dd4Count > 0 || dd6Count > 0,
-      shipMethod: shippingMethod,
-    })
+  // Calculate shipment plan using the same backend engine as warehouse validation.
+  const calculatePallets = async () => {
+    if (!orderItems.length && !quoteNumber) return
 
-    setResults({
-      pallets: allParcel ? [] : pallets,
-      totalWeight,
-      totalCubicFeet: Math.round(totalCubicFeet * 10) / 10,
-      totalPallets: allParcel ? 0 : totalPallets,
-      shippingMethod,
-      totalItems: orderItems.reduce((sum, item) => sum + item.qty, 0),
-      has3DPositions: !allParcel, // Flag for 3D viewer
-      parcelItems, // For parcel shipments
-      hasUnknownItems, // Flag if accuracy might be affected
-    })
+    setQuoteLoading(true)
+    setQuoteError(null)
+    setAiPlan(null)
+
+    try {
+      const trimmedQuoteNumber = String(quoteNumber || '').trim()
+      const payload = trimmedQuoteNumber
+        ? { quoteNumber: trimmedQuoteNumber }
+        : {
+            items: orderItems.map((item) => ({
+              sku: item.sku,
+              name: item.displayName || item.name || item.sku,
+              qty: item.qty,
+            })),
+          }
+
+      const response = await fetch('/api/predict', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      const data = await response.json()
+
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.error || 'Failed to build shipment plan')
+      }
+
+      const mappedResults = mapPredictionToResults(data, orderItems)
+
+      logPackingCalculation({
+        quoteNumber: trimmedQuoteNumber || null,
+        items: orderItems,
+        pallets: mappedResults.pallets,
+        shipMethod: mappedResults.shippingMethod,
+      })
+
+      setUnknownItems((data?.diagnostics?.unknown_skus || data?.diagnostics?.unknownSkus || []).map((sku) => ({
+        sku,
+        isUnknown: true,
+      })))
+      setResults(mappedResults)
+    } catch (err) {
+      console.error('Prediction error:', err)
+      setResults(null)
+      setQuoteError(`Failed to build shipment plan: ${err?.message || 'Unknown error'}`)
+    } finally {
+      setQuoteLoading(false)
+    }
   }
 
   // Legacy calculation kept for reference
