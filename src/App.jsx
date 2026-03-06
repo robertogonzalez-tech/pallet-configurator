@@ -651,6 +651,7 @@ function App() {
   const [quoteLoading, setQuoteLoading] = useState(false)
   const [quoteError, setQuoteError] = useState(null)
   const [pendingQuoteCalculation, setPendingQuoteCalculation] = useState(false)
+  const [quoteHasManualEdits, setQuoteHasManualEdits] = useState(false)
   const [selectedPallet, setSelectedPallet] = useState(null)
   const [isOptimizing, setIsOptimizing] = useState(false)
   const [aiPlan, setAiPlan] = useState(null)
@@ -837,6 +838,7 @@ function App() {
       
       // Store unknown items for warning display
       setUnknownItems(unmatchedItems)
+      setQuoteHasManualEdits(false)
 
       if (newItems.length > 0 || unmatchedItems.length > 0) {
         // Combine matched and unmatched items
@@ -877,6 +879,7 @@ function App() {
 
   // Update quantity
   const updateQty = (sku, delta) => {
+    setQuoteHasManualEdits(true)
     setOrderItems(orderItems.map(item => {
       if (item.sku === sku) {
         const newQty = item.qty + delta
@@ -888,6 +891,7 @@ function App() {
 
   // Remove item
   const removeItem = (sku) => {
+    setQuoteHasManualEdits(true)
     setOrderItems(orderItems.filter(item => item.sku !== sku))
   }
   
@@ -897,6 +901,7 @@ function App() {
     setResults(null)
     setSelectedPallet(null)
     setUnknownItems([])
+    setQuoteHasManualEdits(false)
   }
 
   // AI-powered packing optimization
@@ -977,7 +982,8 @@ function App() {
 
     try {
       const trimmedQuoteNumber = String(quoteNumber || '').trim()
-      const payload = trimmedQuoteNumber
+      const useQuoteSource = trimmedQuoteNumber && !quoteHasManualEdits
+      const payload = useQuoteSource
         ? { quoteNumber: trimmedQuoteNumber }
         : {
             items: orderItems.map((item) => ({
