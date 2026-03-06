@@ -848,6 +848,178 @@ run(
 );
 
 run(
+  'exact_fc3_base_vr2_longtube_heavy_plus1',
+  {
+    breakdown: [
+      row('Base Station', 25),
+      row('VR2 Offset', 10),
+      row('LONG_TUBE', 30),
+    ],
+    currentPallets: 2,
+    orderRef: 'SO6234',
+  },
+  1,
+  'exact_fc3_base_vr2_longtube_heavy_plus1'
+);
+
+run(
+  'exact_fc3_base_vr2_longtube_heavy_plus1_not_overbroad',
+  {
+    breakdown: [
+      row('Base Station', 15),
+      row('VR2 Offset', 5),
+      row('LONG_TUBE', 18),
+    ],
+    currentPallets: 2,
+    orderRef: 'SO6967',
+  },
+  0,
+  null
+);
+
+run(
+  'exact_fc3_base_vr2_longtube_micro_plus1',
+  {
+    breakdown: [
+      row('Base Station', 10),
+      row('VR2 Offset', 5),
+      row('LONG_TUBE', 12),
+    ],
+    currentPallets: 2,
+    orderRef: 'SO7553',
+  },
+  1,
+  'exact_fc3_base_vr2_longtube_micro_plus1'
+);
+
+run(
+  'exact_fc3_base_vr2_longtube_micro_plus1_not_overbroad',
+  {
+    breakdown: [
+      row('Base Station', 13),
+      row('VR2 Offset', 5),
+      row('LONG_TUBE', 17),
+    ],
+    currentPallets: 2,
+    orderRef: 'SO7601',
+  },
+  0,
+  null
+);
+
+run(
+  'exact_fc2_dd_hoop_highband_plus1',
+  {
+    breakdown: [
+      row('Double Docker', 32),
+      row('Hoop Runner', 4),
+    ],
+    currentPallets: 6,
+    orderRef: 'SO6941',
+  },
+  1,
+  'exact_fc2_dd_hoop_highband_plus1'
+);
+
+run(
+  'exact_fc2_dd_hoop_highband_plus1_not_overbroad',
+  {
+    breakdown: [
+      row('Double Docker', 24),
+      row('Hoop Runner', 9),
+    ],
+    currentPallets: 6,
+    orderRef: 'SO7606',
+  },
+  0,
+  null
+);
+
+run(
+  'exact_fc2_base_vr2_mid_plus1',
+  {
+    breakdown: [
+      row('Base Station', 7),
+      row('VR2 Offset', 10),
+    ],
+    currentPallets: 1,
+    orderRef: 'SO7010',
+  },
+  1,
+  'exact_fc2_base_vr2_mid_plus1'
+);
+
+run(
+  'exact_fc2_base_vr2_mid_plus1_not_overbroad',
+  {
+    breakdown: [
+      row('Base Station', 10),
+      row('VR2 Offset', 4),
+    ],
+    currentPallets: 1,
+    orderRef: 'SO6986',
+  },
+  0,
+  null
+);
+
+run(
+  'exact_legacy_fc2_mbv_varsity_mix_plus1',
+  {
+    breakdown: [
+      row('Metal Bike Vault / VisiLocker', 3),
+      row('Varsity', 1),
+    ],
+    currentPallets: 1,
+    orderRef: 'SO6528',
+  },
+  1,
+  'exact_legacy_fc2_mbv_varsity_mix_plus1'
+);
+
+run(
+  'exact_legacy_fc2_mbv_varsity_mix_plus1_not_overbroad',
+  {
+    breakdown: [
+      row('Metal Bike Vault / VisiLocker', 1),
+      row('Varsity', 2),
+    ],
+    currentPallets: 1,
+    orderRef: 'SO7766',
+  },
+  0,
+  null
+);
+
+run(
+  'exact_fc2_radius_vr1xl_mix_plus1',
+  {
+    breakdown: [
+      row('Radius', 7),
+      row('VR1 XL', 9),
+    ],
+    currentPallets: 1,
+    orderRef: 'SO7380',
+  },
+  1,
+  'exact_fc2_radius_vr1xl_mix_plus1'
+);
+
+run(
+  'exact_fc2_radius_vr1xl_mix_plus1_not_overbroad',
+  {
+    breakdown: [
+      row('Radius', 7),
+      row('VR1 XL', 8),
+    ],
+    currentPallets: 1,
+    orderRef: 'SO7381',
+  },
+  0,
+  null
+);
+
+run(
   'legacy_fc2_vr2_longtube_27_39_minus3',
   {
     breakdown: [row('VR2 Offset', 27), row('LONG_TUBE', 39)],

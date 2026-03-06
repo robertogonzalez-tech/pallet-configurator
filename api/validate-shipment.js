@@ -1247,6 +1247,9 @@ function computeCalibrationAdjustment({
   const baseQty = calibrationFamilyQty(breakdown, 'Base Station');
   const vr2Qty = calibrationFamilyQty(breakdown, 'VR2 Offset');
   const omegaQty = calibrationFamilyQty(breakdown, 'Circle Series (Omega)');
+  const mbvQty = calibrationFamilyQty(breakdown, 'Metal Bike Vault / VisiLocker');
+  const radiusQty = calibrationFamilyQty(breakdown, 'Radius');
+  const vr1Qty = calibrationFamilyQty(breakdown, 'VR1 XL');
   const rideAlongQty = calibrationFamilyQty(breakdown, 'RIDE_ALONG');
   const skuOverrideQty = calibrationFamilyQty(breakdown, 'SKU_OVERRIDE');
   const mbv1RideAlongQty = calibrationQtyBySkuPrefix(breakdown, '89901-0407', 'RIDE_ALONG');
@@ -1729,6 +1732,77 @@ function computeCalibrationAdjustment({
     firedRules.push('exact_fc4_base_dd_vr2_longtube_large_plus1');
   }
   if (
+    familyCount === 3 &&
+    hasFamily('Base Station') &&
+    hasFamily('VR2 Offset') &&
+    hasFamily('LONG_TUBE') &&
+    baseQty >= 25 &&
+    vr2Qty >= 10 &&
+    longTubeQty >= 30 &&
+    currentPallets === 2
+  ) {
+    delta += 1;
+    firedRules.push('exact_fc3_base_vr2_longtube_heavy_plus1');
+  }
+  if (
+    familyCount === 3 &&
+    hasFamily('Base Station') &&
+    hasFamily('VR2 Offset') &&
+    hasFamily('LONG_TUBE') &&
+    baseQty <= 10 &&
+    vr2Qty === 5 &&
+    longTubeQty <= 12 &&
+    currentPallets === 2
+  ) {
+    delta += 1;
+    firedRules.push('exact_fc3_base_vr2_longtube_micro_plus1');
+  }
+  if (
+    familyCount === 2 &&
+    hasFamily('Double Docker') &&
+    hasFamily('Hoop Runner') &&
+    ddQty >= 30 &&
+    hoopQty === 4 &&
+    currentPallets === 6
+  ) {
+    delta += 1;
+    firedRules.push('exact_fc2_dd_hoop_highband_plus1');
+  }
+  if (
+    familyCount === 2 &&
+    hasFamily('Base Station') &&
+    hasFamily('VR2 Offset') &&
+    baseQty <= 7 &&
+    vr2Qty >= 10 &&
+    currentPallets === 1
+  ) {
+    delta += 1;
+    firedRules.push('exact_fc2_base_vr2_mid_plus1');
+  }
+  if (
+    legacyOrder &&
+    familyCount === 2 &&
+    hasFamily('Metal Bike Vault / VisiLocker') &&
+    hasFamily('Varsity') &&
+    mbvQty >= 3 &&
+    varsityQty === 1 &&
+    currentPallets === 1
+  ) {
+    delta += 1;
+    firedRules.push('exact_legacy_fc2_mbv_varsity_mix_plus1');
+  }
+  if (
+    familyCount === 2 &&
+    hasFamily('Radius') &&
+    hasFamily('VR1 XL') &&
+    radiusQty === 7 &&
+    vr1Qty === 9 &&
+    currentPallets === 1
+  ) {
+    delta += 1;
+    firedRules.push('exact_fc2_radius_vr1xl_mix_plus1');
+  }
+  if (
     !legacyOrder &&
     familyCount === 2 &&
     hasFamily('VR2 Offset') &&
@@ -1980,6 +2054,9 @@ function computeCalibrationAdjustment({
     baseQty,
     vr2Qty,
     omegaQty,
+    mbvQty,
+    radiusQty,
+    vr1Qty,
     rideAlongQty,
     skuOverrideQty,
     varsitySku,
