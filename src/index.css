@@ -70,17 +70,55 @@ header {
   box-shadow: 0 14px 30px rgba(15, 23, 42, 0.22);
 }
 
+.header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.hermes-brand {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.hermes-brand-mark {
+  width: 78px;
+  height: 78px;
+  border-radius: 22px;
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.18) 0%, rgba(255, 255, 255, 0.08) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.hermes-brand-mark svg {
+  width: 70px;
+  height: 70px;
+  display: block;
+}
+
+.hermes-brand-copy {
+  display: flex;
+  flex-direction: column;
+}
+
 header h1 {
   font-family: 'Space Grotesk', sans-serif;
   font-size: 2rem;
   font-weight: 700;
   letter-spacing: -0.04em;
+  margin: 0;
 }
 
 header p {
   color: rgba(255, 255, 255, 0.78);
   font-size: 0.92rem;
-  margin-top: 4px;
+  margin: 4px 0 0;
 }
 
 .grid {

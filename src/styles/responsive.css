@@ -107,6 +107,11 @@
 
 /* ===== TABLET (768-1024px) ===== */
 @media (max-width: 1024px) {
+  .header-top {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
   .sales-hero {
     grid-template-columns: 1fr;
   }
@@ -165,6 +170,21 @@
 
 /* ===== MOBILE (<768px) ===== */
 @media (max-width: 768px) {
+  .hermes-brand {
+    align-items: flex-start;
+  }
+
+  .hermes-brand-mark {
+    width: 64px;
+    height: 64px;
+    border-radius: 18px;
+  }
+
+  .hermes-brand-mark svg {
+    width: 58px;
+    height: 58px;
+  }
+
   .sales-shell {
     gap: 16px;
   }

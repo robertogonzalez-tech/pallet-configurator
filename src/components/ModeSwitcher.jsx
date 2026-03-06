@@ -1,9 +1,9 @@
 import { useState } from 'react'
 
 const MODES = [
-  { id: 'sales', label: 'Dispatch', icon: '☄️', description: 'Quote intake → shipment manifest' },
-  { id: 'validate', label: 'Floor', icon: '📋', description: 'Capture actual shipment outcomes' },
-  { id: 'warehouse', label: 'Build', icon: '📦', description: 'Warehouse packing instructions' },
+  { id: 'sales', label: 'Quoting', icon: '🧾', description: 'Quote intake and shipment plan' },
+  { id: 'validate', label: 'Warehouse', icon: '📋', description: 'Capture actual shipment outcomes' },
+  { id: 'warehouse', label: 'Packing', icon: '📦', description: 'Packing instructions' },
 ]
 
 export default function ModeSwitcher({ currentMode, onModeChange }) {

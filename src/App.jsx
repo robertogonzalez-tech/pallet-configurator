@@ -1612,8 +1612,39 @@ function App() {
   return (
     <>
       <header>
-        <h1>GCS Pallet Configurator</h1>
-        <p>Calculate pallet configurations and generate packing slips</p>
+        <div className="header-top">
+          <div className="hermes-brand">
+            <div className="hermes-brand-mark" aria-hidden="true">
+              <svg viewBox="0 0 96 96" role="presentation">
+                <defs>
+                  <linearGradient id="hermesHelmet" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#f8fafc" />
+                    <stop offset="100%" stopColor="#cbd5e1" />
+                  </linearGradient>
+                  <linearGradient id="hermesBox" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#f59e0b" />
+                    <stop offset="100%" stopColor="#f97316" />
+                  </linearGradient>
+                </defs>
+                <circle cx="48" cy="48" r="44" fill="rgba(255,255,255,0.08)" />
+                <ellipse cx="40" cy="46" rx="17" ry="19" fill="#fde7d0" />
+                <path d="M24 35c3-13 14-20 27-20 12 0 22 6 27 16l-7 6H31l-7-2z" fill="url(#hermesHelmet)" />
+                <path d="M68 23c8 1 13 6 16 14-7-2-12-1-16 3 1-5 1-11 0-17z" fill="#f8fafc" />
+                <path d="M70 28c6 1 10 4 12 9-5-1-9 0-12 3" fill="none" stroke="#cbd5e1" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                <circle cx="34" cy="46" r="2.2" fill="#0f172a" />
+                <circle cx="45" cy="46" r="2.2" fill="#0f172a" />
+                <path d="M34 56c4 4 10 4 14 0" fill="none" stroke="#0f172a" strokeWidth="2.5" strokeLinecap="round" />
+                <rect x="51" y="48" width="24" height="18" rx="3" fill="url(#hermesBox)" />
+                <path d="M51 55h24M63 48v18" fill="none" stroke="#fff7ed" strokeWidth="2" opacity="0.7" />
+                <path d="M17 60c7 0 11 3 14 8" fill="none" stroke="#f8fafc" strokeWidth="3" strokeLinecap="round" />
+              </svg>
+            </div>
+            <div className="hermes-brand-copy">
+              <h1>Hermes</h1>
+              <p>Internal quote and shipment planner</p>
+            </div>
+          </div>
+        </div>
         
         {/* Mode Switcher */}
         <div style={{ display: 'flex', justifyContent: 'center', marginTop: '16px', marginBottom: '8px' }}>
@@ -1687,13 +1718,13 @@ function App() {
             <p style={{ fontSize: '48px', marginBottom: '16px' }}>📦</p>
             <h3>No Packing Data</h3>
             <p style={{ color: '#94a3b8', marginTop: '8px' }}>
-              Switch to Sales mode and calculate pallets first, then come back here for packing instructions.
+              Switch to Quoting and calculate pallets first, then come back here for packing instructions.
             </p>
             <button 
               onClick={() => setAppMode('sales')}
               style={{ marginTop: '20px', padding: '10px 24px', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
             >
-              Go to Sales Mode
+              Go to Quoting
             </button>
           </div>
         </div>
@@ -1705,23 +1736,23 @@ function App() {
       <div className="container sales-shell">
         <div className="sales-hero">
           <div className="sales-hero-copy">
-            <div className="sales-kicker">Hermes Dispatch</div>
-            <h2>Pull the quote. Hermes builds the shipment manifest.</h2>
+            <div className="sales-kicker">Hermes</div>
+            <h2>Quote in. Shipment plan out.</h2>
             <p>
-              Quote intake stays simple. Bring in the order from NetSuite, let Hermes calculate the shipment shape, then hand the manifest to freight quoting.
+              Import a NetSuite quote and Hermes will map the pallets, dims, and weights for the shipment.
             </p>
           </div>
           <div className="sales-hero-stats">
             <div className="sales-hero-stat">
-              <span className="sales-hero-label">Dispatch source</span>
-              <strong>{quoteNumber ? `Quote ${quoteNumber}` : 'Manual build'}</strong>
+              <span className="sales-hero-label">Quote</span>
+              <strong>{quoteNumber ? `#${quoteNumber}` : 'Not loaded'}</strong>
             </div>
             <div className="sales-hero-stat">
-              <span className="sales-hero-label">Manifest lines</span>
+              <span className="sales-hero-label">Lines</span>
               <strong>{orderSkuCount}</strong>
             </div>
             <div className="sales-hero-stat">
-              <span className="sales-hero-label">Secured units</span>
+              <span className="sales-hero-label">Units</span>
               <strong>{orderUnitCount}</strong>
             </div>
             <div className="sales-hero-stat">
@@ -1737,9 +1768,9 @@ function App() {
               <div className="sales-section-heading">
                 <div>
                   <div className="sales-step-tag">Step 1</div>
-                  <h2>Dispatch intake</h2>
+                  <h2>Import Quote</h2>
                 </div>
-                <p>Enter the NetSuite quote number and pull the shipment request into Hermes.</p>
+                <p>Enter the NetSuite quote number and pull it in.</p>
               </div>
 
               <div className="sales-import-row">
@@ -1771,9 +1802,9 @@ function App() {
               <div className="sales-section-heading">
                 <div>
                   <div className="sales-step-tag">Step 2</div>
-                  <h2>Manifest review</h2>
+                  <h2>Review Quote</h2>
                 </div>
-                <p>Confirm what came over from NetSuite, then let Hermes generate the shipment plan.</p>
+                <p>Check the imported lines, then build the shipment plan.</p>
               </div>
 
               {orderItems.length > 0 ? (
@@ -1872,14 +1903,14 @@ function App() {
                   </div>
 
                   <p className="sales-keyboard-hint">
-                    Press Enter anywhere outside an input to rebuild the manifest after the quote is imported.
+                    Press Enter anywhere outside an input to rebuild the shipment plan after the quote is imported.
                   </p>
                 </>
               ) : (
                 <div className="sales-empty-review">
                   <div className="sales-empty-icon">🧾</div>
-                  <h3>Dispatch queue is empty</h3>
-                  <p>Pull a quote above to load the manifest candidate.</p>
+                  <h3>No quote loaded</h3>
+                  <p>Pull a quote above to load the shipment lines.</p>
                 </div>
               )}
             </div>
@@ -1889,9 +1920,9 @@ function App() {
             <div className="sales-section-heading">
               <div>
                   <div className="sales-step-tag">Step 3</div>
-                <h2>Shipment manifest</h2>
+                <h2>Shipment Plan</h2>
               </div>
-              <p>Hermes separates the predicted shipment output from the quote intake so the readout is clear and quote-ready.</p>
+              <p>Hermes keeps the quote input separate from the shipment output so the readout stays clear.</p>
             </div>
 
             {!results ? (
@@ -1902,14 +1933,14 @@ function App() {
                   </svg>
                   <p>
                     {orderItems.length > 0
-                      ? 'Manifest intake is ready. Build the manifest to generate the shipment readout.'
-                      : 'Pull a quote in Step 1. Hermes will show the shipment manifest here.'}
+                      ? 'The quote is loaded. Build the shipment plan to generate the readout.'
+                      : 'Pull a quote in Step 1. Hermes will show the shipment plan here.'}
                   </p>
                 </div>
                 <div className="sales-results-checklist">
-                  <div className={`sales-check-item ${quoteNumber ? 'done' : ''}`}>Dispatch request identified</div>
-                  <div className={`sales-check-item ${orderItems.length > 0 ? 'done' : ''}`}>Manifest lines loaded</div>
-                  <div className={`sales-check-item ${results ? 'done' : ''}`}>Shipment manifest generated</div>
+                  <div className={`sales-check-item ${quoteNumber ? 'done' : ''}`}>Quote entered</div>
+                  <div className={`sales-check-item ${orderItems.length > 0 ? 'done' : ''}`}>Quote lines loaded</div>
+                  <div className={`sales-check-item ${results ? 'done' : ''}`}>Shipment plan generated</div>
                 </div>
               </div>
             ) : (
@@ -1971,8 +2002,8 @@ function App() {
 
                 <div className="sales-actions-panel">
                   <div className="sales-actions-heading">
-                    <h3>Dispatch actions</h3>
-                    <p>Use the manifest for quoting, then print or copy the shipment summary.</p>
+                    <h3>Quoting Actions</h3>
+                    <p>Use the shipment plan for quoting, then print or copy the summary.</p>
                   </div>
                   <div className="sales-action-grid">
                     <button className="sales-action-btn tone-blue" onClick={() => setShowPackingSlip(true)}>
