@@ -107,6 +107,18 @@
 
 /* ===== TABLET (768-1024px) ===== */
 @media (max-width: 1024px) {
+  .sales-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .sales-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .sales-results-card {
+    position: static;
+  }
+
   .app-container {
     flex-direction: column;
     gap: var(--spacing-tablet);
@@ -153,6 +165,57 @@
 
 /* ===== MOBILE (<768px) ===== */
 @media (max-width: 768px) {
+  .sales-shell {
+    gap: 16px;
+  }
+
+  .sales-hero {
+    padding: 20px 18px;
+  }
+
+  .sales-hero-copy h2 {
+    font-size: 1.6rem;
+  }
+
+  .sales-hero-stats {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .sales-section-heading {
+    flex-direction: column;
+  }
+
+  .sales-section-heading p {
+    max-width: none;
+  }
+
+  .sales-import-row {
+    flex-direction: column;
+  }
+
+  .sales-import-btn {
+    min-height: 48px;
+  }
+
+  .sales-sample-grid,
+  .sales-action-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sales-order-summary {
+    flex-direction: column;
+  }
+
+  .sales-clear-btn {
+    min-height: 44px;
+    padding: 12px 14px;
+  }
+
+  .sales-builder-meta {
+    flex-direction: column;
+    gap: 4px;
+  }
+
   .app-container {
     flex-direction: column;
     gap: var(--spacing-mobile);

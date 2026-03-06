@@ -533,6 +533,20 @@ function App() {
     const family = String(p?.family || '').toLowerCase()
     return sku.includes(term) || displayName.includes(term) || family.includes(term)
   })
+  const orderSkuCount = orderItems.length
+  const orderUnitCount = orderItems.reduce((sum, item) => sum + (item?.qty || 0), 0)
+  const orderEstimatedWeight = orderItems.reduce((sum, item) => {
+    return sum + ((item?.packaged?.weight_lbs || 0) * (item?.qty || 0))
+  }, 0)
+  const hasUnknownOrderItems = orderItems.some(item => item.isUnknown && !getOverride(item.sku))
+  const quoteStatusTone =
+    typeof quoteError === 'string'
+      ? quoteError.startsWith('✓')
+        ? 'success'
+        : quoteError.includes('Demo')
+          ? 'info'
+          : 'error'
+      : null
 
   // Load quote from NetSuite via API proxy
   const loadQuote = async (quoteNum = null) => {
@@ -1699,324 +1713,331 @@ function App() {
       {/* Sales Mode - Main configurator */}
       {appMode === 'sales' && (
       <>
-      <div className="container">
-        <div className="grid">
-          {/* Left Panel - Order Builder */}
-          <div className="card">
-            <h2>Build Order</h2>
-            
-            {/* Quote Lookup */}
-            <div style={{ 
-              marginBottom: '16px', 
-              padding: '12px', 
-              background: '#f0f9ff', 
-              borderRadius: '6px',
-              border: '1px solid #bae6fd'
-            }}>
-              <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#0369a1', marginBottom: '8px' }}>
-                IMPORT FROM QUOTE
+      <div className="container sales-shell">
+        <div className="sales-hero">
+          <div className="sales-hero-copy">
+            <div className="sales-kicker">Sales Workspace</div>
+            <h2>Build the order, then get a quote-ready pallet plan.</h2>
+            <p>
+              Start from a NetSuite quote or build the order manually. The estimate panel stays separate so it is always clear what is input versus what the engine predicted.
+            </p>
+          </div>
+          <div className="sales-hero-stats">
+            <div className="sales-hero-stat">
+              <span className="sales-hero-label">Order source</span>
+              <strong>{quoteNumber ? `Quote ${quoteNumber}` : 'Manual build'}</strong>
+            </div>
+            <div className="sales-hero-stat">
+              <span className="sales-hero-label">Product lines</span>
+              <strong>{orderSkuCount}</strong>
+            </div>
+            <div className="sales-hero-stat">
+              <span className="sales-hero-label">Units</span>
+              <strong>{orderUnitCount}</strong>
+            </div>
+            <div className="sales-hero-stat">
+              <span className="sales-hero-label">Order weight</span>
+              <strong>{orderEstimatedWeight.toLocaleString()} lbs</strong>
+            </div>
+          </div>
+        </div>
+
+        <div className="sales-layout">
+          <div className="sales-workbench">
+            <div className="card sales-section-card sales-import-card">
+              <div className="sales-section-heading">
+                <div>
+                  <div className="sales-step-tag">Step 1</div>
+                  <h2>Start from quote or sample</h2>
+                </div>
+                <p>Import a real quote first. If you are testing, use a sample order instead of mixing both workflows together.</p>
               </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
+
+              <div className="sales-import-row">
                 <input
                   type="text"
-                  placeholder="Enter Quote # (e.g., EST-12345)"
+                  className="quote-input sales-quote-input"
+                  placeholder="Enter Quote # (example: EST-12345)"
                   value={quoteNumber}
                   onChange={(e) => setQuoteNumber(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && loadQuote()}
-                  style={{
-                    flex: 1,
-                    padding: '8px 12px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '4px',
-                    fontSize: '0.875rem'
-                  }}
                 />
                 <button
+                  className="sales-import-btn"
                   onClick={() => loadQuote()}
                   disabled={quoteLoading || !String(quoteNumber || '').trim()}
-                  style={{
-                    padding: '8px 16px',
-                    background: quoteLoading ? '#9ca3af' : '#0369a1',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: quoteLoading ? 'wait' : 'pointer',
-                    fontSize: '0.875rem',
-                    fontWeight: '500'
-                  }}
                 >
-                  {quoteLoading ? 'Loading...' : 'Import'}
+                  {quoteLoading ? 'Loading...' : 'Import Quote'}
                 </button>
               </div>
+
               {quoteError && typeof quoteError === 'string' && (
-                <div style={{ 
-                  marginTop: '8px', 
-                  fontSize: '0.75rem', 
-                  color: quoteError.startsWith('✓') ? '#16a34a' : quoteError.includes('Demo') ? '#0369a1' : '#dc2626' 
-                }}>
+                <div className={`sales-inline-message ${quoteStatusTone ? `tone-${quoteStatusTone}` : ''}`}>
                   {quoteError}
+                </div>
+              )}
+
+              {orderItems.length === 0 && (
+                <div className="sales-sample-grid">
+                  <button
+                    className="sales-sample-card tone-amber"
+                    onClick={() => {
+                      const sampleSkus = ['90101-2287-BLK13', '90101-0172-BLK13', '80101-0370-BLK23']
+                      const sampleItems = sampleSkus.map(sku => products.find(p => p.sku === sku)).filter(Boolean)
+                      if (sampleItems.length > 0) {
+                        setOrderItems([
+                          { ...sampleItems[0], qty: 8 },
+                          { ...sampleItems[1], qty: 4 },
+                          ...(sampleItems[2] ? [{ ...sampleItems[2], qty: 2 }] : [])
+                        ].filter(Boolean))
+                      }
+                    }}
+                  >
+                    <strong>Load demo mixed order</strong>
+                    <span>8 Varsity, 4 VR2, 2 Undergrad</span>
+                  </button>
+
+                  <button
+                    className="sales-sample-card tone-blue"
+                    onClick={() => {
+                      const testItems = []
+                      const dd4 = products.find(p => p.sku === 'DD-SS-04-BLK13')
+                      if (dd4) testItems.push({ ...dd4, qty: 29 })
+
+                      const dd6 = products.find(p => p.sku === 'DD-SS-06-BLK13')
+                      if (dd6) testItems.push({ ...dd6, qty: 3 })
+
+                      const varsity = products.find(p => p.sku === '90101-2287-BLK13')
+                      if (varsity) testItems.push({ ...varsity, qty: 2 })
+
+                      const workStand = products.find(p => p.displayName?.toLowerCase().includes('work stand'))
+                      if (workStand) testItems.push({ ...workStand, qty: 3 })
+
+                      const pump = products.find(p => p.displayName?.toLowerCase().includes('pump') || p.sku?.includes('PUMP'))
+                      if (pump) testItems.push({ ...pump, qty: 3 })
+
+                      const installKit = products.find(p => p.displayName?.toLowerCase().includes('install kit'))
+                      if (installKit) testItems.push({ ...installKit, qty: 3 })
+
+                      const anchorKit = products.find(p => p.sku?.includes('WAK215') || p.displayName?.toLowerCase().includes('anchor kit'))
+                      if (anchorKit) testItems.push({ ...anchorKit, qty: 3 })
+
+                      if (testItems.length > 0) {
+                        setOrderItems(testItems)
+                        console.log('📦 QUO33922 test order loaded:', testItems.map(i => `${i.qty}× ${i.sku}`).join(', '))
+                      }
+                    }}
+                  >
+                    <strong>Load DD stress test</strong>
+                    <span>QUO33922 with accessories</span>
+                  </button>
                 </div>
               )}
             </div>
 
-            <div style={{ 
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              margin: '12px 0',
-            }}>
-              <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }} />
-              <span style={{ fontSize: '0.75rem', color: '#6b7280', textTransform: 'uppercase' }}>or search manually</span>
-              <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }} />
-            </div>
-            
-            {/* Demo order button */}
-            {orderItems.length === 0 && (
-              <button
-                onClick={() => {
-                  // Add a sample mixed order
-                  const sampleSkus = ['90101-2287-BLK13', '90101-0172-BLK13', '80101-0370-BLK23']
-                  const sampleItems = sampleSkus.map(sku => products.find(p => p.sku === sku)).filter(Boolean)
-                  if (sampleItems.length > 0) {
-                    setOrderItems([
-                      { ...sampleItems[0], qty: 8 },  // Varsity
-                      { ...sampleItems[1], qty: 4 },  // VR2
-                      ...(sampleItems[2] ? [{ ...sampleItems[2], qty: 2 }] : [])  // Undergrad if found
-                    ].filter(Boolean))
-                  }
-                }}
-                style={{
-                  width: '100%',
-                  padding: '8px',
-                  marginBottom: '12px',
-                  background: '#fef3c7',
-                  border: '1px solid #fcd34d',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontSize: '0.875rem',
-                  color: '#92400e'
-                }}
-              >
-                ⚡ Load Demo Order (8 Varsity + 4 VR2 + 2 Undergrad)
-              </button>
-            )}
-            
-            {/* QUO33922 Test Order - for validation */}
-            {orderItems.length === 0 && (
-              <button 
-                onClick={() => {
-                  // QUO33922: 29 DD4 + 3 DD6 + accessories
-                  const testItems = []
-                  
-                  // DD4 (29 units) - use DD-SS-04-BLK13
-                  const dd4 = products.find(p => p.sku === 'DD-SS-04-BLK13')
-                  if (dd4) testItems.push({ ...dd4, qty: 29 })
-                  
-                  // DD6 (3 units) - use DD-SS-06-BLK13
-                  const dd6 = products.find(p => p.sku === 'DD-SS-06-BLK13')
-                  if (dd6) testItems.push({ ...dd6, qty: 3 })
-                  
-                  // Varsity 2-pack (1.5 = round to 2)
-                  const varsity = products.find(p => p.sku === '90101-2287-BLK13')
-                  if (varsity) testItems.push({ ...varsity, qty: 2 })
-                  
-                  // Work Stand (3) - search for it
-                  const workStand = products.find(p => p.displayName?.toLowerCase().includes('work stand'))
-                  if (workStand) testItems.push({ ...workStand, qty: 3 })
-                  
-                  // HSO Pump (3)
-                  const pump = products.find(p => p.displayName?.toLowerCase().includes('pump') || p.sku?.includes('PUMP'))
-                  if (pump) testItems.push({ ...pump, qty: 3 })
-                  
-                  // Install Kit (3)
-                  const installKit = products.find(p => p.displayName?.toLowerCase().includes('install kit'))
-                  if (installKit) testItems.push({ ...installKit, qty: 3 })
-                  
-                  // Anchor Kit (3) - WAK215
-                  const anchorKit = products.find(p => p.sku?.includes('WAK215') || p.displayName?.toLowerCase().includes('anchor kit'))
-                  if (anchorKit) testItems.push({ ...anchorKit, qty: 3 })
-                  
-                  if (testItems.length > 0) {
-                    setOrderItems(testItems)
-                    console.log('📦 QUO33922 test order loaded:', testItems.map(i => `${i.qty}× ${i.sku}`).join(', '))
-                  }
-                }}
-                style={{
-                  width: '100%',
-                  padding: '8px',
-                  marginBottom: '12px',
-                  background: '#dbeafe',
-                  border: '1px solid #60a5fa',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontSize: '0.875rem',
-                  color: '#1e40af'
-                }}
-              >
-                🧪 Load QUO33922 Test (29 DD4 + 3 DD6 + accessories)
-              </button>
-            )}
-            
-            <input
-              type="text"
-              className="product-search"
-              placeholder="Search products by SKU or name..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-
-            <div className="product-list">
-              {filteredProducts.slice(0, 50).map(product => (
-                <div 
-                  key={product.sku} 
-                  className="product-item"
-                  onClick={() => addToOrder(product)}
-                >
-                  <div>
-                    <div className="product-name">{product.displayName}</div>
-                    <div className="product-sku">{product.sku}</div>
-                  </div>
-                  <div className="product-dims">
-                    {product.packaged.length_in}×{product.packaged.width_in}×{product.packaged.height_in}"
-                    <br />{product.packaged.weight_lbs} lbs
-                  </div>
+            <div className="card sales-section-card sales-builder-card">
+              <div className="sales-section-heading">
+                <div>
+                  <div className="sales-step-tag">Step 2</div>
+                  <h2>Add or adjust products</h2>
                 </div>
-              ))}
-            </div>
-
-            {orderItems.length > 0 && (
-              <div className="order-list">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                  <h3 style={{ fontSize: '0.875rem', margin: 0, color: '#6b7280' }}>
-                    ORDER ITEMS ({orderItems.reduce((sum, i) => sum + i.qty, 0)} units)
-                  </h3>
-                  <button
-                    onClick={clearOrder}
-                    style={{
-                      padding: '4px 8px',
-                      fontSize: '0.75rem',
-                      background: '#fee2e2',
-                      color: '#dc2626',
-                      border: '1px solid #fecaca',
-                      borderRadius: '4px',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Clear All
-                  </button>
-                </div>
-                
-                {/* Warning for unknown items */}
-                {orderItems.some(item => item.isUnknown && !getOverride(item.sku)) && (
-                  <div style={{
-                    marginBottom: '12px',
-                    padding: '10px 12px',
-                    background: '#fef3c7',
-                    border: '1px solid #fcd34d',
-                    borderRadius: '6px',
-                    fontSize: '0.8rem',
-                    color: '#92400e'
-                  }}>
-                    <strong>⚠️ Unknown Products Detected</strong>
-                    <p style={{ margin: '4px 0 0 0', fontSize: '0.75rem' }}>
-                      {orderItems.filter(i => i.isUnknown && !getOverride(i.sku)).length} item(s) couldn't be matched to known products. 
-                      Using fallback dimensions. Click "Edit" to enter correct dimensions.
-                    </p>
-                  </div>
-                )}
-                
-                {orderItems.filter(item => item && item.sku).map(item => {
-                  const hasOverride = getOverride(item.sku)
-                  const showAsUnknown = item.isUnknown && !hasOverride
-                  const showAsCorrected = item.isUnknown && hasOverride
-                  
-                  return (
-                    <div key={item.sku} className="order-item" style={showAsUnknown ? { 
-                      background: '#fef3c7', 
-                      border: '1px solid #fcd34d' 
-                    } : showAsCorrected ? {
-                      background: '#dcfce7',
-                      border: '1px solid #86efac'
-                    } : {}}>
-                      <div className="order-item-info">
-                        <div className="order-item-name">
-                          {showAsUnknown && <span style={{ color: '#d97706' }}>⚠️ </span>}
-                          {showAsCorrected && <span style={{ color: '#16a34a' }}>✓ </span>}
-                          {String(item.displayName || item.sku || 'Unknown')}
-                        </div>
-                        <div className="order-item-details">
-                          {item.packaged?.weight_lbs || 0} lbs × {item.qty || 0} = {((item.packaged?.weight_lbs || 0) * (item.qty || 0)).toFixed(0)} lbs
-                          {showAsUnknown && <span style={{ color: '#d97706', marginLeft: '8px' }}>(fallback dims)</span>}
-                          {showAsCorrected && <span style={{ color: '#16a34a', marginLeft: '8px' }}>(corrected)</span>}
-                        </div>
-                      </div>
-                      <div className="qty-controls">
-                        {(item.isUnknown || showAsCorrected) && (
-                          <button 
-                            className="qty-btn" 
-                            onClick={() => setOverrideItem(item)}
-                            title="Edit dimensions"
-                            style={{ 
-                              background: showAsCorrected ? '#dcfce7' : '#fef3c7',
-                              color: showAsCorrected ? '#16a34a' : '#d97706',
-                              border: `1px solid ${showAsCorrected ? '#86efac' : '#fcd34d'}`,
-                              fontSize: '0.8rem'
-                            }}
-                          >
-                            ✏️
-                          </button>
-                        )}
-                        <button className="qty-btn" onClick={() => updateQty(item.sku, -1)}>−</button>
-                        <span className="qty-value">{item.qty || 0}</span>
-                        <button className="qty-btn" onClick={() => updateQty(item.sku, 1)}>+</button>
-                        <button className="qty-btn remove" onClick={() => removeItem(item.sku)}>×</button>
-                      </div>
-                    </div>
-                  )
-                })}
+                <p>Search by SKU, product name, or family. Click any product to add it to the active order.</p>
               </div>
-            )}
 
-            <button 
-              className="calculate-btn"
-              onClick={calculatePallets}
-              disabled={orderItems.length === 0}
-            >
-              Calculate Pallets (Enter ↵)
-            </button>
-            
-            <button 
-              className="calculate-btn ai-optimize-btn"
-              onClick={aiOptimizePacking}
-              disabled={orderItems.length === 0 || isOptimizing}
-              style={{ marginTop: '8px', background: 'linear-gradient(135deg, #8B5CF6 0%, #6366F1 100%)' }}
-            >
-              {isOptimizing ? '🤖 Optimizing...' : '🤖 AI Optimize Packing'}
-            </button>
-            
-            {/* Keyboard shortcut hint */}
-            <p style={{ fontSize: '0.7rem', color: '#9ca3af', textAlign: 'center', marginTop: '8px' }}>
-              Tip: Press Enter to calculate, or use AI for optimal packing instructions
-            </p>
+              <div className="sales-builder-toolbar">
+                <input
+                  type="text"
+                  className="product-search"
+                  placeholder="Search products by SKU, family, or name..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+                <div className="sales-builder-meta">
+                  <span>{filteredProducts.length} matches</span>
+                  <span>{products.length} total products</span>
+                </div>
+              </div>
+
+              <div className="product-list sales-product-list">
+                {filteredProducts.slice(0, 50).map(product => (
+                  <div
+                    key={product.sku}
+                    className="product-item"
+                    onClick={() => addToOrder(product)}
+                  >
+                    <div>
+                      <div className="product-name">{product.displayName}</div>
+                      <div className="product-sku">{product.sku}</div>
+                    </div>
+                    <div className="product-dims">
+                      {product.packaged.length_in}×{product.packaged.width_in}×{product.packaged.height_in}"
+                      <br />{product.packaged.weight_lbs} lbs
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="card sales-section-card sales-order-card">
+              <div className="sales-section-heading">
+                <div>
+                  <div className="sales-step-tag">Step 3</div>
+                  <h2>Review active order</h2>
+                </div>
+                <p>Adjust quantities here, then run the estimator once the order looks right.</p>
+              </div>
+
+              {orderItems.length > 0 ? (
+                <>
+                  <div className="sales-order-summary">
+                    <div className="sales-order-pill">
+                      <span>Lines</span>
+                      <strong>{orderSkuCount}</strong>
+                    </div>
+                    <div className="sales-order-pill">
+                      <span>Units</span>
+                      <strong>{orderUnitCount}</strong>
+                    </div>
+                    <div className="sales-order-pill">
+                      <span>Weight</span>
+                      <strong>{orderEstimatedWeight.toLocaleString()} lbs</strong>
+                    </div>
+                    <button className="sales-clear-btn" onClick={clearOrder}>
+                      Clear order
+                    </button>
+                  </div>
+
+                  {hasUnknownOrderItems && (
+                    <div className="sales-warning-card">
+                      <strong>Unknown products detected</strong>
+                      <p>
+                        {orderItems.filter(i => i.isUnknown && !getOverride(i.sku)).length} item(s) are using fallback dimensions. Use edit before trusting a freight quote.
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="order-list">
+                    {orderItems.filter(item => item && item.sku).map(item => {
+                      const hasOverride = getOverride(item.sku)
+                      const showAsUnknown = item.isUnknown && !hasOverride
+                      const showAsCorrected = item.isUnknown && hasOverride
+
+                      return (
+                        <div
+                          key={item.sku}
+                          className="order-item"
+                          style={showAsUnknown ? {
+                            background: '#fef3c7',
+                            border: '1px solid #fcd34d'
+                          } : showAsCorrected ? {
+                            background: '#dcfce7',
+                            border: '1px solid #86efac'
+                          } : {}}
+                        >
+                          <div className="order-item-info">
+                            <div className="order-item-name">
+                              {showAsUnknown && <span style={{ color: '#d97706' }}>⚠️ </span>}
+                              {showAsCorrected && <span style={{ color: '#16a34a' }}>✓ </span>}
+                              {String(item.displayName || item.sku || 'Unknown')}
+                            </div>
+                            <div className="order-item-details">
+                              {item.packaged?.weight_lbs || 0} lbs × {item.qty || 0} = {((item.packaged?.weight_lbs || 0) * (item.qty || 0)).toFixed(0)} lbs
+                              {showAsUnknown && <span style={{ color: '#d97706', marginLeft: '8px' }}>(fallback dims)</span>}
+                              {showAsCorrected && <span style={{ color: '#16a34a', marginLeft: '8px' }}>(corrected)</span>}
+                            </div>
+                          </div>
+                          <div className="qty-controls">
+                            {(item.isUnknown || showAsCorrected) && (
+                              <button
+                                className="qty-btn"
+                                onClick={() => setOverrideItem(item)}
+                                title="Edit dimensions"
+                                style={{
+                                  background: showAsCorrected ? '#dcfce7' : '#fef3c7',
+                                  color: showAsCorrected ? '#16a34a' : '#d97706',
+                                  border: `1px solid ${showAsCorrected ? '#86efac' : '#fcd34d'}`,
+                                  fontSize: '0.8rem'
+                                }}
+                              >
+                                ✏️
+                              </button>
+                            )}
+                            <button className="qty-btn" onClick={() => updateQty(item.sku, -1)}>−</button>
+                            <span className="qty-value">{item.qty || 0}</span>
+                            <button className="qty-btn" onClick={() => updateQty(item.sku, 1)}>+</button>
+                            <button className="qty-btn remove" onClick={() => removeItem(item.sku)}>×</button>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+
+                  <div className="sales-action-stack">
+                    <button
+                      className="calculate-btn"
+                      onClick={calculatePallets}
+                      disabled={orderItems.length === 0}
+                    >
+                      Calculate pallets
+                    </button>
+
+                    <button
+                      className="calculate-btn ai-optimize-btn"
+                      onClick={aiOptimizePacking}
+                      disabled={orderItems.length === 0 || isOptimizing}
+                      style={{ marginTop: '0', background: 'linear-gradient(135deg, #8B5CF6 0%, #6366F1 100%)' }}
+                    >
+                      {isOptimizing ? '🤖 Optimizing...' : '🤖 AI optimize packing'}
+                    </button>
+                  </div>
+
+                  <p className="sales-keyboard-hint">
+                    Press Enter anywhere outside an input to calculate. Use AI optimize only after the base estimate looks reasonable.
+                  </p>
+                </>
+              ) : (
+                <div className="sales-empty-review">
+                  <div className="sales-empty-icon">🧾</div>
+                  <h3>No active order yet</h3>
+                  <p>Import a quote above or click products in the catalog to start building the order.</p>
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Right Panel - Results */}
-          <div className="card">
-            <h2>Pallet Configuration</h2>
+          <div className="card sales-results-card">
+            <div className="sales-section-heading">
+              <div>
+                <div className="sales-step-tag">Step 4</div>
+                <h2>Estimate and next actions</h2>
+              </div>
+              <p>The result panel is isolated from the builder so it is obvious what the app predicted versus what you entered.</p>
+            </div>
 
             {!results ? (
-              <div className="empty-state">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                </svg>
-                <p>Add products and click "Calculate Pallets" to see the configuration</p>
+              <div className="sales-results-empty">
+                <div className="empty-state">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                  </svg>
+                  <p>
+                    {orderItems.length > 0
+                      ? 'Order is ready. Run Calculate Pallets to generate the estimate.'
+                      : 'Start with Step 1 or Step 2, then calculate to see the pallet configuration here.'}
+                  </p>
+                </div>
+                <div className="sales-results-checklist">
+                  <div className={`sales-check-item ${quoteNumber ? 'done' : ''}`}>Quote imported or manual order chosen</div>
+                  <div className={`sales-check-item ${orderItems.length > 0 ? 'done' : ''}`}>Products added to active order</div>
+                  <div className={`sales-check-item ${results ? 'done' : ''}`}>Estimate generated</div>
+                </div>
               </div>
             ) : (
               <>
                 <div className="results-summary">
                   <div className="summary-stat">
                     <div className="value">
-                      {results.shippingMethod === 'Parcel' 
+                      {results.shippingMethod === 'Parcel'
                         ? (results.parcelItems?.[0]?.count || 1)
                         : (results.totalPallets || 0)}
                     </div>
@@ -2033,88 +2054,69 @@ function App() {
                     <div className="label">Cubic Ft</div>
                   </div>
                   <div className="summary-stat">
-                    <div className="value" style={{ fontSize: '1rem', color: (results.shippingMethod === 'Parcel') ? '#16a34a' : (results.shippingMethod === 'LTL') ? '#2563eb' : '#d97706' }}>
+                    <div
+                      className="sales-ship-method-value"
+                      style={{ color: (results.shippingMethod === 'Parcel') ? '#16a34a' : (results.shippingMethod === 'LTL') ? '#2563eb' : '#d97706' }}
+                    >
                       {results.shippingMethod || 'LTL'}
                     </div>
                     <div className="label">Ship Method</div>
                   </div>
                 </div>
-                
-                {/* Parcel shipment info */}
+
                 {results.shippingMethod === 'Parcel' && (
-                  <div style={{
-                    marginBottom: '16px',
-                    padding: '12px 16px',
-                    background: '#dcfce7',
-                    border: '1px solid #86efac',
-                    borderRadius: '8px',
-                    fontSize: '0.9rem',
-                    color: '#166534'
-                  }}>
-                    <strong>📦 Parcel Shipment</strong>
-                    <p style={{ margin: '4px 0 0 0' }}>
-                      All items are small enough to ship via UPS/FedEx Ground.
-                      Est. {results.parcelItems?.[0]?.count || 1} package(s), {results.totalWeight} lbs total.
-                    </p>
-                  </div>
-                )}
-                
-                {/* Warning for unknown items */}
-                {results.hasUnknownItems && (
-                  <div style={{
-                    marginBottom: '16px',
-                    padding: '12px 16px',
-                    background: '#fef3c7',
-                    border: '1px solid #fcd34d',
-                    borderRadius: '8px',
-                    fontSize: '0.9rem',
-                    color: '#92400e'
-                  }}>
-                    <strong>⚠️ Accuracy Notice</strong>
-                    <p style={{ margin: '4px 0 0 0' }}>
-                      This order contains unknown products with estimated dimensions. 
-                      Actual pallet count may vary. Verify dimensions before quoting freight.
+                  <div className="sales-notice-card tone-success">
+                    <strong>Parcel shipment</strong>
+                    <p>
+                      All items are small enough to ship via UPS/FedEx Ground. Estimated {results.parcelItems?.[0]?.count || 1} package(s), {results.totalWeight} lbs total.
                     </p>
                   </div>
                 )}
 
-                {/* Text-based Packing Output */}
+                {results.hasUnknownItems && (
+                  <div className="sales-notice-card tone-warning">
+                    <strong>Accuracy notice</strong>
+                    <p>
+                      This order contains unknown products with estimated dimensions. Verify dimensions before using this for freight quoting.
+                    </p>
+                  </div>
+                )}
+
                 {results.pallets && results.pallets.length > 0 && (
-                  <TextPackingOutput 
+                  <TextPackingOutput
                     results={results}
                     quoteNumber={quoteNumber}
                   />
                 )}
 
-                {/* AI Packing Plan */}
                 {aiPlan && aiPlan.pallets && Array.isArray(aiPlan.pallets) && (
-                  <div style={{ marginBottom: '20px', background: 'linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%)', borderRadius: '8px', padding: '20px', border: '2px solid #6366F1' }}>
-                    <h3 style={{ margin: '0 0 12px 0', color: '#4F46E5' }}>🤖 AI Packing Instructions</h3>
-                    <p style={{ margin: '0 0 16px 0', color: '#6B7280' }}>{aiPlan.summary || 'Optimized packing plan'}</p>
-                    
+                  <div className="sales-ai-plan">
+                    <h3>🤖 AI Packing Instructions</h3>
+                    <p>{aiPlan.summary || 'Optimized packing plan'}</p>
+
                     {aiPlan.pallets.map((pallet, idx) => (
-                      <div key={idx} style={{ background: 'white', borderRadius: '6px', padding: '12px', marginBottom: '12px' }}>
-                        <h4 style={{ margin: '0 0 8px 0' }}>📦 Pallet {pallet.pallet_number || idx + 1} ({pallet.base_size || '48x40'}") — {pallet.total_height || 0}" tall, {pallet.total_weight || 0} lbs</h4>
+                      <div key={idx} className="sales-ai-plan-card">
+                        <h4>📦 Pallet {pallet.pallet_number || idx + 1} ({pallet.base_size || '48x40'}") — {pallet.total_height || 0}" tall, {pallet.total_weight || 0} lbs</h4>
                         {(pallet.layers || []).map((layer, lidx) => (
-                          <div key={lidx} style={{ marginLeft: '16px', marginBottom: '8px' }}>
-                            <div style={{ fontWeight: 'bold', color: '#374151' }}>Layer {layer.layer_number || lidx + 1} (at {layer.height_from_base || 0}" from base):</div>
+                          <div key={lidx} className="sales-ai-layer">
+                            <div className="sales-ai-layer-title">Layer {layer.layer_number || lidx + 1} (at {layer.height_from_base || 0}" from base)</div>
                             {(layer.products || []).map((prod, pidx) => (
-                              <div key={pidx} style={{ marginLeft: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <span style={{ width: '12px', height: '12px', borderRadius: '2px', background: prod.color || '#888' }}></span>
+                              <div key={pidx} className="sales-ai-product-row">
+                                <span className="sales-ai-product-swatch" style={{ background: prod.color || '#888' }}></span>
                                 <span>{prod.quantity || 0}x {prod.sku || 'Unknown'}</span>
-                                <span style={{ color: '#6B7280', fontSize: '0.85rem' }}>— {prod.arrangement || ''}</span>
+                                <span className="sales-ai-product-arrangement">— {prod.arrangement || ''}</span>
                               </div>
                             ))}
                           </div>
                         ))}
-                        {pallet.notes && <p style={{ margin: '8px 0 0 0', fontSize: '0.85rem', color: '#6B7280', fontStyle: 'italic' }}>📝 {pallet.notes}</p>}
+                        {pallet.notes && <p className="sales-ai-notes">📝 {pallet.notes}</p>}
                       </div>
                     ))}
-                    
+
                     {aiPlan.instructions && aiPlan.instructions.length > 0 && (
-                      <div style={{ marginTop: '12px', padding: '12px', background: '#FEF3C7', borderRadius: '6px' }}>
-                        <strong>⚠️ Special Instructions:</strong>
-                        <ul style={{ margin: '8px 0 0 0', paddingLeft: '20px' }}>
+                      <div className="sales-ai-warnings">
+                        <strong>Special instructions</strong>
+                        <ul>
                           {aiPlan.instructions.map((inst, i) => <li key={i}>{inst}</li>)}
                         </ul>
                       </div>
@@ -2122,86 +2124,39 @@ function App() {
                   </div>
                 )}
 
-                <div style={{ marginTop: '20px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                  <button 
-                    style={{ 
-                      padding: '10px 20px', 
-                      cursor: 'pointer',
-                      background: '#2563eb',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '6px',
-                      fontWeight: '600'
-                    }}
-                    onClick={() => setShowPackingSlip(true)}
-                  >
-                    🖨️ Print Packing Slip
-                  </button>
-                  <button 
-                    style={{ 
-                      padding: '10px 20px', 
-                      cursor: 'pointer',
-                      background: '#059669',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '6px',
-                      fontWeight: '600'
-                    }}
-                    onClick={() => setShowWarehouseView(true)}
-                  >
-                    📦 Warehouse Mode
-                  </button>
-                  <button 
-                    style={{ 
-                      padding: '10px 20px', 
-                      cursor: 'pointer',
-                      background: '#7c3aed',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '6px',
-                      fontWeight: '600'
-                    }}
-                    onClick={() => setShowComparison(true)}
-                  >
-                    🔄 Compare Strategies
-                  </button>
-                  <button 
-                    style={{ 
-                      padding: '10px 20px', 
-                      cursor: 'pointer',
-                      background: '#f59e0b',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '6px',
-                      fontWeight: '600'
-                    }}
-                    onClick={() => setShowBOLValidator(true)}
-                  >
-                    📊 Validate vs BOL
-                  </button>
-                  <button 
-                    style={{ 
-                      padding: '10px 20px', 
-                      cursor: 'pointer',
-                      background: '#f3f4f6',
-                      color: '#374151',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontWeight: '500'
-                    }}
-                    onClick={() => {
-                      const text = results.pallets.map(p => 
-                        `Pallet ${p.id}: ${p.dims.join('×')}" @ ${p.weight} lbs (Class ${p.freightClass})\n` +
-                        p.items.map(i => `  - ${i.qty}× ${i.displayName || i.family}`).join('\n')
-                      ).join('\n\n')
-                      navigator.clipboard.writeText(text)
-                      alert('Copied to clipboard!')
-                    }}
-                  >
-                    📋 Copy Summary
-                  </button>
+                <div className="sales-actions-panel">
+                  <div className="sales-actions-heading">
+                    <h3>Next actions</h3>
+                    <p>Use the estimate, then move into print, warehouse, or validation workflows.</p>
+                  </div>
+                  <div className="sales-action-grid">
+                    <button className="sales-action-btn tone-blue" onClick={() => setShowPackingSlip(true)}>
+                      🖨️ Print Packing Slip
+                    </button>
+                    <button className="sales-action-btn tone-green" onClick={() => setShowWarehouseView(true)}>
+                      📦 Warehouse Mode
+                    </button>
+                    <button className="sales-action-btn tone-purple" onClick={() => setShowComparison(true)}>
+                      🔄 Compare Strategies
+                    </button>
+                    <button className="sales-action-btn tone-amber" onClick={() => setShowBOLValidator(true)}>
+                      📊 Validate vs BOL
+                    </button>
+                    <button
+                      className="sales-action-btn tone-neutral"
+                      onClick={() => {
+                        const text = results.pallets.map(p =>
+                          `Pallet ${p.id}: ${p.dims.join('×')}" @ ${p.weight} lbs (Class ${p.freightClass})\n` +
+                          p.items.map(i => `  - ${i.qty}× ${i.displayName || i.family}`).join('\n')
+                        ).join('\n\n')
+                        navigator.clipboard.writeText(text)
+                        alert('Copied to clipboard!')
+                      }}
+                    >
+                      📋 Copy Summary
+                    </button>
+                  </div>
                 </div>
-
               </>
             )}
           </div>
