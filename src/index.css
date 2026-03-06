@@ -1,45 +1,46 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap');
+
 :root {
-  /* Color Therapy Palette - Calm + Energized */
-  
-  /* Primary: Soft Teal (trust, focus, calm) */
-  --primary: #0d9488;
-  --primary-light: #5eead4;
-  --primary-dark: #0f766e;
-  
-  /* Accent: Warm Coral (energy, positivity) */
-  --accent: #fb923c;
-  --accent-light: #fdba74;
-  --accent-dark: #ea580c;
-  
-  /* Success: Fresh Green (balance, nature) */
-  --success: #22c55e;
-  --success-light: #86efac;
-  --success-dark: #16a34a;
-  
-  /* Warning: Warm Amber */
-  --warning: #f59e0b;
-  --warning-light: #fbbf24;
-  
-  /* Danger: Muted Red (less aggressive) */
-  --danger: #ef4444;
+  --primary: #312e81;
+  --primary-light: #818cf8;
+  --primary-dark: #1e1b4b;
+
+  --accent: #f59e0b;
+  --accent-light: #fcd34d;
+  --accent-dark: #b45309;
+
+  --success: #0f766e;
+  --success-light: #5eead4;
+  --success-dark: #115e59;
+
+  --warning: #f97316;
+  --warning-light: #fdba74;
+
+  --danger: #dc2626;
   --danger-light: #fca5a5;
-  
-  /* Neutrals: Warm, inviting tones */
-  --cream: #fefce8;        /* Soft cream background */
-  --sand-50: #fef9f3;      /* Warm white */
-  --sand-100: #fef3e2;     /* Light sand */
-  --sand-200: #fde8cc;     /* Soft sand */
-  --sand-300: #f8d5b0;     /* Medium sand */
-  --gray-500: #78716c;     /* Warm gray */
-  --gray-700: #57534e;     /* Deep warm gray */
-  --gray-900: #292524;     /* Soft black */
-  
-  /* Semantic colors */
-  --background: var(--sand-50);
+
+  --cream: #fff7ed;
+  --sand-50: #fbf7ef;
+  --sand-100: #f4ead6;
+  --sand-200: #e8d9ba;
+  --sand-300: #d7c29b;
+  --gray-500: #64748b;
+  --gray-700: #334155;
+  --gray-900: #0f172a;
+
+  --ink: #0f172a;
+  --ink-soft: #1e293b;
+  --paper: #fbf7ef;
+  --signal: #0f766e;
+  --route: #7c3aed;
+
+  --background:
+    radial-gradient(circle at top, rgba(251, 191, 36, 0.08), transparent 22%),
+    linear-gradient(180deg, #fcfaf6 0%, #f7f2e9 100%);
   --surface: #ffffff;
   --border: var(--sand-200);
-  --text-primary: var(--gray-900);
-  --text-secondary: var(--gray-700);
+  --text-primary: var(--ink);
+  --text-secondary: var(--ink-soft);
   --text-muted: var(--gray-500);
 }
 
@@ -47,7 +48,7 @@ body {
   background: var(--background);
   color: var(--text-primary);
   line-height: 1.6;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
 }
 
 .container {
@@ -57,23 +58,28 @@ body {
 }
 
 header {
-  background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at top right, rgba(251, 191, 36, 0.22), transparent 22%),
+    linear-gradient(135deg, #0f172a 0%, #1e1b4b 55%, #312e81 100%);
   color: white;
-  padding: 20px 24px;
+  padding: 24px 28px;
   margin-bottom: 24px;
-  border-radius: 0 0 12px 12px;
-  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.15);
+  border-radius: 0 0 20px 20px;
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.22);
 }
 
 header h1 {
-  font-size: 1.75rem;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 2rem;
   font-weight: 700;
-  letter-spacing: -0.025em;
+  letter-spacing: -0.04em;
 }
 
 header p {
-  color: var(--primary-light);
-  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.92rem;
   margin-top: 4px;
 }
 
@@ -91,18 +97,19 @@ header p {
 
 .card {
   background: var(--surface);
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(87, 83, 78, 0.08);
+  border-radius: 16px;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
   padding: 24px;
   border: 1px solid var(--border);
   transition: box-shadow 0.2s ease;
 }
 
 .card:hover {
-  box-shadow: 0 4px 16px rgba(87, 83, 78, 0.12);
+  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.12);
 }
 
 .card h2 {
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 1.25rem;
   font-weight: 700;
   margin-bottom: 20px;
@@ -166,12 +173,14 @@ header p {
 .product-sku {
   font-size: 0.75rem;
   color: var(--gray-500);
+  font-family: 'IBM Plex Mono', monospace;
 }
 
 .product-dims {
   font-size: 0.75rem;
   color: var(--gray-500);
   text-align: right;
+  font-family: 'IBM Plex Mono', monospace;
 }
 
 /* Order Items */
@@ -211,6 +220,7 @@ header p {
   font-size: 0.8125rem;
   color: var(--text-muted);
   margin-top: 2px;
+  font-family: 'IBM Plex Mono', monospace;
 }
 
 .qty-controls {
@@ -304,24 +314,26 @@ header p {
 }
 
 .summary-stat {
-  background: linear-gradient(135deg, var(--sand-50) 0%, var(--surface) 100%);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.92) 100%);
   padding: 20px;
-  border-radius: 12px;
+  border-radius: 16px;
   text-align: center;
-  border: 2px solid var(--border);
+  border: 1px solid rgba(49, 46, 129, 0.14);
   transition: all 0.2s ease;
 }
 
 .summary-stat:hover {
   transform: translateY(-4px);
-  box-shadow: 0 8px 20px rgba(13, 148, 136, 0.12);
-  border-color: var(--primary-light);
+  box-shadow: 0 12px 24px rgba(49, 46, 129, 0.12);
+  border-color: rgba(249, 115, 22, 0.3);
 }
 
 .summary-stat .value {
+  font-family: 'IBM Plex Mono', monospace;
   font-size: 2rem;
   font-weight: 800;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--warning) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -335,6 +347,7 @@ header p {
   font-weight: 600;
   letter-spacing: 0.05em;
   margin-top: 6px;
+  font-family: 'IBM Plex Mono', monospace;
 }
 
 /* Pallet Visualization */
@@ -525,10 +538,10 @@ header p {
   padding: 26px 28px;
   border-radius: 18px;
   background:
-    radial-gradient(circle at top right, rgba(94, 234, 212, 0.24), transparent 28%),
-    linear-gradient(145deg, #fdf6ea 0%, #fffdf8 56%, #eefbf8 100%);
-  border: 1px solid var(--border);
-  box-shadow: 0 12px 30px rgba(87, 83, 78, 0.08);
+    radial-gradient(circle at top right, rgba(251, 191, 36, 0.24), transparent 22%),
+    linear-gradient(145deg, rgba(15, 23, 42, 0.96) 0%, rgba(49, 46, 129, 0.94) 52%, rgba(124, 58, 237, 0.88) 100%);
+  border: 1px solid rgba(251, 191, 36, 0.18);
+  box-shadow: 0 20px 42px rgba(15, 23, 42, 0.16);
 }
 
 .sales-kicker {
@@ -536,8 +549,8 @@ header p {
   align-items: center;
   padding: 6px 10px;
   border-radius: 999px;
-  background: rgba(13, 148, 136, 0.1);
-  color: var(--primary-dark);
+  background: rgba(251, 191, 36, 0.14);
+  color: #fde68a;
   font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -549,12 +562,13 @@ header p {
   font-size: 2.1rem;
   line-height: 1.1;
   letter-spacing: -0.04em;
+  color: #fff8ef;
 }
 
 .sales-hero-copy p {
   margin: 0;
   max-width: 60ch;
-  color: var(--text-secondary);
+  color: rgba(248, 250, 252, 0.76);
   font-size: 1rem;
 }
 
@@ -567,25 +581,28 @@ header p {
 .sales-hero-stat {
   padding: 16px;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.78);
-  border: 1px solid rgba(248, 213, 176, 0.9);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(8px);
 }
 
 .sales-hero-stat strong {
   display: block;
   margin-top: 6px;
   font-size: 1.1rem;
-  color: var(--text-primary);
+  color: #fff8ef;
+  font-family: 'IBM Plex Mono', monospace;
 }
 
 .sales-hero-label {
   display: block;
   font-size: 0.75rem;
-  color: var(--text-muted);
+  color: rgba(226, 232, 240, 0.7);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   font-weight: 700;
+  font-family: 'IBM Plex Mono', monospace;
 }
 
 .sales-layout {
@@ -633,12 +650,13 @@ header p {
   margin-bottom: 8px;
   padding: 4px 8px;
   border-radius: 999px;
-  background: var(--sand-100);
+  background: rgba(245, 158, 11, 0.12);
   color: var(--accent-dark);
   font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
+  font-family: 'IBM Plex Mono', monospace;
 }
 
 .sales-import-row {
@@ -650,8 +668,10 @@ header p {
 .sales-quote-input {
   flex: 1;
   min-width: 0;
-  border: 2px solid var(--border);
-  background: #fff;
+  border: 2px solid rgba(49, 46, 129, 0.18);
+  background: linear-gradient(180deg, #fffdf9 0%, #fff7ed 100%);
+  font-family: 'IBM Plex Mono', monospace;
+  letter-spacing: 0.04em;
 }
 
 .sales-import-btn {
@@ -659,11 +679,14 @@ header p {
   padding: 0 18px;
   border: none;
   border-radius: 10px;
-  background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+  background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
   color: white;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 8px 20px rgba(13, 148, 136, 0.18);
+  box-shadow: 0 12px 24px rgba(249, 115, 22, 0.22);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.78rem;
 }
 
 .sales-import-btn:disabled {
@@ -789,6 +812,7 @@ header p {
   margin-top: 6px;
   font-size: 1rem;
   color: var(--text-primary);
+  font-family: 'IBM Plex Mono', monospace;
 }
 
 .sales-clear-btn {
@@ -903,11 +927,14 @@ header p {
 .sales-results-card {
   position: sticky;
   top: 20px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(251, 247, 239, 0.96) 100%);
 }
 
 .sales-ship-method-value {
   font-size: 1rem;
   font-weight: 800;
+  font-family: 'IBM Plex Mono', monospace;
 }
 
 .sales-ai-plan {
@@ -1002,18 +1029,21 @@ header p {
   min-height: 48px;
   padding: 12px 14px;
   border: none;
-  border-radius: 10px;
+  border-radius: 14px;
   color: white;
   font-weight: 700;
   cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.8rem;
 }
 
 .sales-action-btn.tone-blue { background: #2563eb; }
-.sales-action-btn.tone-green { background: #059669; }
+.sales-action-btn.tone-green { background: #0f766e; }
 .sales-action-btn.tone-purple { background: #7c3aed; }
 .sales-action-btn.tone-amber { background: #f59e0b; }
 .sales-action-btn.tone-neutral {
-  background: #f3f4f6;
-  color: #374151;
-  border: 1px solid #d1d5db;
+  background: #fff8ef;
+  color: #334155;
+  border: 1px solid #d8c9ae;
 }

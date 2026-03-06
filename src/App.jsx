@@ -1705,27 +1705,27 @@ function App() {
       <div className="container sales-shell">
         <div className="sales-hero">
           <div className="sales-hero-copy">
-            <div className="sales-kicker">Sales Workspace</div>
-            <h2>Build the order, then get a quote-ready pallet plan.</h2>
+            <div className="sales-kicker">Hermes Dispatch</div>
+            <h2>Pull the quote. Hermes builds the shipment manifest.</h2>
             <p>
-              Start from a NetSuite quote or build the order manually. The estimate panel stays separate so it is always clear what is input versus what the engine predicted.
+              Quote intake stays simple. Bring in the order from NetSuite, let Hermes calculate the shipment shape, then hand the manifest to freight quoting.
             </p>
           </div>
           <div className="sales-hero-stats">
             <div className="sales-hero-stat">
-              <span className="sales-hero-label">Order source</span>
+              <span className="sales-hero-label">Dispatch source</span>
               <strong>{quoteNumber ? `Quote ${quoteNumber}` : 'Manual build'}</strong>
             </div>
             <div className="sales-hero-stat">
-              <span className="sales-hero-label">Product lines</span>
+              <span className="sales-hero-label">Manifest lines</span>
               <strong>{orderSkuCount}</strong>
             </div>
             <div className="sales-hero-stat">
-              <span className="sales-hero-label">Units</span>
+              <span className="sales-hero-label">Secured units</span>
               <strong>{orderUnitCount}</strong>
             </div>
             <div className="sales-hero-stat">
-              <span className="sales-hero-label">Order weight</span>
+              <span className="sales-hero-label">Projected lbs</span>
               <strong>{orderEstimatedWeight.toLocaleString()} lbs</strong>
             </div>
           </div>
@@ -1737,16 +1737,16 @@ function App() {
               <div className="sales-section-heading">
                 <div>
                   <div className="sales-step-tag">Step 1</div>
-                  <h2>Import quote</h2>
+                  <h2>Dispatch intake</h2>
                 </div>
-                <p>Enter the NetSuite quote number. This is the primary sales workflow.</p>
+                <p>Enter the NetSuite quote number and pull the shipment request into Hermes.</p>
               </div>
 
               <div className="sales-import-row">
                 <input
                   type="text"
                   className="quote-input sales-quote-input"
-                  placeholder="Enter Quote # (example: EST-12345)"
+                  placeholder="Enter quote number (example: QUO33922)"
                   value={quoteNumber}
                   onChange={(e) => setQuoteNumber(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && loadQuote()}
@@ -1756,7 +1756,7 @@ function App() {
                   onClick={() => loadQuote()}
                   disabled={quoteLoading || !String(quoteNumber || '').trim()}
                 >
-                  {quoteLoading ? 'Loading...' : 'Import Quote'}
+                  {quoteLoading ? 'Loading...' : 'Pull Quote'}
                 </button>
               </div>
 
@@ -1771,9 +1771,9 @@ function App() {
               <div className="sales-section-heading">
                 <div>
                   <div className="sales-step-tag">Step 2</div>
-                  <h2>Review imported order</h2>
+                  <h2>Manifest review</h2>
                 </div>
-                <p>Confirm what came in from the quote, then run the estimate.</p>
+                <p>Confirm what came over from NetSuite, then let Hermes generate the shipment plan.</p>
               </div>
 
               {orderItems.length > 0 ? (
@@ -1788,7 +1788,7 @@ function App() {
                       <strong>{orderUnitCount}</strong>
                     </div>
                     <div className="sales-order-pill">
-                      <span>Weight</span>
+                      <span>Projected lbs</span>
                       <strong>{orderEstimatedWeight.toLocaleString()} lbs</strong>
                     </div>
                     <button className="sales-clear-btn" onClick={clearOrder}>
@@ -1867,19 +1867,19 @@ function App() {
                       onClick={calculatePallets}
                       disabled={orderItems.length === 0}
                     >
-                      Calculate pallets
+                      Build manifest
                     </button>
                   </div>
 
                   <p className="sales-keyboard-hint">
-                    Press Enter anywhere outside an input to calculate after the quote is imported.
+                    Press Enter anywhere outside an input to rebuild the manifest after the quote is imported.
                   </p>
                 </>
               ) : (
                 <div className="sales-empty-review">
                   <div className="sales-empty-icon">🧾</div>
-                  <h3>No quote imported yet</h3>
-                  <p>Enter a quote number above and import it to populate the order.</p>
+                  <h3>Dispatch queue is empty</h3>
+                  <p>Pull a quote above to load the manifest candidate.</p>
                 </div>
               )}
             </div>
@@ -1888,10 +1888,10 @@ function App() {
           <div className="card sales-results-card">
             <div className="sales-section-heading">
               <div>
-                <div className="sales-step-tag">Step 3</div>
-                <h2>Estimate and next actions</h2>
+                  <div className="sales-step-tag">Step 3</div>
+                <h2>Shipment manifest</h2>
               </div>
-              <p>The result panel is isolated from the builder so it is obvious what the app predicted versus what you entered.</p>
+              <p>Hermes separates the predicted shipment output from the quote intake so the readout is clear and quote-ready.</p>
             </div>
 
             {!results ? (
@@ -1902,14 +1902,14 @@ function App() {
                   </svg>
                   <p>
                     {orderItems.length > 0
-                      ? 'Order is ready. Run Calculate Pallets to generate the estimate.'
-                      : 'Import a quote in Step 1, then calculate to see the pallet configuration here.'}
+                      ? 'Manifest intake is ready. Build the manifest to generate the shipment readout.'
+                      : 'Pull a quote in Step 1. Hermes will show the shipment manifest here.'}
                   </p>
                 </div>
                 <div className="sales-results-checklist">
-                  <div className={`sales-check-item ${quoteNumber ? 'done' : ''}`}>Quote number entered</div>
-                  <div className={`sales-check-item ${orderItems.length > 0 ? 'done' : ''}`}>Quote imported into active order</div>
-                  <div className={`sales-check-item ${results ? 'done' : ''}`}>Estimate generated</div>
+                  <div className={`sales-check-item ${quoteNumber ? 'done' : ''}`}>Dispatch request identified</div>
+                  <div className={`sales-check-item ${orderItems.length > 0 ? 'done' : ''}`}>Manifest lines loaded</div>
+                  <div className={`sales-check-item ${results ? 'done' : ''}`}>Shipment manifest generated</div>
                 </div>
               </div>
             ) : (
@@ -1948,7 +1948,7 @@ function App() {
                   <div className="sales-notice-card tone-success">
                     <strong>Parcel shipment</strong>
                     <p>
-                      All items are small enough to ship via UPS/FedEx Ground. Estimated {results.parcelItems?.[0]?.count || 1} package(s), {results.totalWeight} lbs total.
+                      Hermes marked this as parcel-capable. Estimated {results.parcelItems?.[0]?.count || 1} package(s), {results.totalWeight} lbs total.
                     </p>
                   </div>
                 )}
@@ -1971,12 +1971,12 @@ function App() {
 
                 <div className="sales-actions-panel">
                   <div className="sales-actions-heading">
-                    <h3>Next actions</h3>
-                    <p>Use the estimate for quoting, then print or copy the shipment summary.</p>
+                    <h3>Dispatch actions</h3>
+                    <p>Use the manifest for quoting, then print or copy the shipment summary.</p>
                   </div>
                   <div className="sales-action-grid">
                     <button className="sales-action-btn tone-blue" onClick={() => setShowPackingSlip(true)}>
-                      🖨️ Print Packing Slip
+                      🖨️ Print Manifest
                     </button>
                     <button
                       className="sales-action-btn tone-neutral"
@@ -1989,7 +1989,7 @@ function App() {
                         alert('Copied to clipboard!')
                       }}
                     >
-                      📋 Copy Summary
+                      📋 Copy Dispatch Summary
                     </button>
                   </div>
                 </div>
