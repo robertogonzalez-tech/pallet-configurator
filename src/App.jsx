@@ -464,7 +464,6 @@ function App() {
   const [appMode, setAppMode] = useState('sales')
   
   const [products, setProducts] = useState([])
-  const [searchTerm, setSearchTerm] = useState('')
   const [orderItems, setOrderItems] = useState([])
   const [results, setResults] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -525,14 +524,6 @@ function App() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [orderItems])
 
-  // Filter products by search
-  const filteredProducts = products.filter(p => {
-    const term = String(searchTerm || '').toLowerCase()
-    const sku = String(p?.sku || '').toLowerCase()
-    const displayName = String(p?.displayName || '').toLowerCase()
-    const family = String(p?.family || '').toLowerCase()
-    return sku.includes(term) || displayName.includes(term) || family.includes(term)
-  })
   const orderSkuCount = orderItems.length
   const orderUnitCount = orderItems.reduce((sum, item) => sum + (item?.qty || 0), 0)
   const orderEstimatedWeight = orderItems.reduce((sum, item) => {
@@ -692,18 +683,6 @@ function App() {
     }
 
     setQuoteLoading(false)
-  }
-
-  // Add product to order
-  const addToOrder = (product) => {
-    const existing = orderItems.find(item => item.sku === product.sku)
-    if (existing) {
-      setOrderItems(orderItems.map(item => 
-        item.sku === product.sku ? { ...item, qty: item.qty + 1 } : item
-      ))
-    } else {
-      setOrderItems([...orderItems, { ...product, qty: 1 }])
-    }
   }
 
   // Update quantity
@@ -1748,9 +1727,9 @@ function App() {
               <div className="sales-section-heading">
                 <div>
                   <div className="sales-step-tag">Step 1</div>
-                  <h2>Start from quote or sample</h2>
+                  <h2>Import quote</h2>
                 </div>
-                <p>Import a real quote first. If you are testing, use a sample order instead of mixing both workflows together.</p>
+                <p>Enter the NetSuite quote number. This is the primary sales workflow.</p>
               </div>
 
               <div className="sales-import-row">
@@ -1776,115 +1755,15 @@ function App() {
                   {quoteError}
                 </div>
               )}
-
-              {orderItems.length === 0 && (
-                <div className="sales-sample-grid">
-                  <button
-                    className="sales-sample-card tone-amber"
-                    onClick={() => {
-                      const sampleSkus = ['90101-2287-BLK13', '90101-0172-BLK13', '80101-0370-BLK23']
-                      const sampleItems = sampleSkus.map(sku => products.find(p => p.sku === sku)).filter(Boolean)
-                      if (sampleItems.length > 0) {
-                        setOrderItems([
-                          { ...sampleItems[0], qty: 8 },
-                          { ...sampleItems[1], qty: 4 },
-                          ...(sampleItems[2] ? [{ ...sampleItems[2], qty: 2 }] : [])
-                        ].filter(Boolean))
-                      }
-                    }}
-                  >
-                    <strong>Load demo mixed order</strong>
-                    <span>8 Varsity, 4 VR2, 2 Undergrad</span>
-                  </button>
-
-                  <button
-                    className="sales-sample-card tone-blue"
-                    onClick={() => {
-                      const testItems = []
-                      const dd4 = products.find(p => p.sku === 'DD-SS-04-BLK13')
-                      if (dd4) testItems.push({ ...dd4, qty: 29 })
-
-                      const dd6 = products.find(p => p.sku === 'DD-SS-06-BLK13')
-                      if (dd6) testItems.push({ ...dd6, qty: 3 })
-
-                      const varsity = products.find(p => p.sku === '90101-2287-BLK13')
-                      if (varsity) testItems.push({ ...varsity, qty: 2 })
-
-                      const workStand = products.find(p => p.displayName?.toLowerCase().includes('work stand'))
-                      if (workStand) testItems.push({ ...workStand, qty: 3 })
-
-                      const pump = products.find(p => p.displayName?.toLowerCase().includes('pump') || p.sku?.includes('PUMP'))
-                      if (pump) testItems.push({ ...pump, qty: 3 })
-
-                      const installKit = products.find(p => p.displayName?.toLowerCase().includes('install kit'))
-                      if (installKit) testItems.push({ ...installKit, qty: 3 })
-
-                      const anchorKit = products.find(p => p.sku?.includes('WAK215') || p.displayName?.toLowerCase().includes('anchor kit'))
-                      if (anchorKit) testItems.push({ ...anchorKit, qty: 3 })
-
-                      if (testItems.length > 0) {
-                        setOrderItems(testItems)
-                        console.log('📦 QUO33922 test order loaded:', testItems.map(i => `${i.qty}× ${i.sku}`).join(', '))
-                      }
-                    }}
-                  >
-                    <strong>Load DD stress test</strong>
-                    <span>QUO33922 with accessories</span>
-                  </button>
-                </div>
-              )}
-            </div>
-
-            <div className="card sales-section-card sales-builder-card">
-              <div className="sales-section-heading">
-                <div>
-                  <div className="sales-step-tag">Step 2</div>
-                  <h2>Add or adjust products</h2>
-                </div>
-                <p>Search by SKU, product name, or family. Click any product to add it to the active order.</p>
-              </div>
-
-              <div className="sales-builder-toolbar">
-                <input
-                  type="text"
-                  className="product-search"
-                  placeholder="Search products by SKU, family, or name..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-                <div className="sales-builder-meta">
-                  <span>{filteredProducts.length} matches</span>
-                  <span>{products.length} total products</span>
-                </div>
-              </div>
-
-              <div className="product-list sales-product-list">
-                {filteredProducts.slice(0, 50).map(product => (
-                  <div
-                    key={product.sku}
-                    className="product-item"
-                    onClick={() => addToOrder(product)}
-                  >
-                    <div>
-                      <div className="product-name">{product.displayName}</div>
-                      <div className="product-sku">{product.sku}</div>
-                    </div>
-                    <div className="product-dims">
-                      {product.packaged.length_in}×{product.packaged.width_in}×{product.packaged.height_in}"
-                      <br />{product.packaged.weight_lbs} lbs
-                    </div>
-                  </div>
-                ))}
-              </div>
             </div>
 
             <div className="card sales-section-card sales-order-card">
               <div className="sales-section-heading">
                 <div>
-                  <div className="sales-step-tag">Step 3</div>
-                  <h2>Review active order</h2>
+                  <div className="sales-step-tag">Step 2</div>
+                  <h2>Review imported order</h2>
                 </div>
-                <p>Adjust quantities here, then run the estimator once the order looks right.</p>
+                <p>Confirm what came in from the quote, then run the estimate.</p>
               </div>
 
               {orderItems.length > 0 ? (
@@ -1980,26 +1859,17 @@ function App() {
                     >
                       Calculate pallets
                     </button>
-
-                    <button
-                      className="calculate-btn ai-optimize-btn"
-                      onClick={aiOptimizePacking}
-                      disabled={orderItems.length === 0 || isOptimizing}
-                      style={{ marginTop: '0', background: 'linear-gradient(135deg, #8B5CF6 0%, #6366F1 100%)' }}
-                    >
-                      {isOptimizing ? '🤖 Optimizing...' : '🤖 AI optimize packing'}
-                    </button>
                   </div>
 
                   <p className="sales-keyboard-hint">
-                    Press Enter anywhere outside an input to calculate. Use AI optimize only after the base estimate looks reasonable.
+                    Press Enter anywhere outside an input to calculate after the quote is imported.
                   </p>
                 </>
               ) : (
                 <div className="sales-empty-review">
                   <div className="sales-empty-icon">🧾</div>
-                  <h3>No active order yet</h3>
-                  <p>Import a quote above or click products in the catalog to start building the order.</p>
+                  <h3>No quote imported yet</h3>
+                  <p>Enter a quote number above and import it to populate the order.</p>
                 </div>
               )}
             </div>
@@ -2008,7 +1878,7 @@ function App() {
           <div className="card sales-results-card">
             <div className="sales-section-heading">
               <div>
-                <div className="sales-step-tag">Step 4</div>
+                <div className="sales-step-tag">Step 3</div>
                 <h2>Estimate and next actions</h2>
               </div>
               <p>The result panel is isolated from the builder so it is obvious what the app predicted versus what you entered.</p>
@@ -2023,12 +1893,12 @@ function App() {
                   <p>
                     {orderItems.length > 0
                       ? 'Order is ready. Run Calculate Pallets to generate the estimate.'
-                      : 'Start with Step 1 or Step 2, then calculate to see the pallet configuration here.'}
+                      : 'Import a quote in Step 1, then calculate to see the pallet configuration here.'}
                   </p>
                 </div>
                 <div className="sales-results-checklist">
-                  <div className={`sales-check-item ${quoteNumber ? 'done' : ''}`}>Quote imported or manual order chosen</div>
-                  <div className={`sales-check-item ${orderItems.length > 0 ? 'done' : ''}`}>Products added to active order</div>
+                  <div className={`sales-check-item ${quoteNumber ? 'done' : ''}`}>Quote number entered</div>
+                  <div className={`sales-check-item ${orderItems.length > 0 ? 'done' : ''}`}>Quote imported into active order</div>
                   <div className={`sales-check-item ${results ? 'done' : ''}`}>Estimate generated</div>
                 </div>
               </div>
