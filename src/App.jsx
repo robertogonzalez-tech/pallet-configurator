@@ -470,6 +470,7 @@ function App() {
   const [quoteNumber, setQuoteNumber] = useState('')
   const [quoteLoading, setQuoteLoading] = useState(false)
   const [quoteError, setQuoteError] = useState(null)
+  const [pendingQuoteCalculation, setPendingQuoteCalculation] = useState(false)
   const [selectedPallet, setSelectedPallet] = useState(null)
   const [isOptimizing, setIsOptimizing] = useState(false)
   const [aiPlan, setAiPlan] = useState(null)
@@ -524,6 +525,12 @@ function App() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [orderItems])
 
+  useEffect(() => {
+    if (!pendingQuoteCalculation || orderItems.length === 0) return
+    calculatePallets()
+    setPendingQuoteCalculation(false)
+  }, [pendingQuoteCalculation, orderItems])
+
   const orderSkuCount = orderItems.length
   const orderUnitCount = orderItems.reduce((sum, item) => sum + (item?.qty || 0), 0)
   const orderEstimatedWeight = orderItems.reduce((sum, item) => {
@@ -552,6 +559,8 @@ function App() {
     
     setQuoteLoading(true)
     setQuoteError(null)
+    setResults(null)
+    setAiPlan(null)
     if (quoteNum) setQuoteNumber(String(quoteNum)) // Update input if loaded from URL
 
     try {
@@ -667,6 +676,7 @@ function App() {
           })
           return merged
         })
+        setPendingQuoteCalculation(true)
         
         // Build status message
         let statusMsg = `✓ Loaded ${String(quote.tranId || 'quote')}: ${newItems.length} products`
@@ -1959,58 +1969,14 @@ function App() {
                   />
                 )}
 
-                {aiPlan && aiPlan.pallets && Array.isArray(aiPlan.pallets) && (
-                  <div className="sales-ai-plan">
-                    <h3>🤖 AI Packing Instructions</h3>
-                    <p>{aiPlan.summary || 'Optimized packing plan'}</p>
-
-                    {aiPlan.pallets.map((pallet, idx) => (
-                      <div key={idx} className="sales-ai-plan-card">
-                        <h4>📦 Pallet {pallet.pallet_number || idx + 1} ({pallet.base_size || '48x40'}") — {pallet.total_height || 0}" tall, {pallet.total_weight || 0} lbs</h4>
-                        {(pallet.layers || []).map((layer, lidx) => (
-                          <div key={lidx} className="sales-ai-layer">
-                            <div className="sales-ai-layer-title">Layer {layer.layer_number || lidx + 1} (at {layer.height_from_base || 0}" from base)</div>
-                            {(layer.products || []).map((prod, pidx) => (
-                              <div key={pidx} className="sales-ai-product-row">
-                                <span className="sales-ai-product-swatch" style={{ background: prod.color || '#888' }}></span>
-                                <span>{prod.quantity || 0}x {prod.sku || 'Unknown'}</span>
-                                <span className="sales-ai-product-arrangement">— {prod.arrangement || ''}</span>
-                              </div>
-                            ))}
-                          </div>
-                        ))}
-                        {pallet.notes && <p className="sales-ai-notes">📝 {pallet.notes}</p>}
-                      </div>
-                    ))}
-
-                    {aiPlan.instructions && aiPlan.instructions.length > 0 && (
-                      <div className="sales-ai-warnings">
-                        <strong>Special instructions</strong>
-                        <ul>
-                          {aiPlan.instructions.map((inst, i) => <li key={i}>{inst}</li>)}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                )}
-
                 <div className="sales-actions-panel">
                   <div className="sales-actions-heading">
                     <h3>Next actions</h3>
-                    <p>Use the estimate, then move into print, warehouse, or validation workflows.</p>
+                    <p>Use the estimate for quoting, then print or copy the shipment summary.</p>
                   </div>
                   <div className="sales-action-grid">
                     <button className="sales-action-btn tone-blue" onClick={() => setShowPackingSlip(true)}>
                       🖨️ Print Packing Slip
-                    </button>
-                    <button className="sales-action-btn tone-green" onClick={() => setShowWarehouseView(true)}>
-                      📦 Warehouse Mode
-                    </button>
-                    <button className="sales-action-btn tone-purple" onClick={() => setShowComparison(true)}>
-                      🔄 Compare Strategies
-                    </button>
-                    <button className="sales-action-btn tone-amber" onClick={() => setShowBOLValidator(true)}>
-                      📊 Validate vs BOL
                     </button>
                     <button
                       className="sales-action-btn tone-neutral"
