@@ -854,10 +854,46 @@ function isSkatedockNamedItem(sku, name) {
   return false;
 }
 
-function isFlagBypassItem(item) {
+function shouldTreatAsSkatedockProduct(item, configHint, legacyClassification, context = null) {
+  if (context?.sourceType === 'sales_order') return false;
+  const normSku = normalizeSku(item?.sku || '');
+  if (!isSkatedockNamedItem(normSku, item?.name || '')) return false;
+  if (configHint?.classification === 'product' && configHint?.familyKey === 'skatedock' && configHint?.role === 'primary') {
+    return true;
+  }
+  return (
+    ['component_of_parent', 'hardware', 'non_shippable'].includes(legacyClassification) &&
+    (
+      normSku.startsWith('89901-1210-') ||
+      normSku.startsWith('80101-1210-') ||
+      normSku.startsWith('SM10X') ||
+      normSku.startsWith('SD6X')
+    )
+  );
+}
+
+function isBundledBaseStationItem(sku, configHint = null) {
+  const normSku = normalizeSku(sku || '');
+  if (configHint?.familyKey === 'sidestage' && configHint?.role === 'primary') return true;
+  return /^(?:CSA|SSA|CS|SS)\d{2,3}\b/.test(normSku);
+}
+
+function isBundledBaseStationAddonSku(sku) {
+  return /^(?:CSA|SSA)\d{2,3}\b/.test(normalizeSku(sku || ''));
+}
+
+function parseBundledBaseStationLength(item) {
+  const normSku = normalizeSku(item?.sku);
+  const skuMatch = normSku.match(/^(?:CSA|SSA|CS|SS)(\d{2,3})\b/);
+  if (skuMatch) return parseInt(skuMatch[1], 10);
+  return parseLengthFromSkuOrName(item);
+}
+
+function isFlagBypassItem(item, context = null) {
   const normSku = normalizeSku(item?.sku);
   const name = String(item?.name || '').toUpperCase();
   if (isLongTubeTriggerItem(item)) return true;
+  if (context?.sourceType !== 'sales_order' && isSkatedockNamedItem(normSku, name)) return true;
   // Explicit DD kit parents that represent finished shippable units.
   if (normSku.startsWith('80101-0257') || normSku.startsWith('80101-0258')) return true;
   // Legacy DD parent SKUs
@@ -885,6 +921,41 @@ function estimateLongTubePallets(state) {
   }
   if (state.maxLength >= 86 && state.totalQty >= 120) return 1;
   return 0;
+}
+
+function estimateBundledBaseStationTubePallets(tubeQty) {
+  if (!tubeQty) return 0;
+  return Math.max(1, Math.ceil(tubeQty / 50));
+}
+
+function estimateLongTubePackageHeight(pieceQty) {
+  if (!pieceQty || pieceQty <= 0) return 6;
+  return 6 + (Math.floor((pieceQty - 1) / 10) * 2);
+}
+
+function estimateBundledBaseStationTubeWeight(tubeQty, lengthIn) {
+  if (!tubeQty) return 0;
+  const normalizedLength = Math.max(60, lengthIn || 120);
+  const perTubeWeight = Math.max(8, Math.round((normalizedLength / 120) * 18));
+  return Math.round(tubeQty * perTubeWeight);
+}
+
+function estimateBundledBaseStationNonTubeWeight(stanchions, feet) {
+  return Math.round((Math.max(0, stanchions) * 20) + (Math.max(0, feet) * 6));
+}
+
+function estimateBundledBaseStationStanchionHeight(stanchionQty, shared2UpQty = 0) {
+  return Math.min(48, 18 + (Math.max(1, stanchionQty) * 4) + (shared2UpQty > 0 ? 6 : 0));
+}
+
+function estimateQuoteTwoUpHeight(qty) {
+  const safeQty = Math.max(0, Number(qty) || 0);
+  if (safeQty >= 32) return 49;
+  if (safeQty >= 24) return 40;
+  if (safeQty >= 16) return 34;
+  if (safeQty >= 8) return 28;
+  if (safeQty > 0) return 22;
+  return 30;
 }
 
 function estimateDDPallets(qty, bikeCount) {
@@ -1005,6 +1076,8 @@ const PACKAGE_TEMPLATES = {
   large_pallet: { l: 85, w: 48, h: 39 },
   oversized_pallet: { l: 96, w: 48, h: 28 },
   long_tube: { l: 120, w: 11, h: 11 },
+  base_station_stanchion: { l: 84, w: 50, h: 26 },
+  base_station_feet: { l: 48, w: 40, h: 16 },
   dd_mixed_crate: { l: 79, w: 43, h: 63 },
   skatedock_box: { l: 73, w: 14, h: 13 },
   unknown_pallet: { l: 48, w: 40, h: 24 },
@@ -1038,6 +1111,7 @@ const FAMILY_TEMPLATE = {
 const NO_MIX_FAMILIES = new Set(['Double Docker', 'Undergrad', 'Metal Bike Vault / VisiLocker', 'MBA', 'Base Station']);
 
 function mapTemplateForBreakdownRow(row) {
+  if (row?.packageType && PACKAGE_TEMPLATES[row.packageType]) return row.packageType;
   const matched = String(row?.matched || '');
   if (matched === 'LONG_TUBE') return 'long_tube';
   if (matched === 'UNKNOWN' || matched === 'SKU_OVERRIDE') return 'unknown_pallet';
@@ -1045,32 +1119,178 @@ function mapTemplateForBreakdownRow(row) {
   return FAMILY_TEMPLATE[row?.family] || 'standard_pallet';
 }
 
-function buildPackagesFromBreakdown(breakdown) {
+function distributeIntegerTotal(total, buckets) {
+  const count = Math.max(0, Math.round(Number(buckets) || 0));
+  if (count <= 0) return [];
+  const safeTotal = Math.max(0, Math.round(Number(total) || 0));
+  const base = Math.floor(safeTotal / count);
+  const remainder = safeTotal % count;
+  return Array.from({ length: count }, (_, idx) => base + (idx < remainder ? 1 : 0));
+}
+
+function computeBundledBaseStation2UpSpilloverQty(breakdown, { sourceType = '' } = {}) {
+  if (sourceType === 'sales_order' || !Array.isArray(breakdown) || breakdown.length === 0) return 0;
+
+  const shippableRows = breakdown.filter((row) => Math.max(0, Number(row?.pallets) || 0) > 0);
+  const bundledBaseStationRows = shippableRows.filter((row) => row?.packageRecipe === 'bundled_base_station');
+  const bundledBaseStationHosts = bundledBaseStationRows.filter((row) => Number(row?.componentCounts?.stanchionPallets || 0) === 1);
+  const twoUpRows = shippableRows.filter((row) => String(row?.matched || '') === '2UP' && Math.max(0, Number(row?.qty) || 0) > 0);
+
+  if (bundledBaseStationRows.length !== 1 || bundledBaseStationHosts.length !== 1 || twoUpRows.length !== 1) return 0;
+
+  const host = bundledBaseStationHosts[0];
+  const counts = host?.componentCounts || {};
+  const allowedRowsOnly = shippableRows.every((row) => (
+    row?.packageRecipe === 'bundled_base_station' ||
+    row?.packageRecipe === 'bundled_base_station_long_tube' ||
+    String(row?.matched || '') === '2UP'
+  ));
+
+  if (!allowedRowsOnly) return 0;
+  if (Math.max(0, Number(host?.qty) || 0) !== 1) return 0;
+  if (Math.max(0, Number(counts.feetPallets) || 0) > 0) return 0;
+
+  const row = twoUpRows[0];
+  const qty = Math.max(0, Number(row?.qty) || 0);
+  const remainder = qty % 32;
+  let sharedTwoUpQty = 0;
+  if (qty <= 8) {
+    sharedTwoUpQty = qty;
+  } else if (remainder > 0 && remainder <= 8) {
+    sharedTwoUpQty = remainder;
+  }
+
+  return Math.min(sharedTwoUpQty, Math.max(0, Number(counts.mix2UpSpilloverCapacity) || 0));
+}
+
+function buildPackagesFromBreakdown(breakdown, { sourceType = '' } = {}) {
   let packageId = 1;
   const packages = [];
+  const sharedTwoUpQty = computeBundledBaseStation2UpSpilloverQty(breakdown, { sourceType });
+  let sharedTwoUpAttached = false;
+  let sharedTwoUpConsumed = false;
 
   for (const row of breakdown) {
     const pallets = Math.max(0, Number(row?.pallets) || 0);
     if (pallets <= 0) continue;
 
+    if (row?.packageRecipe === 'bundled_base_station') {
+      const counts = row.componentCounts || {};
+      const stanchionPallets = Math.max(0, Number(counts.stanchionPallets) || 0);
+      const feetPallets = Math.max(0, Number(counts.feetPallets) || 0);
+      const stanchionQtys = distributeIntegerTotal(counts.stanchions, stanchionPallets);
+      const stanchionFeetQtys = feetPallets > 0 ? Array.from({ length: stanchionPallets }, () => 0) : distributeIntegerTotal(counts.feet, stanchionPallets);
+      const feetQtys = distributeIntegerTotal(counts.feet, feetPallets);
+
+      for (let i = 0; i < stanchionPallets; i += 1) {
+        const stanchionQty = stanchionQtys[i] || 0;
+        const feetQty = stanchionFeetQtys[i] || 0;
+        const attachTwoUpQty = !sharedTwoUpAttached && sharedTwoUpQty > 0 ? sharedTwoUpQty : 0;
+        const weight = Math.max(1, Math.round((stanchionQty * 20) + (feetQty * 6) + (attachTwoUpQty * 8)));
+        const contents = [{
+          sku: row?.sku || 'UNKNOWN',
+          name: 'Base Station stanchions',
+          qty: stanchionQty,
+          matched: row?.matched || 'Base Station',
+        }];
+        if (feetQty > 0) {
+          contents.push({
+            sku: row?.sku || 'UNKNOWN',
+            name: 'Base Station feet',
+            qty: feetQty,
+            matched: row?.matched || 'Base Station',
+          });
+        }
+        if (attachTwoUpQty > 0) {
+          contents.push({
+            sku: '80101-0281',
+            name: '2UP spillover on Base Station host pallet',
+            qty: attachTwoUpQty,
+            matched: '2UP',
+          });
+          sharedTwoUpAttached = true;
+        }
+        packages.push({
+          id: packageId++,
+          type: 'base_station_stanchion',
+          family: 'Base Station',
+          dims: {
+            l: PACKAGE_TEMPLATES.base_station_stanchion.l,
+            w: PACKAGE_TEMPLATES.base_station_stanchion.w,
+            h: estimateBundledBaseStationStanchionHeight(stanchionQty, attachTwoUpQty),
+          },
+          weight,
+          mergeable: false,
+          contents,
+        });
+      }
+
+      for (const feetQty of feetQtys) {
+        packages.push({
+          id: packageId++,
+          type: 'base_station_feet',
+          family: 'Base Station',
+          dims: {
+            l: PACKAGE_TEMPLATES.base_station_feet.l,
+            w: PACKAGE_TEMPLATES.base_station_feet.w,
+            h: PACKAGE_TEMPLATES.base_station_feet.h,
+          },
+          weight: Math.max(1, Math.round(feetQty * 6)),
+          mergeable: false,
+          contents: [{
+            sku: row?.sku || 'UNKNOWN',
+            name: 'Base Station feet',
+            qty: feetQty,
+            matched: row?.matched || 'Base Station',
+          }],
+        });
+      }
+      continue;
+    }
+
     const templateKey = mapTemplateForBreakdownRow(row);
     const dims = PACKAGE_TEMPLATES[templateKey] || PACKAGE_TEMPLATES.standard_pallet;
-    const totalRowWeight = Math.max(0, Number(row?.weight) || 0);
-    const perPackageWeight = pallets > 0 ? Math.max(1, Math.round(totalRowWeight / pallets)) : 0;
     const family = String(row?.matched || row?.family || 'Unknown');
+    let effectiveQty = Math.max(0, Number(row?.qty) || 0);
+    let effectivePallets = pallets;
+    let totalRowWeight = Math.max(0, Number(row?.weight) || 0);
 
-    for (let i = 0; i < pallets; i += 1) {
+    if (!sharedTwoUpConsumed && sharedTwoUpQty > 0 && family === '2UP') {
+      effectiveQty = Math.max(0, effectiveQty - sharedTwoUpQty);
+      effectivePallets = effectiveQty > 0 ? computePalletsForFamily('2UP', effectiveQty, row?.sku, row?.name, {}) : 0;
+      totalRowWeight = row?.qty ? Math.round(totalRowWeight * (effectiveQty / row.qty)) : 0;
+      sharedTwoUpConsumed = true;
+    }
+
+    if (effectivePallets <= 0) continue;
+
+    const qtyShares = distributeIntegerTotal(effectiveQty, effectivePallets);
+    const weightShares = distributeIntegerTotal(totalRowWeight, effectivePallets);
+
+    for (let i = 0; i < effectivePallets; i += 1) {
+      const packageQty = qtyShares[i] || 0;
+      const packageWeight = Math.max(1, weightShares[i] || 0);
+      const packageDims = { l: dims.l, w: dims.w, h: dims.h };
+      if (row?.packageRecipe === 'bundled_base_station_long_tube') {
+        packageDims.l = row?.lengthIn || dims.l;
+        packageDims.w = 8;
+        packageDims.h = estimateLongTubePackageHeight(packageQty);
+      } else if (family === '2UP' && sourceType !== 'sales_order') {
+        packageDims.l = 46;
+        packageDims.w = 44;
+        packageDims.h = estimateQuoteTwoUpHeight(packageQty);
+      }
       packages.push({
         id: packageId++,
         type: templateKey,
         family,
-        dims: { l: dims.l, w: dims.w, h: dims.h },
-        weight: perPackageWeight,
-        mergeable: templateKey === 'standard_pallet' && !NO_MIX_FAMILIES.has(family) && perPackageWeight <= 550,
+        dims: packageDims,
+        weight: packageWeight,
+        mergeable: templateKey === 'standard_pallet' && !NO_MIX_FAMILIES.has(family) && packageWeight <= 550,
         contents: [{
           sku: row?.sku || 'UNKNOWN',
           name: row?.name || 'Unknown Item',
-          qty: row?.qty || 0,
+          qty: packageQty,
           matched: row?.matched || 'UNKNOWN',
         }],
       });
@@ -1189,6 +1409,24 @@ function deriveCalibrationFamilies(breakdown) {
     set.add(family);
   }
   return Array.from(set);
+}
+
+function isSyntheticAdjustmentPackage(pkg) {
+  if (!pkg || typeof pkg !== 'object') return false;
+  return (pkg.contents || []).some((content) => (
+    String(content?.matched || '').trim() === 'CALIBRATION_ADJUSTMENT' ||
+    String(content?.sku || '').trim().toUpperCase() === 'CALIBRATION-ADJUSTMENT'
+  ));
+}
+
+function isBundledBaseStationStructurePackage(pkg) {
+  if (!pkg || typeof pkg !== 'object') return false;
+  if (pkg.type === 'base_station_stanchion' || pkg.type === 'base_station_feet') return true;
+  return (
+    pkg.type === 'long_tube' &&
+    Number(pkg?.dims?.w) === 8 &&
+    (pkg.contents || []).some((content) => String(content?.matched || '').trim() === 'LONG_TUBE')
+  );
 }
 
 function calibrationFamilyQty(breakdown, family) {
@@ -2071,6 +2309,7 @@ function applyPackageCountAdjustment(packages, requestedDelta) {
       appliedDelta: 0,
       added: [],
       removed: [],
+      blockedReason: null,
     };
   }
 
@@ -2082,17 +2321,21 @@ function applyPackageCountAdjustment(packages, requestedDelta) {
   const added = [];
   const removed = [];
   let appliedDelta = 0;
+  let blockedReason = null;
 
   if (requestedDelta < 0) {
+    const protectBundledBaseStationStructure = out.some(isBundledBaseStationStructurePackage);
     const removable = [];
     for (let i = 0; i < out.length; i += 1) {
       const pkg = out[i];
+      if (protectBundledBaseStationStructure && !isSyntheticAdjustmentPackage(pkg)) continue;
       if (pkg?.type === 'standard_pallet' && pkg?.mergeable !== false) {
         removable.push({ idx: i, weight: Number(pkg?.weight) || 0, priority: 0 });
       }
     }
     for (let i = 0; i < out.length; i += 1) {
       const pkg = out[i];
+      if (protectBundledBaseStationStructure && !isSyntheticAdjustmentPackage(pkg)) continue;
       if (pkg?.type === 'standard_pallet' && pkg?.mergeable === false) {
         removable.push({ idx: i, weight: Number(pkg?.weight) || 0, priority: 1 });
       }
@@ -2101,12 +2344,14 @@ function applyPackageCountAdjustment(packages, requestedDelta) {
     // This is intentionally lower priority and only used for legacy anomaly harmonization.
     for (let i = 0; i < out.length; i += 1) {
       const pkg = out[i];
+      if (protectBundledBaseStationStructure && !isSyntheticAdjustmentPackage(pkg)) continue;
       if (pkg?.type !== 'standard_pallet' && pkg?.mergeable !== false) {
         removable.push({ idx: i, weight: Number(pkg?.weight) || 0, priority: 2 });
       }
     }
     for (let i = 0; i < out.length; i += 1) {
       const pkg = out[i];
+      if (protectBundledBaseStationStructure && !isSyntheticAdjustmentPackage(pkg)) continue;
       if (pkg?.type !== 'standard_pallet' && pkg?.mergeable === false) {
         removable.push({ idx: i, weight: Number(pkg?.weight) || 0, priority: 3 });
       }
@@ -2119,7 +2364,10 @@ function applyPackageCountAdjustment(packages, requestedDelta) {
     const chosenSet = new Set(chosen);
     removed.push(...out.filter((_, idx) => chosenSet.has(idx)));
     out = out.filter((_, idx) => !chosenSet.has(idx));
-    appliedDelta = -chosen.length;
+    appliedDelta = chosen.length > 0 ? -chosen.length : 0;
+    if (protectBundledBaseStationStructure && chosen.length < target) {
+      blockedReason = 'protected_bundled_base_station_structure';
+    }
   } else if (requestedDelta > 0) {
     const template = PACKAGE_TEMPLATES.unknown_pallet || PACKAGE_TEMPLATES.standard_pallet;
     const startId = out.length;
@@ -2145,7 +2393,7 @@ function applyPackageCountAdjustment(packages, requestedDelta) {
   }
 
   out = out.map((pkg, idx) => ({ ...pkg, id: idx + 1 }));
-  return { packages: out, appliedDelta, added, removed };
+  return { packages: out, appliedDelta, added, removed, blockedReason };
 }
 
 function predictPallets(items, context = {}) {
@@ -2202,6 +2450,7 @@ function predictPallets(items, context = {}) {
     const configHint = classifyFromSkuConfig(item);
     const legacyClassification = classifyItem(item.sku, item.name, orderHasParents);
     const hardLegacyClassifications = new Set(['non_shippable', 'packaging', 'component_of_parent', 'hardware']);
+    const skatedockPrimaryOverride = shouldTreatAsSkatedockProduct(item, configHint, legacyClassification, context);
     let baseClassification = legacyClassification;
     if (configHint?.classification) {
       const configClassification = configHint.classification;
@@ -2211,6 +2460,7 @@ function predictPallets(items, context = {}) {
         ['component_of_parent', 'hardware'].includes(legacyClassification);
       const allowOverride =
         lockerPrimaryOverride ||
+        skatedockPrimaryOverride ||
         !hardLegacyClassifications.has(legacyClassification) ||
         configClassification === 'long_tube_trigger' ||
         configClassification === 'non_shippable';
@@ -2218,7 +2468,10 @@ function predictPallets(items, context = {}) {
         baseClassification = configClassification;
       }
     }
-    const flagBypass = isFlagBypassItem(item);
+    if (skatedockPrimaryOverride) {
+      baseClassification = 'product';
+    }
+    const flagBypass = isFlagBypassItem(item, context);
     let classification = baseClassification;
     let netSuiteFlagged = false;
 
@@ -2396,6 +2649,11 @@ function predictPallets(items, context = {}) {
         trays: 0,
         legs: 0,
         manifolds: 0,
+        bundledBaseStationCount: 0,
+        bundledBaseStationStanchions: 0,
+        bundledBaseStationFeet: 0,
+        bundledBaseStationTubes: 0,
+        bundledBaseStationMaxLength: 0,
       };
     }
     families[family].qty += item.qty;
@@ -2403,6 +2661,18 @@ function predictPallets(items, context = {}) {
 
     const s = normSku.toUpperCase();
     const n = (item.name || '').toUpperCase();
+    if (family === 'Base Station' && isBundledBaseStationItem(normSku, configHint)) {
+      const bundledQty = Math.max(0, Number(item.qty) || 0);
+      const isAddon = isBundledBaseStationAddonSku(normSku);
+      families[family].bundledBaseStationCount += bundledQty;
+      families[family].bundledBaseStationStanchions += bundledQty * (isAddon ? 1 : 2);
+      families[family].bundledBaseStationFeet += bundledQty * (isAddon ? 1 : 2);
+      families[family].bundledBaseStationTubes += bundledQty * 4;
+      families[family].bundledBaseStationMaxLength = Math.max(
+        families[family].bundledBaseStationMaxLength || 0,
+        parseBundledBaseStationLength(item)
+      );
+    }
     if (family === 'Double Docker') {
       if (n.includes('TRAY') || s.includes('1210') || s.includes('SLIDE')) families[family].trays += item.qty;
       if (n.includes('LEG')) families[family].legs += item.qty;
@@ -2425,6 +2695,68 @@ function predictPallets(items, context = {}) {
     if (family === 'Metal Bike Vault / VisiLocker') {
       effectiveQty = Math.max(1, data.maxLineQty || data.qty || 0);
     }
+    const bundledBaseStationOnly =
+      family === 'Base Station' &&
+      data.bundledBaseStationCount > 0 &&
+      data.bundledBaseStationCount === data.qty &&
+      context?.sourceType !== 'sales_order' &&
+      longTubeState.triggerLines === 0;
+
+    if (bundledBaseStationOnly) {
+      const stanchionPallets = data.bundledBaseStationStanchions > 0
+        ? Math.max(1, Math.ceil(data.bundledBaseStationStanchions / 40))
+        : 0;
+      const feetPallets = data.bundledBaseStationFeet > 10
+        ? Math.max(1, Math.ceil(data.bundledBaseStationFeet / 40))
+        : 0;
+      const tubePallets = estimateBundledBaseStationTubePallets(data.bundledBaseStationTubes);
+      const familyWeight = estimateBundledBaseStationNonTubeWeight(
+        data.bundledBaseStationStanchions,
+        data.bundledBaseStationFeet
+      );
+      const tubeWeight = estimateBundledBaseStationTubeWeight(
+        data.bundledBaseStationTubes,
+        data.bundledBaseStationMaxLength
+      );
+
+      totalPallets += stanchionPallets + feetPallets;
+      totalWeight += familyWeight;
+      breakdown.push({
+        sku: data.skuSample,
+        name: 'Base Station (bundled recipe)',
+        qty: effectiveQty,
+        pallets: stanchionPallets + feetPallets,
+        weight: familyWeight,
+        matched: family,
+        packageRecipe: 'bundled_base_station',
+        componentCounts: {
+          stanchions: data.bundledBaseStationStanchions,
+          feet: data.bundledBaseStationFeet,
+          stanchionPallets,
+          feetPallets,
+          mix2UpSpilloverCapacity: stanchionPallets * 8,
+        },
+      });
+
+      if (tubePallets > 0) {
+        diagnostics.longTubePallets += tubePallets;
+        totalPallets += tubePallets;
+        totalWeight += tubeWeight;
+        breakdown.push({
+          sku: 'LONG-TUBE',
+          name: `Long tube bundle (${data.bundledBaseStationMaxLength || 'unknown'}")`,
+          qty: data.bundledBaseStationTubes,
+          pallets: tubePallets,
+          weight: tubeWeight,
+          matched: 'LONG_TUBE',
+          packageRecipe: 'bundled_base_station_long_tube',
+          lengthIn: data.bundledBaseStationMaxLength,
+          sources: [data.skuSample],
+        });
+      }
+      continue;
+    }
+
     let pallets = computePalletsForFamily(family, effectiveQty, data.skuSample, data.nameSample, data);
     if (applyBaseStationLongTubeDedupe && family === 'Base Station') {
       pallets = 0;
@@ -2519,7 +2851,7 @@ function predictPallets(items, context = {}) {
     diagnostics.zeroFloorLikelyPhysicalExcluded = 0;
   }
 
-  const rawPackages = buildPackagesFromBreakdown(breakdown);
+  const rawPackages = buildPackagesFromBreakdown(breakdown, { sourceType: context?.sourceType || '' });
   const consolidation = consolidatePackages(rawPackages);
   let packages = consolidation.packages;
   const suspiciousExcludedLines = diagnostics.excludedLines.filter(isPotentiallyPhysicalExcluded);
@@ -2545,6 +2877,7 @@ function predictPallets(items, context = {}) {
   diagnostics.calibration = {
     requestedDelta: calibration.delta,
     appliedDelta: packageAdjustment.appliedDelta,
+    blockedReason: packageAdjustment.blockedReason || null,
     rules: calibration.firedRules,
     familyCount: calibration.familyCount,
     families: calibration.families,
@@ -2595,6 +2928,7 @@ function predictPallets(items, context = {}) {
   diagnostics.exactBooster = {
     requestedDelta: exactBooster.requestedDelta || 0,
     appliedDelta: exactBoostAdjustment.appliedDelta || 0,
+    blockedReason: exactBoostAdjustment.blockedReason || null,
     rule: exactBooster.rule || null,
     source: exactBooster.source || null,
     signature: exactBooster.signature || null,
@@ -2979,4 +3313,5 @@ module.exports.__private__ = {
   classifyFromSkuConfig,
   sanitizeDiagnostics,
   computeCalibrationAdjustment,
+  applyPackageCountAdjustment,
 };

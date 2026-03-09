@@ -52,9 +52,10 @@ function flattenReasons(diag) {
     { sku: '89904-1201', name: 'GREY SKATEDOCK/SNOWDOCK TOP KIT, W/ HARDWARE, BOXED', qty: 2, fulfillable: true, assemblyComponent: false, kitComponent: false, itemType: 'Assembly' },
   ]);
   const r4 = flattenReasons(skatedock.diagnostics);
-  assert(skatedock.totalPallets >= 4, 'Expected skatedock order to produce package count from skatedock recipe');
+  assert(skatedock.totalPallets >= 1, 'Expected skatedock order to resolve through skatedock recipe');
+  assert(r4.included.includes('PRODUCT_FAMILY'), 'Expected skatedock lines to be treated as product-family lines');
   assert(!r4.included.includes('UNKNOWN'), 'Expected skatedock lines not to fall back to UNKNOWN');
-  assert(skatedock.diagnostics.zeroFloorApplied, 'Expected skatedock-heavy order to be rescued by ZERO_FLOOR safeguards');
+  assert(!skatedock.diagnostics.zeroFloorApplied, 'Expected skatedock order not to require ZERO_FLOOR safeguards');
 
   // Long tube bundles should scale at very high trigger quantities (not hard-capped at 1).
   const longTubeScaled = predictPallets([
