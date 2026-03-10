@@ -538,6 +538,56 @@ function buildFallbackPackageFromBreakdownRow(row, idx) {
   }))
 }
 
+const QUOTE_REVIEW_NAME_SKIP_PATTERNS = [
+  /freight/i,
+  /shipping/i,
+  /\blabor\b/i,
+  /installation service/i,
+  /mobilization/i,
+  /\bservice\b/i,
+  /\bfee\b/i,
+  /\btax\b/i,
+  /\bdiscount\b/i,
+  /power post/i,
+  /charging rack/i,
+  /public work stand/i,
+  /fixation/i,
+  /high security outdoor pump/i,
+  /channel nut/i,
+  /strike anchor/i,
+  /wedge anchor/i,
+]
+
+const QUOTE_REVIEW_SKU_SKIP_PATTERNS = [
+  /^80101-0257-.+-KIT$/i,
+  /^80101-0258-.+-KIT$/i,
+  /^91000-/i,
+  /^WAK\d+$/i,
+  /^26268$/i,
+  /^26246$/i,
+  /^26302/i,
+  /^3000[PQ]-/i,
+  /^31000-/i,
+  /^39000-/i,
+  /^81000-/i,
+  /^MISC-NON-INV-SALE$/i,
+]
+
+function shouldHideFromQuoteReview(line) {
+  const rawSku = String(line?.item || '').trim()
+  const normalizedSku = normalizeSkuKey(rawSku)
+  const description = String(line?.description || line?.item || '').trim()
+
+  if (!rawSku && !description) return false
+  if (/^SIK/i.test(rawSku) || /^SIK/i.test(normalizedSku)) return false
+
+  if (QUOTE_REVIEW_SKU_SKIP_PATTERNS.some((pattern) => pattern.test(rawSku) || pattern.test(normalizedSku))) {
+    return true
+  }
+
+  return QUOTE_REVIEW_NAME_SKIP_PATTERNS.some((pattern) => pattern.test(description))
+}
+
 function mapPredictionToResults(data, orderItems) {
   const prediction = data?.prediction || {}
   const breakdown = Array.isArray(data?.predicted_breakdown)
@@ -650,6 +700,7 @@ function App() {
   const [quoteNumber, setQuoteNumber] = useState('')
   const [quoteLoading, setQuoteLoading] = useState(false)
   const [quoteError, setQuoteError] = useState(null)
+  const [quoteReviewMeta, setQuoteReviewMeta] = useState({ hiddenLineCount: 0, hiddenUnitCount: 0 })
   const [pendingQuoteCalculation, setPendingQuoteCalculation] = useState(false)
   const [quoteHasManualEdits, setQuoteHasManualEdits] = useState(false)
   const [selectedPallet, setSelectedPallet] = useState(null)
@@ -742,6 +793,7 @@ function App() {
     setQuoteError(null)
     setResults(null)
     setAiPlan(null)
+    setQuoteReviewMeta({ hiddenLineCount: 0, hiddenUnitCount: 0 })
     if (quoteNum) setQuoteNumber(String(quoteNum)) // Update input if loaded from URL
 
     try {
@@ -766,6 +818,8 @@ function App() {
       // Skip Product Summary items and items with no quantity
       const newItems = []
       const unmatchedItems = []
+      let hiddenLineCount = 0
+      let hiddenUnitCount = 0
       for (const line of quote.lines) {
         try {
           // Ensure line.item is a string and has content
@@ -773,33 +827,17 @@ function App() {
           const qty = Number(line?.quantity) || 0
           if (!item || qty <= 0) continue
           if (item === 'Product Summary' || item.includes('Product Summary')) continue
-          
-          // Skip common non-product items (services, fees, etc.)
-          const skipPatterns = ['freight', 'shipping', 'labor', 'installation', 'service', 'fee', 'tax', 'discount']
-          if (skipPatterns.some(p => item.toLowerCase().includes(p))) continue
-          
-          // Skip kit SKUs that ship with main products (DD kits, anchor kits, etc.)
-          // These are hardware bundles already included in the main product dims/weight
-          const kitSkuPatterns = [
-            /^80101-0257-.+-KIT$/i, // DD4 hardware kit
-            /^80101-0258-.+-KIT$/i, // DD6 hardware kit
-            /^91000-/i,             // Hardware tools (trident sockets, etc.)
-            /^WAK\d+$/i,            // Wall anchor kits
-            /^26268$/i,             // Public Work Stand Install Kit - small, packs with hardware
-            /^\d{5}\s*\(/i,         // SKUs like "26246 (HSO Pump...)" - Saris accessories
-            /^3000[PQ]-/i,          // Screws (3000P-, 3000Q-)
-            /^31000-/i,             // Washers (31000-)
-            /^39000-/i,             // Nuts (39000-)
-            /^81000-/i,             // Anchor/hardware kits (81000-)
-          ]
-          if (kitSkuPatterns.some(pattern => pattern.test(item))) {
-            console.log(`[MATCH] ⏭️ Skipping kit/hardware SKU: "${item}"`)
+          const safeQty = Math.max(1, Math.round(qty))
+
+          if (shouldHideFromQuoteReview(line)) {
+            hiddenLineCount += 1
+            hiddenUnitCount += safeQty
+            console.log(`[MATCH] ⏭️ Hiding non-freight/ride-along quote line: "${item}"`)
             continue
           }
-          
+
           // Normalize item SKU to string
           const itemSku = item
-          const safeQty = Math.max(1, Math.round(qty))
           
           // Match by SKU - try exact match first, then prefix match
           console.log(`[MATCH] Trying to match SKU: "${itemSku}" against ${products.length} products`)
@@ -838,6 +876,7 @@ function App() {
       
       // Store unknown items for warning display
       setUnknownItems(unmatchedItems)
+      setQuoteReviewMeta({ hiddenLineCount, hiddenUnitCount })
       setQuoteHasManualEdits(false)
 
       if (newItems.length > 0 || unmatchedItems.length > 0) {
@@ -901,6 +940,7 @@ function App() {
     setResults(null)
     setSelectedPallet(null)
     setUnknownItems([])
+    setQuoteReviewMeta({ hiddenLineCount: 0, hiddenUnitCount: 0 })
     setQuoteHasManualEdits(false)
   }
 
@@ -1552,6 +1592,13 @@ function App() {
                       Clear order
                     </button>
                   </div>
+
+                  {quoteReviewMeta.hiddenLineCount > 0 && (
+                    <div className="sales-inline-message tone-info">
+                      Hermes hid {quoteReviewMeta.hiddenLineCount} non-freight / ride-along line{quoteReviewMeta.hiddenLineCount === 1 ? '' : 's'}
+                      {quoteReviewMeta.hiddenUnitCount > 0 ? ` (${quoteReviewMeta.hiddenUnitCount} unit${quoteReviewMeta.hiddenUnitCount === 1 ? '' : 's'})` : ''} so this review only shows shipper-facing items.
+                    </div>
+                  )}
 
                   {hasUnknownOrderItems && (
                     <div className="sales-warning-card">
