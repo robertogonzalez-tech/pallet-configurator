@@ -986,7 +986,7 @@ function varsityMode(sku, name) {
 function computePalletsForFamily(family, qty, sku, name, familyState = {}) {
   if (qty <= 0) return 0;
   switch (family) {
-    case 'Hoop Runner': return qty <= 20 ? 1 : Math.ceil(qty / 20);
+    case 'Hoop Runner': return qty <= 20 ? 1 : qty <= 60 ? Math.ceil(qty / 20) : Math.ceil(qty / 21);
     case 'Dismount': return qty <= 10 ? 1 : Math.ceil(qty / 6);
     case 'Radius': return qty <= 24 ? 1 : Math.ceil(qty / 25);
     case 'MBA': return qty <= 3 ? 1 : qty <= 8 ? 2 : Math.ceil(qty / 4);
@@ -2834,6 +2834,15 @@ function predictPallets(items, context = {}) {
         fallbackPallets,
         computePalletsForFamily('Skatedock', inferredSkatedockQty, 'SM10X', 'Skatedock', {})
       );
+    }
+
+    // WAK215 (Varsity anchor kit) inference: hardware-only orders with high
+    // WAK215 qty ship as multiple pallets.  ~25 kits per pallet based on data.
+    const wak215Qty = rawLines
+      .filter((line) => normalizeSku(line.sku || '').startsWith('WAK215'))
+      .reduce((sum, line) => sum + (Number(line.qty) || 0), 0);
+    if (wak215Qty >= 25) {
+      fallbackPallets = Math.max(fallbackPallets, Math.ceil(wak215Qty / 25));
     }
 
     const fallbackWeight = Math.max(80, Math.min(450, Math.round((diagnostics.filteredHardware + diagnostics.filteredComponents + diagnostics.filteredNonShippable) * 30)));
