@@ -91,7 +91,7 @@ run(
 );
 
 run(
-  'legacy_fc4_long_tube_base_hoop_extreme_plus3',
+  'legacy_fc4_long_tube_base_hoop_extreme_plus4',
   {
     breakdown: [
       row('Base Station', 14),
@@ -102,8 +102,8 @@ run(
     currentPallets: 4,
     orderRef: 'SO5501',
   },
-  6,
-  'legacy_fc4_long_tube_base_hoop_extreme_plus3'
+  7,
+  'legacy_fc4_long_tube_base_hoop_extreme_plus4'
 );
 
 run(

@@ -1338,7 +1338,10 @@ function consolidatePackages(packages) {
     const candidateFamilies = familySet(candidate);
     const overlaps = Array.from(candidateFamilies).some((fam) => hostFamilies.has(fam));
     if (overlaps) return false;
-    if (hostFamilies.size + candidateFamilies.size > 4) return false;
+    const totalFamilies = hostFamilies.size + candidateFamilies.size;
+    if (totalFamilies > 4) return false;
+    // Block 3+ family merges when combined weight is heavy (prevents over-consolidation)
+    if (totalFamilies > 2 && combinedWeight > 500) return false;
 
     return true;
   };
@@ -1496,7 +1499,9 @@ function computeCalibrationAdjustment({
   const vr2Sku = calibrationFamilySku(breakdown, 'VR2 Offset').toUpperCase();
 
   // Stable overprediction bucket: 2-family mixed orders without long-tube / DD / VR2.
-  if (familyCount === 2 && !hasFamily('LONG_TUBE') && !hasFamily('Double Docker') && !hasFamily('VR2 Offset') && currentPallets > 1) {
+  // Guard: MBV+Varsity mixes with multiple MBV units can't consolidate (MBV is ~850lb each).
+  const mbvVarsityNoMix = hasFamily('Metal Bike Vault / VisiLocker') && hasFamily('Varsity') && mbvQty >= 2;
+  if (familyCount === 2 && !hasFamily('LONG_TUBE') && !hasFamily('Double Docker') && !hasFamily('VR2 Offset') && currentPallets > 1 && !mbvVarsityNoMix) {
     delta -= 1;
     firedRules.push('fc2_non_lt_non_dd_non_vr2_minus1');
   }
@@ -1576,8 +1581,8 @@ function computeCalibrationAdjustment({
     ((hasFamily('VR2 Offset') && calibrationFamilyQty(breakdown, 'VR2 Offset') >= 25) || hasFamily('2UP')) &&
     longTubeQty >= 35
   ) {
-    delta += 3;
-    firedRules.push('legacy_fc4_long_tube_base_hoop_extreme_plus3');
+    delta += 4;
+    firedRules.push('legacy_fc4_long_tube_base_hoop_extreme_plus4');
   }
   if (
     legacyOrder &&
