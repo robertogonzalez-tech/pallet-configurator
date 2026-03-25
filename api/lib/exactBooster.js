@@ -80,6 +80,18 @@ function qtyBin(qty) {
   return '64+';
 }
 
+function buildFamilyComboSignatureFromBreakdown(breakdown) {
+  if (!Array.isArray(breakdown)) return '';
+  const families = new Set();
+  for (const row of breakdown) {
+    if (!shouldUseRowForSignature(row)) continue;
+    const family = String(row.matched || '').trim();
+    if (family) families.add(family);
+  }
+  if (families.size === 0) return '';
+  return Array.from(families).sort().join('|');
+}
+
 function buildPatternSignatureFromBreakdown(breakdown) {
   if (!Array.isArray(breakdown)) return '';
   const qtyByFamily = new Map();
@@ -99,11 +111,14 @@ function buildPatternSignatureFromBreakdown(breakdown) {
 
 function loadExactBoosterMap() {
   if (EXACT_BOOSTER_MAP) return EXACT_BOOSTER_MAP;
-  const paths = [
-    path.join(process.cwd(), 'config', 'exact-booster-map.json'),
-    path.join(__dirname, '..', '..', 'config', 'exact-booster-map.json'),
-    path.join(__dirname, '..', 'config', 'exact-booster-map.json'),
-  ];
+  const envPath = process.env.EXACT_BOOSTER_MAP_PATH;
+  const paths = envPath
+    ? [path.resolve(envPath)]
+    : [
+        path.join(process.cwd(), 'config', 'exact-booster-map.json'),
+        path.join(__dirname, '..', '..', 'config', 'exact-booster-map.json'),
+        path.join(__dirname, '..', 'config', 'exact-booster-map.json'),
+      ];
   for (const p of paths) {
     try {
       const raw = fs.readFileSync(p, 'utf8');
@@ -243,6 +258,19 @@ function chooseExactBoosterAdjustment({
     if (familyAdjustment.requestedDelta !== 0 || familyAdjustment.blocked) return familyAdjustment;
   }
 
+  const familyComboSignature = buildFamilyComboSignatureFromBreakdown(breakdown);
+  if (familyComboSignature) {
+    const comboRecord = boosterMap.familyComboSignatures?.[familyComboSignature];
+    const comboAdjustment = chooseAdjustmentFromRecord({
+      record: comboRecord,
+      currentPallets,
+      allowTrim,
+      source: 'family_combo_signature',
+      signature: familyComboSignature,
+    });
+    if (comboAdjustment.requestedDelta !== 0 || comboAdjustment.blocked) return comboAdjustment;
+  }
+
   const patternSignature = buildPatternSignatureFromBreakdown(breakdown);
   if (patternSignature) {
     const patternRecord = boosterMap.patternSignatures?.[patternSignature];
@@ -257,8 +285,8 @@ function chooseExactBoosterAdjustment({
   }
 
   return buildResponse({
-    source: lineSignature || familySignature || patternSignature ? 'none' : null,
-    signature: lineSignature || familySignature || patternSignature || null,
+    source: lineSignature || familySignature || familyComboSignature || patternSignature ? 'none' : null,
+    signature: lineSignature || familySignature || familyComboSignature || patternSignature || null,
   });
 }
 
@@ -268,6 +296,7 @@ module.exports = {
   normalizeQty,
   buildLineSignatureFromBreakdown,
   buildFamilySignatureFromBreakdown,
+  buildFamilyComboSignatureFromBreakdown,
   buildPatternSignatureFromBreakdown,
   loadExactBoosterMap,
   chooseExactBoosterAdjustment,

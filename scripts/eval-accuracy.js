@@ -4,6 +4,7 @@ require('dotenv').config({ path: '.env.local' });
 const fs = require('fs');
 const path = require('path');
 const { createClient } = require('@supabase/supabase-js');
+const { loadEvalDataset, familyCountFromBreakdown, familySetFromBreakdown, bucketFamilyCount } = require('./lib/evalDataset');
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -18,6 +19,10 @@ const args = process.argv.slice(2);
 const writeReport = args.includes('--write-report');
 const reportTagArg = args.find((a) => a.startsWith('--tag='));
 const reportTag = reportTagArg ? reportTagArg.split('=')[1] : null;
+const jsonOutArg = args.find((a) => a.startsWith('--json-out='));
+const jsonOutPath = jsonOutArg ? jsonOutArg.split('=').slice(1).join('=') : null;
+const mdOutArg = args.find((a) => a.startsWith('--md-out='));
+const mdOutPath = mdOutArg ? mdOutArg.split('=').slice(1).join('=') : null;
 
 function nowStamp() {
   return new Date().toISOString().replace(/[:.]/g, '-');
@@ -28,50 +33,8 @@ function toPercent(num, den) {
   return (num / den) * 100;
 }
 
-function familyCountFromBreakdown(breakdown) {
-  if (!Array.isArray(breakdown)) return 0;
-  const ignored = new Set(['UNKNOWN', 'SKU_OVERRIDE', 'RIDE_ALONG', 'LONG_TUBE_TRIGGER', 'UNKNOWN_FALLBACK', 'CONSERVATIVE_LIFT', 'CALIBRATION_ADJUSTMENT']);
-  const families = new Set();
-  for (const row of breakdown) {
-    const family = String(row?.matched || '').trim();
-    if (!family || ignored.has(family)) continue;
-    families.add(family);
-  }
-  return families.size;
-}
-
-function familySetFromBreakdown(breakdown) {
-  if (!Array.isArray(breakdown)) return [];
-  const ignored = new Set(['UNKNOWN', 'SKU_OVERRIDE', 'RIDE_ALONG', 'LONG_TUBE_TRIGGER', 'UNKNOWN_FALLBACK', 'CONSERVATIVE_LIFT', 'CALIBRATION_ADJUSTMENT']);
-  const families = new Set();
-  for (const row of breakdown) {
-    const family = String(row?.matched || '').trim();
-    if (!family || ignored.has(family)) continue;
-    families.add(family);
-  }
-  return Array.from(families);
-}
-
-function hasSentinelFallback(breakdown) {
-  if (!Array.isArray(breakdown)) return false;
-  return breakdown.some((row) => {
-    const matched = String(row?.matched || '').trim();
-    return matched === 'ZERO_FLOOR' || matched === 'UNKNOWN_FALLBACK';
-  });
-}
-
-function isLegacySo(row) {
-  const so = String(row?.sales_order_id || row?.pick_ticket_id || '').toUpperCase();
-  return /^SO[56]/.test(so);
-}
-
-function bucketFamilyCount(count) {
-  if (count <= 0) return '0';
-  if (count === 1) return '1';
-  if (count === 2) return '2';
-  if (count === 3) return '3';
-  return '4+';
-}
+// familyCountFromBreakdown, familySetFromBreakdown, hasSentinelFallback,
+// isLegacySo, bucketFamilyCount — imported from ./lib/evalDataset
 
 function initMetricBucket() {
   return {
@@ -168,80 +131,7 @@ function computeMetrics(rows) {
   };
 }
 
-function dedupeCleanRows(rows) {
-  const bySo = new Map();
-  for (const row of rows) {
-    const key = String(row.sales_order_id || row.pick_ticket_id || row.id);
-    const existing = bySo.get(key);
-    if (!existing) {
-      bySo.set(key, row);
-      continue;
-    }
-    const tsA = new Date(existing.validated_at || existing.created_at || 0).getTime();
-    const tsB = new Date(row.validated_at || row.created_at || 0).getTime();
-    if (tsB > tsA) bySo.set(key, row);
-  }
-  return Array.from(bySo.values());
-}
-
-async function fetchValidatedRows() {
-  const selectWithBasis = 'id,sales_order_id,pick_ticket_id,status,shipment_completeness,actual_unit_basis,predicted_pallets,actual_pallets,predicted_breakdown,validated_at,created_at';
-  const selectLegacy = 'id,sales_order_id,pick_ticket_id,status,shipment_completeness,predicted_pallets,actual_pallets,predicted_breakdown,validated_at,created_at';
-  let selectClause = selectWithBasis;
-  const pageSize = 1000;
-  let from = 0;
-  const all = [];
-  while (true) {
-    let { data, error } = await supabase
-      .from('validations')
-      .select(selectClause)
-      .eq('status', 'validated')
-      .order('validated_at', { ascending: true })
-      .range(from, from + pageSize - 1);
-
-    if (error && /actual_unit_basis/i.test(error.message || '') && selectClause === selectWithBasis) {
-      // Migration-safe fallback for environments where basis column is not yet applied.
-      selectClause = selectLegacy;
-      ({ data, error } = await supabase
-        .from('validations')
-        .select(selectClause)
-        .eq('status', 'validated')
-        .order('validated_at', { ascending: true })
-        .range(from, from + pageSize - 1));
-      if (!error && Array.isArray(data)) {
-        data = data.map((row) => ({ ...row, actual_unit_basis: 'unknown' }));
-      }
-    }
-
-    if (error) throw error;
-    if (!data || data.length === 0) break;
-    all.push(...data);
-    if (data.length < pageSize) break;
-    from += pageSize;
-  }
-  return all;
-}
-
-async function fetchRowsFromView(viewName) {
-  const selectClause = 'id,sales_order_id,pick_ticket_id,status,shipment_completeness,actual_unit_basis,predicted_pallets,actual_pallets,predicted_breakdown,validated_at,created_at';
-  const pageSize = 1000;
-  let from = 0;
-  const all = [];
-
-  while (true) {
-    const { data, error } = await supabase
-      .from(viewName)
-      .select(selectClause)
-      .order('validated_at', { ascending: true })
-      .range(from, from + pageSize - 1);
-    if (error) return { rows: null, error };
-    if (!data || data.length === 0) break;
-    all.push(...data);
-    if (data.length < pageSize) break;
-    from += pageSize;
-  }
-  return { rows: all, error: null };
-}
+// dedupeCleanRows, fetchValidatedRows, fetchRowsFromView — imported via loadEvalDataset from ./lib/evalDataset
 
 function toMarkdown(report) {
   const fmt = (n) => (typeof n === 'number' ? n.toFixed(2) : String(n));
@@ -310,47 +200,12 @@ function toMarkdown(report) {
 }
 
 (async () => {
-  const rows = await fetchValidatedRows();
-  const completenessCounts = rows.reduce((acc, row) => {
-    const key = row.shipment_completeness || 'null';
-    acc[key] = (acc[key] || 0) + 1;
-    return acc;
-  }, {});
-
-  const unitBasisCounts = rows.reduce((acc, row) => {
-    const key = row.actual_unit_basis || 'null';
-    acc[key] = (acc[key] || 0) + 1;
-    return acc;
-  }, {});
-
-  const completeRows = rows.filter((row) => String(row.shipment_completeness || '').toLowerCase() === 'complete');
-  const packageCountRows = completeRows.filter((row) => String(row.actual_unit_basis || '').toLowerCase() === 'package_count');
-  const fallbackToComplete = packageCountRows.length === 0 && completeRows.length > 0;
-  const cleanRows = dedupeCleanRows(fallbackToComplete ? completeRows : packageCountRows);
-  const derivedConsistentRows = cleanRows.filter((row) => !isLegacySo(row) && !hasSentinelFallback(row.predicted_breakdown));
-  const consistentView = await fetchRowsFromView('validations_eval_consistent');
-  const consistentRows = Array.isArray(consistentView.rows) && consistentView.rows.length > 0
-    ? consistentView.rows
-    : derivedConsistentRows;
-  const consistentSource = Array.isArray(consistentView.rows) && consistentView.rows.length > 0
-    ? 'validations_eval_consistent(view)'
-    : 'derived_fallback(clean - legacy SO5/6 - sentinel)';
+  const { allRows, cleanRows, consistentRows, dataset } = await loadEvalDataset(supabase);
 
   const report = {
     generated_at: new Date().toISOString(),
-    dataset: {
-      validated_rows: rows.length,
-      complete_rows: completeRows.length,
-      package_count_rows: packageCountRows.length,
-      clean_rows: cleanRows.length,
-      consistent_rows: consistentRows.length,
-      consistent_source: consistentSource,
-      consistent_view_error: consistentView.error ? String(consistentView.error.message || consistentView.error) : null,
-      shipment_completeness_counts: completenessCounts,
-      actual_unit_basis_counts: unitBasisCounts,
-      basis_filter_fallback: fallbackToComplete,
-    },
-    metrics_all: computeMetrics(rows),
+    dataset,
+    metrics_all: computeMetrics(allRows),
     metrics_clean: computeMetrics(cleanRows),
     metrics_consistent: computeMetrics(consistentRows),
   };
@@ -367,6 +222,18 @@ function toMarkdown(report) {
     fs.writeFileSync(mdPath, toMarkdown(report));
     console.error(`Wrote ${jsonPath}`);
     console.error(`Wrote ${mdPath}`);
+  }
+
+  if (jsonOutPath) {
+    fs.mkdirSync(path.dirname(path.resolve(jsonOutPath)), { recursive: true });
+    fs.writeFileSync(path.resolve(jsonOutPath), JSON.stringify(report, null, 2));
+    console.error(`Wrote JSON artifact: ${path.resolve(jsonOutPath)}`);
+  }
+
+  if (mdOutPath) {
+    fs.mkdirSync(path.dirname(path.resolve(mdOutPath)), { recursive: true });
+    fs.writeFileSync(path.resolve(mdOutPath), toMarkdown(report));
+    console.error(`Wrote MD artifact: ${path.resolve(mdOutPath)}`);
   }
 })().catch((error) => {
   console.error('eval-accuracy failed:', error?.message || error);

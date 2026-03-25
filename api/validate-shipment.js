@@ -1609,7 +1609,7 @@ function computeCalibrationAdjustment({
     delta += 1;
     firedRules.push('legacy_fc0_sku_override_plus1');
   }
-  if (!legacyOrder && familyCount === 1 && hasFamily('ZERO_FLOOR') && currentPallets === 1 && rideAlongQty >= 300) {
+  if (!legacyOrder && familyCount === 1 && hasFamily('ZERO_FLOOR') && currentPallets === 1 && rideAlongQty >= 200) {
     delta += 1;
     firedRules.push('zero_floor_heavy_ride_along_plus1');
   }

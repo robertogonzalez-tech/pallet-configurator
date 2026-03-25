@@ -4,15 +4,19 @@ require('dotenv').config({ path: '.env.local' });
 const { spawnSync } = require('child_process');
 const fs = require('fs');
 
+const path = require('path');
+
 const args = process.argv.slice(2);
 const apply = args.includes('--apply');
 const localEngine = args.includes('--local-engine') || process.env.REPROCESS_LOCAL_ENGINE === '1';
 const allowExactDropArg = args.find((a) => a.startsWith('--allow-exact-drop='));
 const allowWithin1DropArg = args.find((a) => a.startsWith('--allow-within1-drop='));
 const apiBaseArg = args.find((a) => a.startsWith('--api-base='));
+const jsonOutArg = args.find((a) => a.startsWith('--json-out='));
 const allowExactDrop = allowExactDropArg ? Number(allowExactDropArg.split('=')[1]) : 1.0;
 const allowWithin1Drop = allowWithin1DropArg ? Number(allowWithin1DropArg.split('=')[1]) : 1.0;
 const apiBase = apiBaseArg ? String(apiBaseArg.split('=')[1] || '').trim() : '';
+const jsonOutPath = jsonOutArg ? jsonOutArg.split('=').slice(1).join('=') : null;
 
 function run(cmd, cmdArgs, envOverride = null) {
   const result = spawnSync(cmd, cmdArgs, {
@@ -88,14 +92,47 @@ function printSummary(prefix, log) {
   );
   process.stdout.write(dry.stdout || '');
   process.stderr.write(dry.stderr || '');
+
+  function writeJsonArtifact(result) {
+    if (!jsonOutPath) return;
+    fs.mkdirSync(path.dirname(path.resolve(jsonOutPath)), { recursive: true });
+    fs.writeFileSync(path.resolve(jsonOutPath), JSON.stringify(result, null, 2));
+    console.error(`Wrote guard artifact: ${path.resolve(jsonOutPath)}`);
+  }
+
   if (dry.status !== 0) {
-    console.error('Dry-run failed. Aborting.');
+    const dryLogPath = parseLogPath(dry.stdout);
+    const dryLog = loadLog(dryLogPath);
+    const verdict = dryLog ? 'regressed' : 'infra_failed';
+    writeJsonArtifact({
+      timestamp: new Date().toISOString(),
+      dryRun: true,
+      localEngine,
+      verdict,
+      error: verdict === 'infra_failed' ? 'Dry-run subprocess crashed with no valid log' : null,
+      old: dryLog?.oldAccuracy || null,
+      new: dryLog?.newAccuracy || null,
+      gates: null,
+      deltas: null,
+    });
+    console.error(`Dry-run failed (verdict: ${verdict}). Aborting.`);
     process.exit(dry.status || 1);
   }
 
   const dryLogPath = parseLogPath(dry.stdout);
   const dryLog = loadLog(dryLogPath);
   if (!dryLog) {
+    writeJsonArtifact({
+      timestamp: new Date().toISOString(),
+      dryRun: true,
+      localEngine,
+      verdict: 'infra_failed',
+      error: 'Could not parse dry-run log file',
+      old: null,
+      new: null,
+      gates: null,
+      deltas: null,
+    });
     console.error('Could not parse dry-run log file. Aborting.');
     process.exit(1);
   }
@@ -103,6 +140,26 @@ function printSummary(prefix, log) {
   printSummary('[dry-run]', dryLog);
   const gate = gateCheck(dryLog);
   console.log('[gates]', JSON.stringify(gate, null, 2));
+
+  const guardResult = {
+    timestamp: new Date().toISOString(),
+    dryRun: true,
+    localEngine,
+    verdict: gate.gates.all_pass ? 'passed' : 'regressed',
+    old: {
+      exact: dryLog.oldAccuracy.exactRate,
+      within1: dryLog.oldAccuracy.withinOneRate,
+      mae: dryLog.oldAccuracy.mae,
+    },
+    new: {
+      exact: dryLog.newAccuracy.exactRate,
+      within1: dryLog.newAccuracy.withinOneRate,
+      mae: dryLog.newAccuracy.mae,
+    },
+    gates: gate.gates,
+    deltas: gate.deltas,
+  };
+  writeJsonArtifact(guardResult);
 
   if (!gate.gates.all_pass) {
     console.error('Guarded write gates failed. Live reprocess aborted.');
