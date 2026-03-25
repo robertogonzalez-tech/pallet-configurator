@@ -764,7 +764,7 @@ const UNITS_PER_PALLET = {
   'Metal Bike Vault / VisiLocker': 2, 'MBA': 2,
   'Pump & Repair': 10, 'Cane Detection': 10, '2UP': 24,
   'Strut Install Kit': 20, 'Saris': 10, 'Fiberglass Bike Vault': 2,
-  'Radius': 6, 'Guardian': 6, 'Snowdock': 8,
+  'Radius': 6, 'Guardian': 8, 'Snowdock': 8,
 };
 
 // Explicit SKU-level overrides from Chad's validation review
